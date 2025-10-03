@@ -1,0 +1,100 @@
+/* Instagram-style grid */
+.plants-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+  margin-top: 1rem;
+}
+
+.feed-thumb {
+  cursor: pointer;
+  position: relative;
+}
+
+.feed-image {
+  width: 100%;
+  aspect-ratio: 1 / 1; /* keep square */
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+/* Modal for album */
+.album-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: white;
+  z-index: 9999;
+  padding: 1rem;
+  overflow-y: auto;
+}
+
+.close-btn {
+  border: none;
+  background: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  float: right;
+}
+
+/* TikTok-style album */
+.plant-album {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.plant-album::-webkit-scrollbar {
+  display: none;
+}
+
+.album-slide {
+  flex: 0 0 100%;
+  scroll-snap-align: start;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.plant-image {
+  width: 100%;
+  max-height: 80vh;
+  object-fit: cover;
+  border-radius: 12px;
+}
+
+/* Zoom effect on click */
+.zoomable {
+  transition: transform 0.3s ease;
+  cursor: zoom-in;
+}
+
+.zoomable:active {
+  transform: scale(1.2); /* zoom on click/press */
+  cursor: zoom-out;
+}
+
+/* Dots indicator */
+.album-indicators {
+  display: flex;
+  justify-content: center;
+  margin-top: 0.5rem;
+}
+
+.dot {
+  height: 8px;
+  width: 8px;
+  margin: 0 4px;
+  background-color: #bbb;
+  border-radius: 50%;
+  display: inline-block;
+  transition: background-color 0.3s ease;
+}
+
+.dot.active {
+  background-color: #333;
+}
