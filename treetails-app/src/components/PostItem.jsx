@@ -27,9 +27,10 @@ const PostItem = ({ post }) => {
       {images.length > 0 && (
         <div className="hover-image-wrapper" onClick={handleTap}>
           <img
+            key={images[currentIndex]}
             src={images[currentIndex]}
             alt={title}
-            className="hover-image-cycle fade-slide"
+            className="hover-image-cycle"
           />
         </div>
       )}

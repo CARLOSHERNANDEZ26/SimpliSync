@@ -26,7 +26,7 @@ const SpotMarkers = ({ spots }) => {
 };
 
 const AddSpotOnClick = ({ onAdd }) => {
-  useMapEvents({
+  useMapEvents({ 
     click(e) {
       const { lat, lng } = e.latlng;
       const newSpot = {

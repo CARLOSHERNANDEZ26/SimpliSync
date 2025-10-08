@@ -1,4 +1,3 @@
-/* Modal overlay (dark background) */
 .logout-modal-overlay {
   position: fixed;
   top: 0;
@@ -18,7 +17,7 @@
   animation: fadeOut 0.3s ease forwards;
 }
 
-/* Modal box */
+
 .logout-modal {
   background: #fff;
   padding: 1.5rem;
@@ -69,9 +68,6 @@
   background: #ddd;
 }
 
-/* ==================== */
-/* Animations           */
-/* ==================== */
 @keyframes fadeIn {
   from { opacity: 0; }
   to   { opacity: 1; }

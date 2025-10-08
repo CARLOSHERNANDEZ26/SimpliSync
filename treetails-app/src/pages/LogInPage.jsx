@@ -1,4 +1,3 @@
-// src/pages/LoginPage.jsx
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -9,7 +8,6 @@ const LoginPage = () => {
   const { user, login } = useAuth();
   const navigate = useNavigate();
 
-  // ✅ Redirect if already logged in
   useEffect(() => {
     if (user) {
       navigate("/my-plants", { replace: true });

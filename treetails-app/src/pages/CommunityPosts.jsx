@@ -3,7 +3,7 @@ import PostItem from "../components/PostItem";
 
 
 const CommunityPosts = () => {
-  // Mock community post data
+
   const [posts] = useState([
     {
       id: 1,
