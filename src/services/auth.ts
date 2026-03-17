@@ -1,5 +1,6 @@
 import { auth } from "../lib/firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
+import { collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc, doc } from "firebase/firestore";
 
 export const loginEmployee = async (email: string, password: string) => {
   try {
@@ -14,3 +15,4 @@ export const loginEmployee = async (email: string, password: string) => {
     throw new Error("Invalido");
   }
 };
+

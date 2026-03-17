@@ -6,6 +6,7 @@ import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import ClockInButton from "@/components/ClockInButton";
+import ClockOutButton from "@/components/ClockOutButton";
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -76,7 +77,9 @@ export default function DashboardPage() {
           {/* Widgets Grid - Currently just the Clock In Button */}
           <div className="w-full grid grid-cols-1 place-items-center">
             <ClockInButton />
+            <ClockOutButton />
           </div>
+          
 
         </div>
       </main>
