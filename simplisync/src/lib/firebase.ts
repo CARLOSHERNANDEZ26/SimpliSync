@@ -4,12 +4,13 @@ import { getFirestore } from "firebase/firestore";
 // You can add getFirestore later when we do the attendance logs!
 
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  apiKey: "AIzaSyDaALq9GGgLHiNBiuIQeohIKw_YQ0qzdJs",
+  authDomain: "simplisync-2925f.firebaseapp.com",
+  projectId: "simplisync-2925f",
+  storageBucket: "simplisync-2925f.firebasestorage.app",
+  messagingSenderId: "612112669566",
+  appId: "1:612112669566:web:4d5a90de52b51958d3712f",
+  measurementId: "G-EPWRYFM66S"
 };
 
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
