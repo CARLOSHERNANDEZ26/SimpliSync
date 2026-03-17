@@ -17,22 +17,11 @@ export default function DashboardPage() {
   };
 
   return (
-<<<<<<< HEAD
     <ProtectedRoute>
       <main className="min-h-screen w-full bg-slate-50 dark:bg-[#0a0a0a] text-gray-900 dark:text-white font-sans relative overflow-hidden transition-colors duration-500">
         {/* Dynamic Background Glows */}
         <div className="absolute top-0 right-0 w-[40rem] h-[40rem] bg-teal-400/20 dark:bg-teal-600/10 rounded-full blur-[150px] pointer-events-none"></div>
         <div className="absolute bottom-0 left-0 w-[30rem] h-[30rem] bg-emerald-400/20 dark:bg-emerald-600/10 rounded-full blur-[120px] pointer-events-none"></div>
-=======
-    <ProtectedRoute> 
-   
-          <h1 className="text-3xl font-bold mb-4">HR Dashboard</h1>
-          
-          {/* This proves the global memory is working! */}
-          <p className="mb-6 text-gray-600">
-            Welcome back, <span className="font-semibold text-blue-600">{user?.email}</span>
-          </p>
->>>>>>> 82a0d9d (chore: remove legacy treetails-app and clean repo)
 
         {/* Navigation Bar */}
         <nav className="relative z-20 w-full border-b border-gray-200 dark:border-white/10 bg-white/70 dark:bg-black/40 backdrop-blur-md px-6 py-4 flex justify-between items-center sticky top-0 transition-colors duration-500">
@@ -82,6 +71,7 @@ export default function DashboardPage() {
             </h2>
             <p className="text-lg text-gray-500 dark:text-gray-400 transition-colors">Your HR Dashboard is ready for your shift.</p>
           </div>
+          
 
           {/* Widgets Grid - Currently just the Clock In Button */}
           <div className="w-full grid grid-cols-1 place-items-center">
