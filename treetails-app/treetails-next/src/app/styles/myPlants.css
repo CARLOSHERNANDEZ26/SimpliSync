@@ -1,0 +1,183 @@
+.plants-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+  margin-top: 1rem;
+}
+
+.feed-thumb {
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+.feed-thumb:hover {
+  transform: scale(1.03);
+}
+.feed-image {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+/* --- Modal --- */
+.album-modal {
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(to bottom, #f1f8e9, #fff);
+  z-index: 9999;
+  overflow-y: auto;
+  padding-bottom: 3rem;
+}
+
+/* Close Button (Persistent) */
+.close-btn {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  background: rgba(255, 255, 255, 0.95);
+  border: none;
+  border-radius: 50%;
+  width: 38px;
+  height: 38px;
+  font-size: 1.4rem;
+  cursor: pointer;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s ease;
+  z-index: 10000;
+}
+.close-btn:hover {
+  transform: scale(1.1);
+}
+
+/* --- Album Layout --- */
+.album-content-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 3.5rem;
+  width: 100%;
+}
+
+.plant-album {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  width: 100%;
+  max-width: 500px;
+  border-radius: 16px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
+}
+.plant-album::-webkit-scrollbar {
+  display: none;
+}
+
+.album-slide {
+  flex: 0 0 100%;
+  scroll-snap-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.image-content-wrapper {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.plant-image {
+  width: 100%;
+  object-fit: cover;
+  border-radius: 16px;
+}
+
+/* Dots indicator */
+.album-indicators {
+  display: flex;
+  justify-content: center;
+  margin-top: 0.8rem;
+}
+.dot {
+  height: 9px;
+  width: 9px;
+  margin: 0 5px;
+  background-color: #c5e1a5;
+  border-radius: 50%;
+  transition: background-color 0.3s ease;
+}
+.dot.active {
+  background-color: #33691e;
+}
+
+/* --- Growth Tracker --- */
+.growth-section {
+  text-align: center;
+  margin-top: 1.5rem;
+}
+.growth-section h4 {
+  color: #2e7d32;
+  margin-bottom: 0.5rem;
+}
+.growth-bar {
+  width: 80%;
+  height: 10px;
+  background: #dcedc8;
+  border-radius: 10px;
+  margin: 0.5rem auto 1rem;
+  overflow: hidden;
+}
+.growth-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #66bb6a, #9ccc65);
+  transition: width 0.4s ease;
+}
+
+/* Timeline */
+.growth-timeline {
+  display: flex;
+  justify-content: space-around;
+  flex-wrap: wrap;
+  font-size: 0.9rem;
+  color: #4e4e4e;
+}
+.timeline-item {
+  margin: 0.3rem 5rem;
+}
+
+/* --- Plant Info --- */
+.plant-details {
+  text-align: center;
+  margin-top: 1rem;
+  padding: 0 1rem;
+  max-width: 500px;
+}
+.plant-details h3 {
+  color: #2e7d32;
+  font-size: 1.5rem;
+}
+.plant-details p {
+  color: #555;
+  font-size: 0.95rem;
+  margin-top: 0.25rem;
+}
+
+.growth-stage-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 12px;
+  padding: 3px 6px;
+  font-size: 1rem;
+  color: #2e7d32;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  pointer-events: none;
+  user-select: none;
+  transition: transform 0.2s ease;
+}
+
+.feed-thumb:hover .growth-stage-badge {
+  transform: scale(1.05);
+}

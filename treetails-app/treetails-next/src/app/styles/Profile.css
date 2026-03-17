@@ -1,0 +1,76 @@
+.profile-prototype {
+  max-width: 350px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background: #f8f9fa;
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  text-align: center;
+}
+
+.profile-avatar {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-bottom: 1rem;
+  border: 3px solid #a3d9a5;
+}
+
+.profile-prototype h2 {
+  margin: 0.5rem 0 0.25rem 0;
+  font-size: 1.5rem;
+  color: #2e7d32;
+}
+
+.profile-prototype p {
+  color: #555;
+  margin-bottom: 0.5rem;
+}
+
+.profile-prototype input,
+.profile-prototype textarea {
+  width: 90%;
+  margin: 0.25rem 0;
+  padding: 0.5rem;
+  border-radius: 6px;
+  border: 1px solid #bdbdbd;
+  font-size: 1rem;
+}
+
+.profile-prototype button {
+  margin: 0.5rem 0;
+  padding: 0.4rem 1.2rem;
+  background: #81c784;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.profile-prototype button:hover {
+  background: #388e3c;
+}
+
+.profile-stats {
+  margin: 1rem 0 0.5rem 0;
+  font-size: 1rem;
+  color: #333;
+}
+
+.profile-badges {
+  margin-top: 0.5rem;
+}
+
+.profile-badge {
+  display: inline-block;
+  background: #e0f2f1;
+  color: #00796b;
+  border-radius: 12px;
+  padding: 0.2rem 0.8rem;
+  margin: 0.2rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
