@@ -8,6 +8,8 @@ import { useRouter } from "next/navigation";
 import ClockInButton from "@/components/ClockInButton";
 import ClockOutButton from "@/components/ClockOutButton";
 import AdminLogsTable from "@/components/AdminLogsTable";
+import EmployeeHistoryTable from "@/components/EmployeeHistoryTable";
+
 
 export default function DashboardPage() {
   // 1. We don't need 'loading' here anymore! ProtectedRoute handles it.
@@ -99,6 +101,13 @@ export default function DashboardPage() {
           </div>
           )}
 
+          {/* Employee History Widget (Hidden from Admin) */}
+       {!isAdmin && (
+         <div className="w-full mt-12 animate-fade-in-up" style={{ animationDelay: "0.2s" }}>
+           <EmployeeHistoryTable />
+         </div>
+       )} 
+          
         </div>
       </main>
     </ProtectedRoute>

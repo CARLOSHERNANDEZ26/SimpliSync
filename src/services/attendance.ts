@@ -120,4 +120,49 @@ export const fetchAllAttendanceLogs = async () => {
     console.error("Error fetching logs:", error);
     throw new Error("Failed to fetch attendance records.");
   }
+
+  
+};
+
+export const fetchUserAttendanceLogs = async (userId: string) => {
+  try {
+    const attendanceRef = collection(db, "attendanceLogs");
+
+    const q = query(
+      attendanceRef, 
+      where("userId", "==", userId),
+      orderBy("timeIn", "desc")
+    );
+
+    const querySnapshot = await getDocs(q);
+
+    const logs: {
+      id: string;
+      userId: string;
+      timeIn: Date | null;
+      timeOut: Date | null;
+      status: string;
+      lat: number;
+      lng: number;
+    }[] = [];
+
+    querySnapshot.forEach((document) => {
+      const data = document.data();
+      logs.push({
+        id: document.id,
+        userId: data.userId,
+        timeIn: data.timeIn ? data.timeIn.toDate() : null,
+        timeOut: data.timeOut ? data.timeOut.toDate() : null,
+        status: data.status,
+        lat: data.lat,
+        lng: data.lng,
+      });
+    });
+
+    return logs;
+
+  } catch (error) {
+    console.error("Error fetching user logs:", error);
+    throw new Error("Failed to fetch your attendance records.");
+  }
 };

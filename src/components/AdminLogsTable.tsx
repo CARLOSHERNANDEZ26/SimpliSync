@@ -9,6 +9,8 @@ interface AttendanceLog {
   timeIn: Date | null;
   timeOut: Date | null;
   status: string;
+  lat?: number;
+  lng?: number;
 }
 
 export default function AdminLogsTable() {
@@ -57,14 +59,70 @@ export default function AdminLogsTable() {
   if (isLoading) return <div className="text-center p-12 text-teal-600 animate-pulse font-medium">Loading HR data...</div>;
   if (error) return <div className="text-center p-12 text-rose-500 font-medium">{error}</div>;
 
+  const handleExportCSV = () => {
+    if (logs.length === 0) {
+      alert("No data to export!");
+      return;
+    }
+
+    // 1. Create the CSV Headers
+    const headers = ["Date", "Employee ID", "Time In", "Time Out", "Duration", "Status", "Latitude", "Longitude"];
+
+    // 2. Loop through the logs and format each row
+    const csvRows = logs.map((log) => {
+      // Safely format the data so it doesn't break if someone forgot to clock out
+      const date = log.timeIn ? log.timeIn.toLocaleDateString() : "N/A";
+      const timeIn = log.timeIn ? log.timeIn.toLocaleTimeString() : "--:--";
+      const timeOut = log.timeOut ? log.timeOut.toLocaleTimeString() : "Working...";
+      
+      // Calculate duration for the spreadsheet
+      let duration = "Working...";
+      if (log.timeIn && log.timeOut) {
+        const diffMs = log.timeOut.getTime() - log.timeIn.getTime();
+        const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
+        const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+        duration = `${diffHrs}h ${diffMins}m`;
+      }
+
+      // Return the row as an array of strings, wrapping in quotes to prevent comma errors
+      return `"${date}","${log.userId}","${timeIn}","${timeOut}","${duration}","${log.status}","${log.lat || ''}","${log.lng || ''}"`;
+    });
+
+    // 3. Combine headers and rows with line breaks (\n)
+    const csvString = [headers.join(","), ...csvRows].join("\n");
+
+    // 4. Create a hidden download link and click it programmatically
+    const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    
+    // Name the file dynamically based on today's date
+    const today = new Date().toLocaleDateString().replace(/\//g, '-');
+    link.setAttribute("download", `SimpliSync_Timesheet_${today}.csv`);
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link); // Clean up after download
+  };
+
   // 5. The Main UI Table
   return (
-    <div className="w-full mt-8 overflow-hidden bg-white dark:bg-black/40 backdrop-blur-md rounded-2xl shadow-sm border border-gray-200 dark:border-white/10">
-      <div className="px-6 py-5 border-b border-gray-200 dark:border-white/10 flex justify-between items-center">
-        <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Recent Activity</h3>
-        <span className="bg-teal-100 text-teal-800 text-xs font-bold px-3 py-1 rounded-full dark:bg-teal-900/50 dark:text-teal-400">
-          {logs.length} Records
-        </span>
+    <div className="w-full mt-8 bg-white dark:bg-white/5 backdrop-blur-md rounded-2xl shadow-sm border border-gray-200 dark:border-white/10 overflow-hidden">
+      
+      {/* Table Header & Export Button */}
+      <div className="px-6 py-4 border-b border-gray-200 dark:border-white/10 flex justify-between items-center">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Company Attendance Logs</h3>
+        
+        <button 
+          onClick={handleExportCSV}
+          className="flex items-center gap-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 dark:bg-emerald-500/20 dark:hover:bg-emerald-500/30 dark:text-emerald-300 text-sm font-semibold py-2 px-4 rounded-lg transition-colors duration-200"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          </svg>
+          Export CSV
+        </button>
       </div>
       
       <div className="overflow-x-auto">
