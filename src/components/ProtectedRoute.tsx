@@ -1,36 +1,37 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
+    // If the app is done loading and there is no user, kick them to login
     if (!loading && !user) {
       router.push("/login");
     }
   }, [user, loading, router]);
 
+  // STRICT GATE 1: While loading, ONLY show this full-screen spinner
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-[#0a0a0a] transition-colors duration-500">
-        <div className="flex flex-col items-center gap-4">
-          <svg className="animate-spin h-8 w-8 text-teal-600 dark:text-teal-500 transition-colors" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-          <p className="text-sm font-medium text-teal-700 dark:text-teal-400 tracking-widest uppercase transition-colors">Checking credentials...</p>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 dark:bg-[#0a0a0a]">
+        <div className="w-8 h-8 border-4 border-teal-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+        <div className="text-teal-600 font-semibold tracking-widest text-sm uppercase">
+          Checking Credentials...
         </div>
       </div>
     );
   }
 
+  // STRICT GATE 2: If no user, render absolutely nothing while the router redirects them
   if (!user) {
     return null;
   }
 
+  // STRICT GATE 3: If they pass the checks, ONLY render the Dashboard (the 'children')
   return <>{children}</>;
 }

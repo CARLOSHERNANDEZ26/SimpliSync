@@ -1,7 +1,6 @@
 import { db } from "../lib/firebase";
-import { collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc, doc } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc, doc, orderBy } from "firebase/firestore";
 import { isWithinSmartZone } from "@/utils/geo";    
-
 
 export const clockInEmployee = async (userId: string, latitude: number, longitude: number) => {
   try {
@@ -9,15 +8,6 @@ export const clockInEmployee = async (userId: string, latitude: number, longitud
     if (!isValidLocation) {
       throw new Error("Out_Of_Smart_Zone.");
     }
-
-
-    // YOUR MISSION GOES HERE:
-    // 1. Define the collection you want to target (Hint: use the 'collection' function)
-    // 2. Use 'addDoc' to create a new record.
-    // 3. The record must contain: userId, timeIn, lat, lng, and a default status of "Pending".
-    // 4. For timeIn, you MUST use the imported 'serverTimestamp()' function.
-
-    // Return true if it succeeds!
     const attendanceRef = collection(db, "attendanceLogs"); 
 
     const docRef = await addDoc(attendanceRef, {
@@ -47,9 +37,7 @@ export const clockOutEmployee = async (userId: string, latitude: number, longitu
       throw new Error("OUT_OF_BOUNDS");
     }
     const attendanceRef = collection(db, "attendanceLogs");
-    
-    // CHALLENGE 1: Create a query (q) that searches attendanceRef 'where' the "userId" is "==" to the userId variable.
-    const q =  query(attendanceRef, where("userId", "==", userId)); // YOUR QUERY HERE
+    const q =  query(attendanceRef, where("userId", "==", userId)); 
     
     const querySnapshot = await getDocs(q);
     console.log("Query returned documents:", querySnapshot.size);
@@ -66,21 +54,14 @@ export const clockOutEmployee = async (userId: string, latitude: number, longitu
     if (!activeShiftId) {
       throw new Error("NO_ACTIVE_SHIFT");
     }
-
-    // CHALLENGE 2: Target the specific document using doc()
     const shiftDocRef = doc(db, "attendanceLogs", activeShiftId); 
     console.log("Targeting document with ID:", activeShiftId);
-    
-// CHALLENGE 3: Use await updateDoc() to add a timeOut field set to serverTimestamp()
-    // YOUR UPDATE LOGIC HERE
      await updateDoc(shiftDocRef, {
       timeOut: serverTimestamp(),
       lat: latitude,
       lng: longitude,
       status: "Completed",
     });
-
-    
 
     console.log("Success! Clocked out of shift:", activeShiftId);
     return true;
@@ -94,5 +75,49 @@ export const clockOutEmployee = async (userId: string, latitude: number, longitu
     }
     console.error("Database Error:", error);
     throw new Error("Failed to clock out. Please try again.");
+  }
+};
+
+export const fetchAllAttendanceLogs = async () => {
+  try {
+    const attendanceRef = collection(db, "attendanceLogs");
+
+    const q = query(attendanceRef, orderBy("timeIn", "desc"));
+
+    const querySnapshot = await getDocs(q);
+
+    const logs: {
+      id: string;
+      userId: string;
+      timeIn: Date | null;
+      timeOut: Date | null;
+      status: string;
+      lat: number;
+      lng: number;
+    }[] = [];
+
+    querySnapshot.forEach((document) => {
+      const data = document.data();
+
+      const formattedTimeIn = data.timeIn ? data.timeIn.toDate() : null;
+      const formattedTimeOut = data.timeOut ? data.timeOut.toDate() : null;
+
+      logs.push({
+        id: document.id,
+        userId: data.userId,
+        timeIn: formattedTimeIn,
+        timeOut: formattedTimeOut,
+        status: data.status,
+        lat: data.lat,
+        lng: data.lng,
+      });
+    });
+
+    console.log(`Successfully fetched ${logs.length} logs!`);
+    return logs;
+
+  } catch (error) {
+    console.error("Error fetching logs:", error);
+    throw new Error("Failed to fetch attendance records.");
   }
 };

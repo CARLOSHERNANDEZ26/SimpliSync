@@ -2,30 +2,80 @@
 
 import { useState, useEffect, createContext, useContext } from "react";
 import { onAuthStateChanged, User } from "firebase/auth";
-import { auth } from "../lib/firebase";
+import { auth, db } from "../lib/firebase"; 
+import { collection, query, where, onSnapshot } from "firebase/firestore"; // Added onSnapshot!
 
-const AuthContext = createContext<{ user: User | null; loading: boolean }>({
+// 1. Tell TypeScript exactly what powers this context has
+interface AuthContextType {
+  user: User | null;
+  isClockedIn: boolean; 
+  loading: boolean;
+}
+
+const AuthContext = createContext<AuthContextType>({
   user: null,
-  loading: true, 
+  isClockedIn: false,
+  loading: true,
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [isClockedIn, setIsClockedIn] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // 1. Create an empty variable to hold our database listener
+    let unsubscribeDb: () => void;
 
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
-      setLoading(false);
+
+      if (currentUser) {
+        // IF LOGGED IN: Build the query
+        const activeShiftQuery = query(
+          collection(db, "attendanceLogs"),
+          where("userId", "==", currentUser.uid),
+          where("status", "==", "Valid")
+        );
+
+        // Save the listener to our variable
+        unsubscribeDb = onSnapshot(
+          activeShiftQuery, 
+          (snapshot) => {
+            setIsClockedIn(!snapshot.empty); 
+            setLoading(false);
+          },
+          () => { 
+            // Only log if we are actually trying to listen securely
+            setIsClockedIn(false);
+            setLoading(false);
+          }
+        );
+
+      } else {
+        // 2. IF LOGGED OUT: Instantly kill the database listener so it stops asking for data!
+        if (unsubscribeDb) {
+          unsubscribeDb(); 
+        }
+        
+        // Reset everything else
+        setIsClockedIn(false);
+        setLoading(false);
+      }
     });
 
-    return () => unsubscribe();
+    // 3. Cleanup everything when the app closes
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribeDb) {
+        unsubscribeDb();
+      }
+    };
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading }}>
-      {children}
+    <AuthContext.Provider value={{ user, isClockedIn, loading }}>
+      {!loading && children}
     </AuthContext.Provider>
   );
 };

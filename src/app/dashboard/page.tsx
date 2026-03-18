@@ -7,17 +7,24 @@ import { signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import ClockInButton from "@/components/ClockInButton";
 import ClockOutButton from "@/components/ClockOutButton";
+import AdminLogsTable from "@/components/AdminLogsTable";
 
 export default function DashboardPage() {
-  const { user } = useAuth();
+  // 1. We don't need 'loading' here anymore! ProtectedRoute handles it.
+  const { user } = useAuth(); 
   const router = useRouter();
+
+  const isAdmin = user?.email === "admin@simplisync.local";
 
   const handleLogout = async () => {
     await signOut(auth);
     router.push("/login");
   };
 
+  // NOTICE: I deleted the useEffect, the if(loading) screen, and the if(!user) block!
+
   return (
+    // 2. ProtectedRoute does all the heavy lifting for us right here.
     <ProtectedRoute>
       <main className="min-h-screen w-full bg-slate-50 dark:bg-[#0a0a0a] text-gray-900 dark:text-white font-sans relative overflow-hidden transition-colors duration-500">
         {/* Dynamic Background Glows */}
@@ -79,7 +86,18 @@ export default function DashboardPage() {
             <ClockInButton />
             <ClockOutButton />
           </div>
-          
+
+          {/* Admin Table Widget */}
+          {isAdmin && (
+            <div className="w-full mt-12 animate-fade-in-up" style={{ animationDelay: "0.2s" }}>
+            <div className="mb-4 text-center">
+              <span className="bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 text-xs font-bold px-3 py-1 rounded-full tracking-widest uppercase">
+                Admin View Only
+              </span>
+            </div>
+            <AdminLogsTable />
+          </div>
+          )}
 
         </div>
       </main>

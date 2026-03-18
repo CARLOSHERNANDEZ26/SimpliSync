@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { loginEmployee } from "@/services/auth";
 import { useRouter } from "next/navigation";
 
@@ -13,15 +13,21 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorMsg("");
+    setErrorMsg(""); 
     setIsLoading(true);
 
     try {
       await loginEmployee(email, password);
       router.push("/dashboard");
-    } catch (error) {
-      const authError = error as Error;
-      setErrorMsg(authError.message);
+    } catch (err) {
+      if (err instanceof Error) {
+        setErrorMsg(err.message === "Invalido" 
+          ? "Invalid email or password. Please try again." 
+          : "An unexpected error occurred. Please try again."
+        );
+      } else {
+        setErrorMsg("Failed to log in.");
+      }
       setIsLoading(false);
     }
   };
@@ -38,25 +44,15 @@ export default function LoginPage() {
         {/* Logo Section */}
         <div className="flex flex-col items-center justify-center mb-10">
           <div className="relative w-24 h-24 mb-4 flex items-center justify-center">
-            {/* SVG Logo approximating the provided SimplifV / SimpliSync logo */}
             <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-lg" fill="none" xmlns="http://www.w3.org/2000/svg">
-              {/* Cloud back layer */}
-              <path d="M25 65C15 65 10 55 15 45C18 38 25 35 30 35C35 20 55 15 65 25C75 20 85 25 90 35C95 45 90 60 75 60" 
-                    stroke="#0f766e" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" />
-              {/* Buildings shadow/grey */}
+              <path d="M25 65C15 65 10 55 15 45C18 38 25 35 30 35C35 20 55 15 65 25C75 20 85 25 90 35C95 45 90 60 75 60" stroke="#0f766e" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" />
               <rect x="35" y="45" width="10" height="25" fill="#9ca3af" />
               <polygon points="35,45 40,38 45,45" fill="#9ca3af" />
-              
               <rect x="55" y="40" width="12" height="30" fill="#9ca3af" />
               <polygon points="55,40 61,30 67,40" fill="#9ca3af" />
-              
-              {/* Buildings foreground/white */}
               <rect x="42" y="30" width="15" height="40" fill="#ffffff" />
               <polygon points="42,30 49.5,20 57,30" fill="#ffffff" />
-              
               <rect x="42" y="55" width="15" height="15" fill="#0f766e" />
-
-              {/* Arrow wrapping around */}
               <path d="M20 55 C 30 75, 55 75, 65 55 L 75 55 L 60 35 L 55 50" fill="#14b8a6" />
             </svg>
           </div>

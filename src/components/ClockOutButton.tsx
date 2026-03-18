@@ -5,13 +5,18 @@ import { useAuth } from "@/hooks/useAuth";
 import { clockOutEmployee } from "@/services/attendance";
 
 export default function ClockOutButton() {
-  const { user } = useAuth();
+  const { user, isClockedIn } = useAuth();
   const [statusMsg, setStatusMsg] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const handleClockOut = async () => {
     if (!user) {
       setStatusMsg("Error: You must be logged in.");
+      return;
+    }
+
+    if (!isClockedIn) {
+      setStatusMsg("Error: You are not currently clocked in.");
       return;
     }
 

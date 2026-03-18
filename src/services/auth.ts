@@ -5,14 +5,11 @@ import { collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc, 
 export const loginEmployee = async (email: string, password: string) => {
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
-   return userCredential.user; // Return the user object on successful login
+   return userCredential.user; 
    
-
-    
   } catch (error) {
-    const firebaseError = error as { code: string };
-    console.error("Internal auth error:", firebaseError.code);
     throw new Error("Invalido");
   }
 };
+
 
