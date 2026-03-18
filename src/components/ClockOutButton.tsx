@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { clockOutEmployee } from "@/services/attendance";
+import toast from "react-hot-toast";
 
 export default function ClockOutButton() {
   const { user, isClockedIn } = useAuth();
@@ -12,6 +13,7 @@ export default function ClockOutButton() {
   const handleClockOut = async () => {
     // We keep your functional protections here just in case!
     if (!user) {
+      toast.error("Error: You must be logged in.");
       setStatusMsg("Error: You must be logged in.");
       return;
     }
@@ -19,7 +21,9 @@ export default function ClockOutButton() {
       return; // We don't even need the error message anymore, the button handles it!
     }
     if (!navigator.geolocation) {
-      setStatusMsg("Error: Geolocation is not supported by your browser.");
+      const errorMsg = "Error: Geolocation is not supported by your browser.";
+      toast.error(errorMsg);
+      setStatusMsg(errorMsg);
       return;
     }
 
@@ -34,20 +38,21 @@ export default function ClockOutButton() {
           // Call our shiny new backend engine!
           await clockOutEmployee(user.uid, latitude, longitude);
           
+          toast.success("Success! You have officially clocked out.");
           setStatusMsg("Success! You have officially clocked out.");
         } catch (error) {
-          if (error instanceof Error) {
-            setStatusMsg(`Error: ${error.message}`);
-          } else {
-            setStatusMsg("An unexpected error occurred.");
-          }
+          const errorMsg = error instanceof Error ? `Error: ${error.message}` : "An unexpected error occurred.";
+          toast.error(errorMsg);
+          setStatusMsg(errorMsg);
         } finally {
           setIsLoading(false);
         }
       },
       (error) => {
         setIsLoading(false);
-        setStatusMsg("Error: Please allow location access to clock out.");
+        const errorMsg = "Error: Please allow location access to clock out.";
+        toast.error(errorMsg);
+        setStatusMsg(errorMsg);
         console.error(error);
       },
       { enableHighAccuracy: true } 

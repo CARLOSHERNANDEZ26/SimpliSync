@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { clockInEmployee } from "@/services/attendance"; 
+import toast from "react-hot-toast";
 
 export default function ClockInButton() {
   const { user, isClockedIn } = useAuth();
@@ -21,7 +22,9 @@ export default function ClockInButton() {
       setStatusMsg("Acquiring satellite lock...");
       
       if (!navigator.geolocation) {
-        setStatusMsg("Geolocation is not supported by your browser.");
+        const errorMsg = "Geolocation is not supported by your browser.";
+        setStatusMsg(errorMsg);
+        toast.error(errorMsg);
         setIsLoading(false);
         return;
       }
@@ -33,20 +36,26 @@ export default function ClockInButton() {
           try {
             await clockInEmployee(user?.uid || "", latitude, longitude);
             setStatusMsg("Ika'y nakapag Clock In na!"); 
+            toast.success("Successfully clocked in!");
           } catch (error) {
+            let errorText = "An unexpected error occurred. Please try again.";
             if (error instanceof Error && error.message === "Please allow location access to clock in.") {
-              setStatusMsg(error.message); 
+              errorText = error.message;
             } else if (error instanceof Error && error.message.includes("You are outside the allowed area")) {
-              setStatusMsg(error.message); 
-            } else {
-              setStatusMsg(error instanceof Error ? error.message : "An unexpected error occurred. Please try again."); 
-            } 
+              errorText = error.message;
+            } else if (error instanceof Error) {
+              errorText = error.message;
+            }
+            setStatusMsg(errorText);
+            toast.error(errorText);
           } finally {
             setIsLoading(false);
           }
         },
         () => {
-          setStatusMsg("Please allow location access to clock in.");
+          const errorMsg = "Please allow location access to clock in.";
+          setStatusMsg(errorMsg);
+          toast.error(errorMsg);
           setIsLoading(false);
         },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 } 
