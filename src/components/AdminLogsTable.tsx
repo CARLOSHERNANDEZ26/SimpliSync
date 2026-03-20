@@ -1,11 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { fetchAllAttendanceLogs } from "@/services/attendance";
+import { collection, query, orderBy, onSnapshot, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase"; 
 
 interface AttendanceLog {
   id: string;
   userId: string;
+  fullName: string; 
+  role: string;     
   timeIn: Date | null;
   timeOut: Date | null;
   status: string;
@@ -19,19 +22,62 @@ export default function AdminLogsTable() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        const data = await fetchAllAttendanceLogs();
-        setLogs(data);
-      } catch (err) {
-        setError("Failed to load attendance records.");
-        console.error(err);
-      } finally {
-        setIsLoading(false);
-      }
+    let unsubscribe: () => void; 
+
+    const loadData = () => {
+      // 1. Live Listen to Users first
+      const usersUnsub = onSnapshot(collection(db, "users"), (userSnap) => {
+        const userDictionary: Record<string, { fullName: string, role: string }> = {};
+        userSnap.forEach((doc) => {
+          const userData = doc.data();
+          userDictionary[doc.id] = {
+            fullName: userData.fullName || "Unknown User",
+            role: userData.role || "No Role Assigned"
+          };
+        });
+
+        const q = query(collection(db, "attendanceLogs"), orderBy("timeIn", "desc"));
+        
+        unsubscribe = onSnapshot(q, (snapshot) => { 
+            const liveLogs: AttendanceLog[] = []; 
+            
+            snapshot.forEach((doc) => {
+              const data = doc.data();
+              const employeeProfile = userDictionary[data.userId] || { fullName: "Unknown User", role: "N/A" }; 
+
+              liveLogs.push({
+                id: doc.id,
+                userId: data.userId,
+                fullName: employeeProfile.fullName, 
+                role: employeeProfile.role,         
+                timeIn: data.timeIn ? data.timeIn.toDate() : null,
+                timeOut: data.timeOut ? data.timeOut.toDate() : null,
+                status: data.status,
+                lat: data.lat,
+                lng: data.lng,
+              });
+            });
+            
+            setLogs(liveLogs);
+            setIsLoading(false);
+          },
+          (err) => {
+            console.error("Error fetching live admin logs:", err);
+            setError("Failed to load company attendance records.");
+            setIsLoading(false);
+          }
+        );
+      }); // <--- THIS WAS THE MISSING CLOSING FOR THE USERS LISTENER
+
+      return usersUnsub;
     };
 
-    loadData();
+    const usersCleanup = loadData();
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+      if (usersCleanup) usersCleanup();
+    };
   }, []);
 
   const formatTime = (date: Date | null) => {
@@ -46,17 +92,14 @@ export default function AdminLogsTable() {
 
   const calculateDuration = (timeIn: Date | null, timeOut: Date | null) => {
     if (!timeIn || !timeOut) return "Working...";
-    
     const diffMs = timeOut.getTime() - timeIn.getTime();
     const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
     const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-    
     if (diffHrs === 0) return `${diffMins}m`;
     return `${diffHrs}h ${diffMins}m`;
   };
 
-  // 4. Loading & Error States
-  if (isLoading) return <div className="text-center p-12 text-teal-600 animate-pulse font-medium">Loading HR data...</div>;
+  if (isLoading) return <div className="text-center p-12 text-teal-600 animate-pulse font-medium">Syncing cross-collection data...</div>;
   if (error) return <div className="text-center p-12 text-rose-500 font-medium">{error}</div>;
 
   const handleExportCSV = () => {
@@ -65,55 +108,42 @@ export default function AdminLogsTable() {
       return;
     }
 
-    // 1. Create the CSV Headers
-    const headers = ["Date", "Employee ID", "Time In", "Time Out", "Duration", "Status", "Latitude", "Longitude"];
+    // Upgraded CSV Headers to include Name and Role!
+    const headers = ["Date", "Employee Name", "Role", "Time In", "Time Out", "Duration", "Status", "Latitude", "Longitude", "System ID"];
 
-    // 2. Loop through the logs and format each row
     const csvRows = logs.map((log) => {
-      // Safely format the data so it doesn't break if someone forgot to clock out
       const date = log.timeIn ? log.timeIn.toLocaleDateString() : "N/A";
       const timeIn = log.timeIn ? log.timeIn.toLocaleTimeString() : "--:--";
       const timeOut = log.timeOut ? log.timeOut.toLocaleTimeString() : "Working...";
       
-      // Calculate duration for the spreadsheet
       let duration = "Working...";
       if (log.timeIn && log.timeOut) {
         const diffMs = log.timeOut.getTime() - log.timeIn.getTime();
         const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
-        const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+        const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60)); 
         duration = `${diffHrs}h ${diffMins}m`;
       }
 
-      // Return the row as an array of strings, wrapping in quotes to prevent comma errors
-      return `"${date}","${log.userId}","${timeIn}","${timeOut}","${duration}","${log.status}","${log.lat || ''}","${log.lng || ''}"`;
+      return `"${date}","${log.fullName}","${log.role}","${timeIn}","${timeOut}","${duration}","${log.status}","${log.lat || ''}","${log.lng || ''}","${log.userId}"`;
     });
 
-    // 3. Combine headers and rows with line breaks (\n)
     const csvString = [headers.join(","), ...csvRows].join("\n");
-
-    // 4. Create a hidden download link and click it programmatically
     const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    
-    // Name the file dynamically based on today's date
     const today = new Date().toLocaleDateString().replace(/\//g, '-');
     link.setAttribute("download", `SimpliSync_Timesheet_${today}.csv`);
-    
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link); // Clean up after download
+    document.body.removeChild(link); 
   };
 
-  // 5. The Main UI Table
   return (
-    <div className="w-full bg-white dark:bg-white/5 backdrop-blur-md rounded-2xl shadow-sm border border-gray-200 dark:border-white/10 overflow-hidden">
+    <div className="w-full mt-8 bg-white dark:bg-white/5 backdrop-blur-md rounded-2xl shadow-sm border border-gray-200 dark:border-white/10 overflow-hidden">
       
-      {/* Table Header & Export Button */}
       <div className="px-6 py-4 border-b border-gray-200 dark:border-white/10 flex justify-between items-center">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Company Attendance Logs</h3>
-        
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Live Company Attendance</h3>
         <button 
           onClick={handleExportCSV}
           className="flex items-center gap-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 dark:bg-emerald-500/20 dark:hover:bg-emerald-500/30 dark:text-emerald-300 text-sm font-semibold py-2 px-4 rounded-lg transition-colors duration-200"
@@ -130,7 +160,8 @@ export default function AdminLogsTable() {
           <thead className="text-xs text-gray-700 uppercase bg-gray-50/50 dark:bg-white/5 dark:text-gray-300">
             <tr>
               <th scope="col" className="px-6 py-4">Date</th>
-              <th scope="col" className="px-6 py-4">Employee ID</th>
+              {/* Changed Employee ID to Employee */}
+              <th scope="col" className="px-6 py-4">Employee</th>
               <th scope="col" className="px-6 py-4">Time In</th>
               <th scope="col" className="px-6 py-4">Time Out</th>
               <th scope="col" className="px-6 py-4">Duration</th>
@@ -148,9 +179,15 @@ export default function AdminLogsTable() {
                   <td className="px-6 py-4 font-medium text-gray-900 dark:text-white whitespace-nowrap">
                     {formatDate(log.timeIn)}
                   </td>
-                  <td className="px-6 py-4 font-mono text-xs text-gray-500 dark:text-gray-400 truncate max-w-[120px]">
-                    {log.userId}
+                  
+                  {/* The newly designed Employee Cell! */}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex flex-col">
+                      <span className="font-semibold text-gray-900 dark:text-white">{log.fullName}</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{log.role}</span>
+                    </div>
                   </td>
+
                   <td className="px-6 py-4 text-emerald-600 dark:text-emerald-400 font-medium whitespace-nowrap">
                     {formatTime(log.timeIn)}
                   </td>
@@ -162,6 +199,8 @@ export default function AdminLogsTable() {
                   </td>
                   <td className="px-6 py-4">
                     <span className={`px-2.5 py-1 rounded-md text-xs font-semibold tracking-wide ${
+                      /^Late/.test(log.status) ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-400' :
+                      /^On Time/.test(log.status) ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400' :
                       log.status === 'Completed' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400' :
                       log.status === 'Valid' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400' :
                       'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'

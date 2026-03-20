@@ -8,14 +8,31 @@ export const clockInEmployee = async (userId: string, latitude: number, longitud
     if (!isValidLocation) {
       throw new Error("Out_Of_Smart_Zone.");
     }
-    const attendanceRef = collection(db, "attendanceLogs"); 
+    
+   
+    const now = new Date();
+    const targetTime = new Date();
+    targetTime.setHours(8, 0, 0, 0); 
 
+    let finalStatus = "On Time";
+
+    if (now > targetTime) {
+      const diffInMs = now.getTime() - targetTime.getTime();
+      const diffInMins = Math.floor(diffInMs / (1000 * 60));
+      
+      if (diffInMins > 0) {
+        finalStatus = `Late (${diffInMins}m)`;
+      }
+    }
+
+    const attendanceRef = collection(db, "attendanceLogs"); 
     const docRef = await addDoc(attendanceRef, {
       userId,
       timeIn: serverTimestamp(),
+      timeOut: null,
       lat: latitude,
       lng: longitude,
-      status: "Valid",
+      status: finalStatus, 
     });
     
     console.log("Attendance record created with ID:", docRef.id);
@@ -37,7 +54,7 @@ export const clockOutEmployee = async (userId: string, latitude: number, longitu
       throw new Error("OUT_OF_BOUNDS");
     }
     const attendanceRef = collection(db, "attendanceLogs");
-    const q =  query(attendanceRef, where("userId", "==", userId)); 
+    const q =  query(attendanceRef, where("userId", "==", userId), where("timeOut", "==", null)); 
     
     const querySnapshot = await getDocs(q);
     console.log("Query returned documents:", querySnapshot.size);
@@ -60,7 +77,6 @@ export const clockOutEmployee = async (userId: string, latitude: number, longitu
       timeOut: serverTimestamp(),
       lat: latitude,
       lng: longitude,
-      status: "Completed",
     });
 
     console.log("Success! Clocked out of shift:", activeShiftId);

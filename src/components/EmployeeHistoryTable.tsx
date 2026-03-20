@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { fetchUserAttendanceLogs } from "@/services/attendance";
 import { useAuth } from "@/hooks/useAuth";
+// 1. Notice the new Firebase imports here!
+import { collection, query, where, orderBy, onSnapshot } from "firebase/firestore";
+import { db } from "@/lib/firebase"; 
 
 interface AttendanceLog {
   id: string;
@@ -18,24 +20,46 @@ export default function EmployeeHistoryTable() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const loadData = async () => {
-      if (!user) return; // Safety check
-      
-      try {
-        const data = await fetchUserAttendanceLogs(user.uid);
-        setLogs(data); 
-      } catch (err) { 
-        setError("Failed to load your attendance history."); 
-        console.error(err);
-      } finally { 
+    if (!user) return; // Safety check
+
+    // 2. Build the query to find only this specific employee's logs
+    const q = query(
+      collection(db, "attendanceLogs"),
+      where("userId", "==", user.uid),
+      orderBy("timeIn", "desc")
+    );
+
+    // 3. Attach the "Stethoscope" (onSnapshot) to listen for live database changes
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const liveLogs: AttendanceLog[] = [];
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          liveLogs.push({
+            id: doc.id,
+            timeIn: data.timeIn ? data.timeIn.toDate() : null,
+            timeOut: data.timeOut ? data.timeOut.toDate() : null,
+            status: data.status,
+          });
+        });
+        
+        // Instantly update the table whenever the database changes!
+        setLogs(liveLogs);
+        setIsLoading(false);
+      },
+      (err) => {
+        console.error("Error fetching live logs:", err);
+        setError("Failed to load your attendance history.");
         setIsLoading(false);
       }
-    };
+    );
 
-    loadData(); 
-  }, [user]); 
+    // Clean up the listener when the user leaves the page
+    return () => unsubscribe();
+  }, [user]);
 
-  const formatTime = (date: Date | null) => { 
+  const formatTime = (date: Date | null) => {
     if (!date) return "--:--"; 
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
@@ -45,7 +69,7 @@ export default function EmployeeHistoryTable() {
     return date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
   };
 
-  const calculateDuration = (timeIn: Date | null, timeOut: Date | null) => { 
+  const calculateDuration = (timeIn: Date | null, timeOut: Date | null) => {
     if (!timeIn || !timeOut) return "Working...";
     const diffMs = timeOut.getTime() - timeIn.getTime();
     const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
@@ -58,7 +82,7 @@ export default function EmployeeHistoryTable() {
   if (error) return <div className="text-center p-8 text-rose-500">{error}</div>;
 
   return (
-    <div className="w-full bg-white dark:bg-white/5 backdrop-blur-md rounded-2xl shadow-sm border border-gray-200 dark:border-white/10 overflow-hidden">
+    <div className="w-full mt-8 bg-white dark:bg-white/5 backdrop-blur-md rounded-2xl shadow-sm border border-gray-200 dark:border-white/10 overflow-hidden">
       <div className="px-6 py-4 border-b border-gray-200 dark:border-white/10">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">My Timesheet</h3>
       </div>
@@ -74,14 +98,14 @@ export default function EmployeeHistoryTable() {
             </tr>
           </thead>
           <tbody>
-            {logs.length === 0 ? ( 
+            {logs.length === 0 ? (
               <tr>
                 <td colSpan={4} className="px-6 py-8 text-center text-gray-500">No shifts recorded yet.</td>
               </tr>
             ) : (
-              logs.map((log) => ( 
-                <tr key={log.id} className="border-b dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"> 
-                  <td className="px-6 py-4 font-medium text-gray-900 dark:text-white whitespace-nowrap"> 
+              logs.map((log) => (
+                <tr key={log.id} className="border-b dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+                  <td className="px-6 py-4 font-medium text-gray-900 dark:text-white whitespace-nowrap">
                     {formatDate(log.timeIn)}
                   </td>
                   <td className="px-6 py-4 text-emerald-600 dark:text-emerald-400 font-medium whitespace-nowrap">
