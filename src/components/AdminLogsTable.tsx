@@ -108,7 +108,7 @@ export default function AdminLogsTable() {
 
   // 5. The Main UI Table
   return (
-    <div className="w-full mt-8 bg-white dark:bg-white/5 backdrop-blur-md rounded-2xl shadow-sm border border-gray-200 dark:border-white/10 overflow-hidden">
+    <div className="w-full bg-white dark:bg-white/5 backdrop-blur-md rounded-2xl shadow-sm border border-gray-200 dark:border-white/10 overflow-hidden">
       
       {/* Table Header & Export Button */}
       <div className="px-6 py-4 border-b border-gray-200 dark:border-white/10 flex justify-between items-center">

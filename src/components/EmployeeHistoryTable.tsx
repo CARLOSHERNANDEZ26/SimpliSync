@@ -58,7 +58,7 @@ export default function EmployeeHistoryTable() {
   if (error) return <div className="text-center p-8 text-rose-500">{error}</div>;
 
   return (
-    <div className="w-full mt-8 bg-white dark:bg-white/5 backdrop-blur-md rounded-2xl shadow-sm border border-gray-200 dark:border-white/10 overflow-hidden">
+    <div className="w-full bg-white dark:bg-white/5 backdrop-blur-md rounded-2xl shadow-sm border border-gray-200 dark:border-white/10 overflow-hidden">
       <div className="px-6 py-4 border-b border-gray-200 dark:border-white/10">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">My Timesheet</h3>
       </div>
