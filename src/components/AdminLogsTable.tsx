@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { collection, query, orderBy, onSnapshot, getDocs } from "firebase/firestore";
+import { collection, query, orderBy, onSnapshot, doc, deleteDoc, getDocs, where } from "firebase/firestore"; // Added getDocs
 import { db } from "@/lib/firebase"; 
+import toast from "react-hot-toast";
 
 interface AttendanceLog {
   id: string;
@@ -20,14 +21,24 @@ export default function AdminLogsTable() {
   const [logs, setLogs] = useState<AttendanceLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
 
-  useEffect(() => {
-    let unsubscribe: () => void; 
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const today = new Date();
+    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+  });
 
-    const loadData = () => {
-      // 1. Live Listen to Users first
-      const usersUnsub = onSnapshot(collection(db, "users"), (userSnap) => {
+
+ useEffect(() => {
+    let unsubscribeLogs: () => void;
+    let isMounted = true; 
+
+    const loadData = async () => {
+      try {
+        // 1. Fetch Users ONCE (Code remains the same)
+        const userSnap = await getDocs(collection(db, "users"));
         const userDictionary: Record<string, { fullName: string, role: string }> = {};
+        
         userSnap.forEach((doc) => {
           const userData = doc.data();
           userDictionary[doc.id] = {
@@ -35,50 +46,79 @@ export default function AdminLogsTable() {
             role: userData.role || "No Role Assigned"
           };
         });
+        const [year, month] = selectedMonth.split('-');
+        const startOfMonth = new Date(parseInt(year), parseInt(month) - 1, 1, 0, 0, 0);
+        const endOfMonth = new Date(parseInt(year), parseInt(month), 0, 23, 59, 59, 999);
 
-        const q = query(collection(db, "attendanceLogs"), orderBy("timeIn", "desc"));
+        const q = query(
+          collection(db, "attendanceLogs"),
+          where("timeIn", ">=", startOfMonth),
+          where("timeIn", "<=", endOfMonth),
+          orderBy("timeIn", "desc")
+        );
         
-        unsubscribe = onSnapshot(q, (snapshot) => { 
-            const liveLogs: AttendanceLog[] = []; 
-            
-            snapshot.forEach((doc) => {
-              const data = doc.data();
-              const employeeProfile = userDictionary[data.userId] || { fullName: "Unknown User", role: "N/A" }; 
+        unsubscribeLogs = onSnapshot(q, (snapshot) => { 
+          if (!isMounted) return;
 
-              liveLogs.push({
-                id: doc.id,
-                userId: data.userId,
-                fullName: employeeProfile.fullName, 
-                role: employeeProfile.role,         
-                timeIn: data.timeIn ? data.timeIn.toDate() : null,
-                timeOut: data.timeOut ? data.timeOut.toDate() : null,
-                status: data.status,
-                lat: data.lat,
-                lng: data.lng,
-              });
+          const liveLogs: AttendanceLog[] = []; 
+          
+          snapshot.forEach((doc) => {
+            const data = doc.data();
+            const employeeProfile = userDictionary[data.userId] || { fullName: "Unknown User", role: "N/A" }; 
+
+            liveLogs.push({
+              id: doc.id,
+              userId: data.userId,
+              fullName: employeeProfile.fullName, 
+              role: employeeProfile.role,         
+              timeIn: data.timeIn ? data.timeIn.toDate() : null,
+              timeOut: data.timeOut ? data.timeOut.toDate() : null,
+              status: data.status,
+              lat: data.lat,
+              lng: data.lng,
             });
-            
-            setLogs(liveLogs);
-            setIsLoading(false);
-          },
-          (err) => {
-            console.error("Error fetching live admin logs:", err);
+          });
+
+          setLogs(liveLogs);
+          setIsLoading(false);
+        },
+        (err) => {
+          console.error("Error fetching live admin logs:", err);
+          if (isMounted) {
             setError("Failed to load company attendance records.");
             setIsLoading(false);
           }
-        );
-      }); // <--- THIS WAS THE MISSING CLOSING FOR THE USERS LISTENER
+        });
 
-      return usersUnsub;
+      } catch (err) {
+        console.error("Error in Smart Fetch:", err);
+        if (isMounted) {
+          setError("Failed to initialize database connection.");
+          setIsLoading(false);
+        }
+      }
     };
 
-    const usersCleanup = loadData();
+    loadData();
 
-    return () => {
-      if (unsubscribe) unsubscribe();
-      if (usersCleanup) usersCleanup();
+    return () => { 
+      isMounted = false; 
+      if (unsubscribeLogs) unsubscribeLogs(); 
     };
-  }, []);
+  }, [selectedMonth]);
+
+  const handleDeleteLog = async (logId: string) => {
+    const isConfirmed = window.confirm("Are you sure you want to delete this attendance record? This cannot be undone.");
+    if (!isConfirmed) return;
+
+    try {
+      await deleteDoc(doc(db, "attendanceLogs", logId)); 
+      toast.success("Record permanently deleted.");
+    } catch (error) {
+      console.error("Error deleting log:", error);
+      toast.error("Failed to delete the record.");
+    }
+  };
 
   const formatTime = (date: Date | null) => {
     if (!date) return "--:--"; 
@@ -103,15 +143,18 @@ export default function AdminLogsTable() {
   if (error) return <div className="text-center p-12 text-rose-500 font-medium">{error}</div>;
 
   const handleExportCSV = () => {
-    if (logs.length === 0) {
+    if (filteredLogs.length === 0) {
       alert("No data to export!");
       return;
     }
 
-    // Upgraded CSV Headers to include Name and Role!
+    const escapeCSV = (str: string) => {
+      return `"${str.replace(/"/g, '""')}"`; 
+    };
+
     const headers = ["Date", "Employee Name", "Role", "Time In", "Time Out", "Duration", "Status", "Latitude", "Longitude", "System ID"];
 
-    const csvRows = logs.map((log) => {
+    const csvRows = filteredLogs.map((log) => {
       const date = log.timeIn ? log.timeIn.toLocaleDateString() : "N/A";
       const timeIn = log.timeIn ? log.timeIn.toLocaleTimeString() : "--:--";
       const timeOut = log.timeOut ? log.timeOut.toLocaleTimeString() : "Working...";
@@ -124,7 +167,8 @@ export default function AdminLogsTable() {
         duration = `${diffHrs}h ${diffMins}m`;
       }
 
-      return `"${date}","${log.fullName}","${log.role}","${timeIn}","${timeOut}","${duration}","${log.status}","${log.lat || ''}","${log.lng || ''}","${log.userId}"`;
+      // Using the escape helper for strings that might have user input
+      return `${escapeCSV(date)},${escapeCSV(log.fullName)},${escapeCSV(log.role)},${escapeCSV(timeIn)},${escapeCSV(timeOut)},${escapeCSV(duration)},${escapeCSV(log.status)},${escapeCSV((log.lat || '').toString())},${escapeCSV((log.lng || '').toString())},${escapeCSV(log.userId)}`;
     });
 
     const csvString = [headers.join(","), ...csvRows].join("\n");
@@ -139,20 +183,68 @@ export default function AdminLogsTable() {
     document.body.removeChild(link); 
   };
 
-  return (
+  const filteredLogs = logs.filter((log) => 
+    log.fullName.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const searchTotalMs = filteredLogs.reduce((total, log) => {
+    if (log.timeIn && log.timeOut) {
+      return total + (log.timeOut.getTime() - log.timeIn.getTime());
+    }
+    return total;
+  }, 0); 
+
+  const displayHours = (searchTotalMs / (1000 * 60 * 60)).toFixed(1);
+
+return (
     <div className="w-full mt-8 bg-white dark:bg-white/5 backdrop-blur-md rounded-2xl shadow-sm border border-gray-200 dark:border-white/10 overflow-hidden">
-      
-      <div className="px-6 py-4 border-b border-gray-200 dark:border-white/10 flex justify-between items-center">
+      {/* SECTION 1: HEADER (Title & Controls) */}
+      <div className="px-6 py-4 border-b border-gray-200 dark:border-white/10 flex justify-between items-center flex-wrap gap-4">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Live Company Attendance</h3>
-        <button 
-          onClick={handleExportCSV}
-          className="flex items-center gap-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 dark:bg-emerald-500/20 dark:hover:bg-emerald-500/30 dark:text-emerald-300 text-sm font-semibold py-2 px-4 rounded-lg transition-colors duration-200"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+        
+        <div className="flex items-center gap-3">
+          <input 
+            type="month" 
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(e.target.value)}
+            className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-teal-500 focus:border-teal-500 block p-2 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-teal-500 dark:focus:border-teal-500 transition-colors"
+          />
+
+          <div className="relative group flex-1 w-full md:max-w-xs">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-teal-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
-          Export CSV
-        </button>
+          <input 
+            type="text" 
+            placeholder="Search employee..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none dark:bg-gray-700 dark:border-gray-600 dark:text-white transition-all"
+          />
+        </div>
+
+          <button 
+            onClick={handleExportCSV} 
+            className="flex items-center gap-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 dark:bg-emerald-500/20 dark:hover:bg-emerald-500/30 dark:text-emerald-300 text-sm font-semibold py-2 px-4 rounded-lg transition-colors duration-200"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Export CSV
+          </button>
+        </div>
+      </div>
+
+      {/* SECTION 2: SUMMARY BAR (Now outside the header) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 px-6 py-4 bg-gray-50/50 dark:bg-white/5 border-b border-gray-200 dark:border-white/10">
+        <div className="p-4 bg-white dark:bg-white/5 rounded-xl border border-gray-200 dark:border-white/10 shadow-sm">
+          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total Monthly Logs</p>
+          <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{filteredLogs.length}</p>
+        </div>
+        <div className="p-4 bg-white dark:bg-white/5 rounded-xl border border-gray-200 dark:border-white/10 shadow-sm">
+          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total Man-Hours</p>
+          <p className="text-2xl font-bold text-teal-600 dark:text-teal-400 mt-1">{displayHours}h</p>
+        </div>
       </div>
       
       <div className="overflow-x-auto">
@@ -160,27 +252,26 @@ export default function AdminLogsTable() {
           <thead className="text-xs text-gray-700 uppercase bg-gray-50/50 dark:bg-white/5 dark:text-gray-300">
             <tr>
               <th scope="col" className="px-6 py-4">Date</th>
-              {/* Changed Employee ID to Employee */}
               <th scope="col" className="px-6 py-4">Employee</th>
               <th scope="col" className="px-6 py-4">Time In</th>
               <th scope="col" className="px-6 py-4">Time Out</th>
               <th scope="col" className="px-6 py-4">Duration</th>
               <th scope="col" className="px-6 py-4">Status</th>
+              <th scope="col" className="px-6 py-4 text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {logs.length === 0 ? (
+            {filteredLogs.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-6 py-12 text-center text-gray-500">No attendance records found in the database.</td>
+                <td colSpan={7} className="px-6 py-12 text-center text-gray-500">No attendance records found in the database.</td>
               </tr>
             ) : (
-              logs.map((log) => (
+              filteredLogs.map((log) => (
                 <tr key={log.id} className="border-b dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
                   <td className="px-6 py-4 font-medium text-gray-900 dark:text-white whitespace-nowrap">
                     {formatDate(log.timeIn)}
                   </td>
                   
-                  {/* The newly designed Employee Cell! */}
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex flex-col">
                       <span className="font-semibold text-gray-900 dark:text-white">{log.fullName}</span>
@@ -207,6 +298,18 @@ export default function AdminLogsTable() {
                     }`}>
                       {log.status}
                     </span>
+                  </td>
+
+                  <td className="px-6 py-4 text-right whitespace-nowrap">
+                    <button
+                      onClick={() => handleDeleteLog(log.id)}
+                      className="text-gray-400 hover:text-rose-500 transition-colors p-2 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-500/10"
+                      title="Delete this record"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
                   </td>
                 </tr>
               ))

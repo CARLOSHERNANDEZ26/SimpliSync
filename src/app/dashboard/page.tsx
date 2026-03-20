@@ -11,6 +11,7 @@
   import EmployeeHistoryTable from "@/components/EmployeeHistoryTable";
   import toast from "react-hot-toast";
   import ProfileSettings from "@/components/ProfileSettings";
+import AdminSettings from "@/components/AdminSettings";
 
   export default function DashboardPage() {
     // 1. We don't need 'loading' here anymore! ProtectedRoute handles it.
@@ -119,8 +120,10 @@
                 )}
                 
                 {/* Tables */}
-                <div className="w-full">
-                  {isAdmin ? <AdminLogsTable /> : <EmployeeHistoryTable />}
+                <div className="w-full flex flex-col gap-2">
+                  {isAdmin ? <AdminLogsTable /> : <EmployeeHistoryTable /> } 
+                  {/* The AdminSettings component is only rendered for admins, and it's placed below the tables to avoid overwhelming regular users. *\/ */}
+                  { isAdmin && <AdminSettings /> }
                 </div>
               </div>
 

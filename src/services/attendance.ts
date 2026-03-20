@@ -1,6 +1,7 @@
 import { db } from "../lib/firebase";
-import { collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc, doc, orderBy } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc, doc, orderBy, getDoc } from "firebase/firestore";
 import { isWithinSmartZone } from "@/utils/geo";    
+import { time } from "console";
 
 export const clockInEmployee = async (userId: string, latitude: number, longitude: number) => {
   try {
@@ -12,7 +13,25 @@ export const clockInEmployee = async (userId: string, latitude: number, longitud
    
     const now = new Date();
     const targetTime = new Date();
-    targetTime.setHours(8, 0, 0, 0); 
+
+    let targetHour = 8;
+    let targetMinute = 0;
+
+    try {
+      const settingsSnap = await getDoc(doc(db, "settings", "company"));
+      if (settingsSnap.exists() && settingsSnap.data().shiftStartTime) {
+        const timeString = settingsSnap.data().shiftStartTime; 
+        
+        const [hourStr, minuteStr] = timeString.split(':');
+        targetHour = parseInt(hourStr, 10);
+        targetMinute = parseInt(minuteStr, 10);
+
+      }
+    } catch (e) {
+      console.warn("Could not load company settings, defaulting to 8:00 AM", e);
+    }
+
+    targetTime.setHours(targetHour, targetMinute, 0, 0);
 
     let finalStatus = "On Time";
 
