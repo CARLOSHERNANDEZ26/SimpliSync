@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react"; 
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { auth } from "@/lib/firebase";
@@ -13,6 +14,16 @@ export default function Navbar() {
   const { user } = useAuth();
   const router = useRouter();
   const { theme, setTheme } = useTheme();
+  
+  // The Hydration Fix State
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      setMounted(true)
+    });
+    return () => cancelAnimationFrame(frame);
+  }, []);
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -55,19 +66,23 @@ export default function Navbar() {
           <LayoutDashboard className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" />
         </Link>
 
+        {/* Hydration-Safe Theme Toggle */}
         <button
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          className="p-2.5 rounded-xl text-gray-600 dark:text-gray-300 hover:text-amber-500 dark:hover:text-amber-400 hover:bg-gray-100 dark:hover:bg-white/10 active:bg-gray-200 dark:active:bg-white/20 transition-all active:scale-95 flex items-center justify-center group"
+          className="p-2.5 rounded-xl text-gray-600 dark:text-gray-300 hover:text-amber-500 dark:hover:text-amber-400 hover:bg-gray-100 dark:hover:bg-white/10 active:bg-gray-200 dark:active:bg-white/20 transition-all active:scale-95 flex items-center justify-center group min-w-[40px] min-h-[40px]"
           aria-label="Toggle Dark Mode"
           title="Toggle Theme"
         >
-          {theme === "dark" ? (
-            <Sun className="w-5 h-5 group-hover:rotate-45 transition-transform duration-300" />
-          ) : (
-            <Moon className="w-5 h-5 group-hover:-rotate-12 transition-transform duration-300" />
+          {mounted && (
+            theme === "dark" ? (
+              <Sun className="w-5 h-5 group-hover:rotate-45 transition-transform duration-300" />
+            ) : (
+              <Moon className="w-5 h-5 group-hover:-rotate-12 transition-transform duration-300" />
+            )
           )}
         </button>
 
+        {/* FIXED: Settings Link (Visible to everyone, routes to /settings) */}
         <Link
           href="/settings"
           className="p-2.5 rounded-xl text-gray-600 dark:text-gray-300 hover:text-teal-600 dark:hover:text-teal-400 hover:bg-gray-100 dark:hover:bg-white/10 active:bg-gray-200 dark:active:bg-white/20 transition-all active:scale-95 flex items-center justify-center group"
