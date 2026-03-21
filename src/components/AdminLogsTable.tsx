@@ -247,9 +247,9 @@ return (
         </div>
       </div>
       
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-          <thead className="text-xs text-gray-700 uppercase bg-gray-50/50 dark:bg-white/5 dark:text-gray-300">
+      <div className="w-full px-4 md:px-0">
+        <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400 block md:table">
+          <thead className="text-xs text-gray-700 uppercase bg-gray-50/50 dark:bg-white/5 dark:text-gray-300 hidden md:table-header-group">
             <tr>
               <th scope="col" className="px-6 py-4">Date</th>
               <th scope="col" className="px-6 py-4">Employee</th>
@@ -260,35 +260,41 @@ return (
               <th scope="col" className="px-6 py-4 text-right">Actions</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="block md:table-row-group">
             {filteredLogs.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="px-6 py-12 text-center text-gray-500">No attendance records found in the database.</td>
+              <tr className="block md:table-row">
+                <td colSpan={7} className="px-6 py-12 text-center text-gray-500 block md:table-cell">No attendance records found in the database.</td>
               </tr>
             ) : (
               filteredLogs.map((log) => (
-                <tr key={log.id} className="border-b dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
-                  <td className="px-6 py-4 font-medium text-gray-900 dark:text-white whitespace-nowrap">
-                    {formatDate(log.timeIn)}
+                <tr key={log.id} className="block md:table-row border border-gray-100 dark:border-white/5 md:border-x-0 md:border-t-0 md:border-b hover:bg-gray-50 dark:hover:bg-white/5 transition-colors mb-4 md:mb-0 bg-white dark:bg-white/5 md:bg-transparent rounded-2xl md:rounded-none p-4 md:p-0 shadow-sm md:shadow-none relative">
+                  <td className="flex justify-between items-center md:table-cell px-2 md:px-6 py-2 md:py-4 font-medium text-gray-900 dark:text-white border-b border-gray-100 dark:border-white/5 md:border-none">
+                    <span className="md:hidden text-xs text-gray-500 uppercase tracking-widest font-semibold">Date</span>
+                    <span>{formatDate(log.timeIn)}</span>
                   </td>
                   
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex flex-col">
-                      <span className="font-semibold text-gray-900 dark:text-white">{log.fullName}</span>
+                  <td className="flex justify-between items-center md:table-cell px-2 md:px-6 py-3 md:py-4 border-b border-gray-100 dark:border-white/5 md:border-none">
+                    <span className="md:hidden text-xs text-gray-500 uppercase tracking-widest font-semibold">Employee</span>
+                    <div className="flex flex-col text-right md:text-left">
+                      <span className="font-semibold text-gray-900 dark:text-white leading-tight">{log.fullName}</span>
                       <span className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{log.role}</span>
                     </div>
                   </td>
 
-                  <td className="px-6 py-4 text-emerald-600 dark:text-emerald-400 font-medium whitespace-nowrap">
-                    {formatTime(log.timeIn)}
+                  <td className="flex justify-between items-center md:table-cell px-2 md:px-6 py-2 md:py-4 border-b border-gray-100 dark:border-white/5 md:border-none">
+                    <span className="md:hidden text-xs text-gray-500 uppercase tracking-widest font-semibold">Time In</span>
+                    <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{formatTime(log.timeIn)}</span>
                   </td>
-                  <td className="px-6 py-4 text-rose-600 dark:text-rose-400 font-medium whitespace-nowrap">
-                    {formatTime(log.timeOut)}
+                  <td className="flex justify-between items-center md:table-cell px-2 md:px-6 py-2 md:py-4 border-b border-gray-100 dark:border-white/5 md:border-none">
+                    <span className="md:hidden text-xs text-gray-500 uppercase tracking-widest font-semibold">Time Out</span>
+                    <span className="text-rose-600 dark:text-rose-400 font-semibold">{formatTime(log.timeOut)}</span>
                   </td>
-                  <td className="px-6 py-4 font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                    {calculateDuration(log.timeIn, log.timeOut)}
+                  <td className="flex justify-between items-center md:table-cell px-2 md:px-6 py-2 md:py-4 border-b border-gray-100 dark:border-white/5 md:border-none">
+                    <span className="md:hidden text-xs text-gray-500 uppercase tracking-widest font-semibold">Duration</span>
+                    <span className="font-medium text-gray-700 dark:text-gray-300">{calculateDuration(log.timeIn, log.timeOut)}</span>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="flex justify-between items-center md:table-cell px-2 md:px-6 py-3 md:py-4 border-b border-gray-100 dark:border-white/5 md:border-none">
+                    <span className="md:hidden text-xs text-gray-500 uppercase tracking-widest font-semibold">Status</span>
                     <span className={`px-2.5 py-1 rounded-md text-xs font-semibold tracking-wide ${
                       /^Late/.test(log.status) ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-400' :
                       /^On Time/.test(log.status) ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400' :
@@ -300,10 +306,11 @@ return (
                     </span>
                   </td>
 
-                  <td className="px-6 py-4 text-right whitespace-nowrap">
+                  <td className="flex justify-between items-center md:table-cell px-2 md:px-6 py-2 md:py-4 text-right">
+                    <span className="md:hidden text-xs text-gray-500 uppercase tracking-widest font-semibold">Actions</span>
                     <button
                       onClick={() => handleDeleteLog(log.id)}
-                      className="text-gray-400 hover:text-rose-500 transition-colors p-2 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-500/10"
+                      className="text-gray-400 hover:text-rose-500 transition-colors p-2 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-500/10 active:scale-95"
                       title="Delete this record"
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
