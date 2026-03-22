@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
-// 1. Notice the new Firebase imports here!
-import { collection, query, where, orderBy, onSnapshot } from "firebase/firestore";
+import { collection, query, where, orderBy, onSnapshot, limit } from "firebase/firestore";
 import { db } from "@/lib/firebase"; 
 
 interface AttendanceLog {
@@ -20,16 +19,15 @@ export default function EmployeeHistoryTable() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!user) return; // Safety check
+    if (!user?.uid) return; 
 
-    // 2. Build the query to find only this specific employee's logs
     const q = query(
       collection(db, "attendanceLogs"),
       where("userId", "==", user.uid),
-      orderBy("timeIn", "desc")
+      orderBy("timeIn", "desc"),
+      limit(30)
     );
 
-    // 3. Attach the "Stethoscope" (onSnapshot) to listen for live database changes
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
@@ -38,26 +36,25 @@ export default function EmployeeHistoryTable() {
           const data = doc.data();
           liveLogs.push({
             id: doc.id,
-            timeIn: data.timeIn ? data.timeIn.toDate() : null,
-            timeOut: data.timeOut ? data.timeOut.toDate() : null,
-            status: data.status,
+            // Safety check for .toDate() during optimistic updates
+            timeIn: data.timeIn?.toDate ? data.timeIn.toDate() : null,
+            timeOut: data.timeOut?.toDate ? data.timeOut.toDate() : null,
+            status: data.status || "N/A",
           });
         });
         
-        // Instantly update the table whenever the database changes!
         setLogs(liveLogs);
         setIsLoading(false);
       },
       (err) => {
-        console.error("Error fetching live logs:", err);
-        setError("Failed to load your attendance history.");
+        console.error("Firebase Listener Error:", err);
+        setError("Unable to sync your history. Check your connection.");
         setIsLoading(false);
       }
     );
 
-    // Clean up the listener when the user leaves the page
     return () => unsubscribe();
-  }, [user]);
+  }, [user?.uid]);
 
   const formatTime = (date: Date | null) => {
     if (!date) return "--:--"; 
@@ -74,17 +71,24 @@ export default function EmployeeHistoryTable() {
     const diffMs = timeOut.getTime() - timeIn.getTime();
     const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
     const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-    if (diffHrs === 0) return `${diffMins}m`;
-    return `${diffHrs}h ${diffMins}m`;
+    return diffHrs === 0 ? `${diffMins}m` : `${diffHrs}h ${diffMins}m`;
   };
 
-  if (isLoading) return <div className="text-center p-8 text-teal-600 animate-pulse">Loading your history...</div>;
-  if (error) return <div className="text-center p-8 text-rose-500">{error}</div>;
+  // Helper function to style the badges
+  const getStatusStyles = (status: string) => {
+    if (/^Late/.test(status)) return 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-400';
+    if (/^On Time/.test(status)) return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400';
+    if (status === 'Valid' || status === 'Completed') return 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400';
+    return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400';
+  };
+
+  if (isLoading) return <div className="text-center p-8 text-teal-600 animate-pulse font-medium">Syncing your records...</div>;
+  if (error) return <div className="text-center p-8 text-rose-500 font-medium">{error}</div>;
 
   return (
-    <div className="w-full mt-8 bg-white dark:bg-white/5 backdrop-blur-md rounded-2xl shadow-sm border border-gray-200 dark:border-white/10 overflow-hidden">
+    <div className="w-full mt-8 bg-white dark:bg-white/5 backdrop-blur-md rounded-2xl shadow-sm border border-gray-200 dark:border-white/10 overflow-hidden transition-all">
       <div className="px-6 py-4 border-b border-gray-200 dark:border-white/10">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">My Timesheet</h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">My Attendance Logs</h3>
       </div>
       
       <div className="overflow-x-auto">
@@ -92,6 +96,7 @@ export default function EmployeeHistoryTable() {
           <thead className="text-xs text-gray-700 uppercase bg-gray-50/50 dark:bg-white/5 dark:text-gray-300">
             <tr>
               <th scope="col" className="px-6 py-4">Date</th>
+              <th scope="col" className="px-6 py-4">Status</th>
               <th scope="col" className="px-6 py-4">Time In</th>
               <th scope="col" className="px-6 py-4">Time Out</th>
               <th scope="col" className="px-6 py-4">Duration</th>
@@ -100,7 +105,7 @@ export default function EmployeeHistoryTable() {
           <tbody>
             {logs.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-6 py-8 text-center text-gray-500">No shifts recorded yet.</td>
+                <td colSpan={5} className="px-6 py-12 text-center text-gray-500 italic">No attendance records found.</td>
               </tr>
             ) : (
               logs.map((log) => (
@@ -108,13 +113,21 @@ export default function EmployeeHistoryTable() {
                   <td className="px-6 py-4 font-medium text-gray-900 dark:text-white whitespace-nowrap">
                     {formatDate(log.timeIn)}
                   </td>
-                  <td className="px-6 py-4 text-emerald-600 dark:text-emerald-400 font-medium whitespace-nowrap">
+                  
+                  {/* Status Badge Column */}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2.5 py-1 rounded-md text-xs font-semibold tracking-wide ${getStatusStyles(log.status)}`}>
+                      {log.status}
+                    </span>
+                  </td>
+
+                  <td className="px-6 py-4 text-emerald-600 dark:text-emerald-400 font-bold whitespace-nowrap">
                     {formatTime(log.timeIn)}
                   </td>
-                  <td className="px-6 py-4 text-rose-600 dark:text-rose-400 font-medium whitespace-nowrap">
+                  <td className="px-6 py-4 text-rose-600 dark:text-rose-400 font-bold whitespace-nowrap">
                     {formatTime(log.timeOut)}
                   </td>
-                  <td className="px-6 py-4 font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                  <td className="px-6 py-4 font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
                     {calculateDuration(log.timeIn, log.timeOut)}
                   </td>
                 </tr>

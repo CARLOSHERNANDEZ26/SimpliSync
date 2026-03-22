@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useAuth } from "@/hooks/useAuth";
 import { collection, query, orderBy, onSnapshot, doc, deleteDoc, getDocs, where } from "firebase/firestore"; // Added getDocs
 import { db } from "@/lib/firebase"; 
 import toast from "react-hot-toast";
@@ -18,10 +19,12 @@ interface AttendanceLog {
 }
 
 export default function AdminLogsTable() {
+  const { user } = useAuth();
   const [logs, setLogs] = useState<AttendanceLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+     
 
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const today = new Date();
@@ -34,8 +37,9 @@ export default function AdminLogsTable() {
     let isMounted = true; 
 
     const loadData = async () => {
+      if (!user) return; 
+
       try {
-        // 1. Fetch Users ONCE (Code remains the same)
         const userSnap = await getDocs(collection(db, "users"));
         const userDictionary: Record<string, { fullName: string, role: string }> = {};
         
@@ -46,6 +50,7 @@ export default function AdminLogsTable() {
             role: userData.role || "No Role Assigned"
           };
         });
+
         const [year, month] = selectedMonth.split('-');
         const startOfMonth = new Date(parseInt(year), parseInt(month) - 1, 1, 0, 0, 0);
         const endOfMonth = new Date(parseInt(year), parseInt(month), 0, 23, 59, 59, 999);
@@ -58,10 +63,9 @@ export default function AdminLogsTable() {
         );
         
         unsubscribeLogs = onSnapshot(q, (snapshot) => { 
-          if (!isMounted) return;
+          if (!isMounted || !user) return; // 2. DON'T UPDATE STATE IF LOGGED OUT
 
           const liveLogs: AttendanceLog[] = []; 
-          
           snapshot.forEach((doc) => {
             const data = doc.data();
             const employeeProfile = userDictionary[data.userId] || { fullName: "Unknown User", role: "N/A" }; 
@@ -71,31 +75,29 @@ export default function AdminLogsTable() {
               userId: data.userId,
               fullName: employeeProfile.fullName, 
               role: employeeProfile.role,         
-              timeIn: data.timeIn ? data.timeIn.toDate() : null,
-              timeOut: data.timeOut ? data.timeOut.toDate() : null,
+              timeIn: data.timeIn?.toDate ? data.timeIn.toDate() : null,
+              timeOut: data.timeOut?.toDate ? data.timeOut.toDate() : null,
               status: data.status,
               lat: data.lat,
               lng: data.lng,
             });
           });
-
+          
           setLogs(liveLogs);
           setIsLoading(false);
         },
         (err) => {
-          console.error("Error fetching live admin logs:", err);
-          if (isMounted) {
-            setError("Failed to load company attendance records.");
-            setIsLoading(false);
+          // 3. SILENCE THE LOGOUT NOISE
+          // Only show error if it's NOT a permission error during logout
+          if (err.code !== "permission-denied") {
+             console.error("Error fetching live admin logs:", err);
+             if (isMounted) setError("Failed to load records.");
           }
         });
 
       } catch (err) {
-        console.error("Error in Smart Fetch:", err);
-        if (isMounted) {
-          setError("Failed to initialize database connection.");
-          setIsLoading(false);
-        }
+        console.error("Error during initial data load:", err);
+        if (isMounted) setIsLoading(false);
       }
     };
 
@@ -105,7 +107,7 @@ export default function AdminLogsTable() {
       isMounted = false; 
       if (unsubscribeLogs) unsubscribeLogs(); 
     };
-  }, [selectedMonth]);
+  }, [selectedMonth, user]); 
 
   const handleDeleteLog = async (logId: string) => {
     const isConfirmed = window.confirm("Are you sure you want to delete this attendance record? This cannot be undone.");
