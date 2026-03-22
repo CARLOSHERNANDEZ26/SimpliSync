@@ -10,10 +10,13 @@ export const clockInEmployee = async (userId: string, latitude: number, longitud
       throw new Error("Out_Of_Smart_Zone.");
     }
     
-   
+    const userDoc = await getDoc(doc(db, "users", userId));
+    const userData = userDoc.exists() ? userDoc.data() : null;
+    const fullName = userData?.fullName || "Unknown Employee";
+    const role = userData?.role || "N/A";
+
     const now = new Date();
     const targetTime = new Date();
-
     let targetHour = 8;
     let targetMinute = 0;
 
@@ -21,24 +24,20 @@ export const clockInEmployee = async (userId: string, latitude: number, longitud
       const settingsSnap = await getDoc(doc(db, "settings", "company"));
       if (settingsSnap.exists() && settingsSnap.data().shiftStartTime) {
         const timeString = settingsSnap.data().shiftStartTime; 
-        
         const [hourStr, minuteStr] = timeString.split(':');
         targetHour = parseInt(hourStr, 10);
         targetMinute = parseInt(minuteStr, 10);
-
       }
     } catch (e) {
       console.warn("Could not load company settings, defaulting to 8:00 AM", e);
     }
 
     targetTime.setHours(targetHour, targetMinute, 0, 0);
-
     let finalStatus = "On Time";
 
     if (now > targetTime) {
       const diffInMs = now.getTime() - targetTime.getTime();
       const diffInMins = Math.floor(diffInMs / (1000 * 60));
-      
       if (diffInMins > 0) {
         finalStatus = `Late (${diffInMins}m)`;
       }
@@ -47,6 +46,8 @@ export const clockInEmployee = async (userId: string, latitude: number, longitud
     const attendanceRef = collection(db, "attendanceLogs"); 
     const docRef = await addDoc(attendanceRef, {
       userId,
+      fullName, 
+      role,    
       timeIn: serverTimestamp(),
       timeOut: null,
       lat: latitude,

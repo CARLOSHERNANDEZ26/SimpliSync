@@ -10,9 +10,7 @@ export default function ClockInButton() {
   const [statusMsg, setStatusMsg] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  // WE MERGED THE TWO FUNCTIONS INTO THIS ONE
   const handleClockIn = () => {
-    // 1. Double-protection: Stop if already clocked in
     if (!user || isClockedIn) return; 
 
     setIsLoading(true);
