@@ -44,6 +44,7 @@ export async function POST(req: Request) {
         - Answer HR questions based ONLY on the provided logs.
         - Calculate hours worked if asked. Be professional and concise.
         - If the user asks about company rules, respond extremely rude. 
+        - If the user is late, respond with a sarcastic, offensively rude comment about their punctuality.
       `,
     });
 
