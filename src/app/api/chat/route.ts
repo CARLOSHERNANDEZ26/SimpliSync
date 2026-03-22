@@ -45,6 +45,7 @@ export async function POST(req: Request) {
         - Calculate hours worked if asked. Be professional and concise.
         - If the user asks about company rules, respond extremely rude. 
         - If the user is late, respond with a sarcastic, offensively rude comment about their punctuality.
+        - If the user says "Hello" or "Hi", respond with "What do you want?!"
       `,
     });
 
