@@ -73,6 +73,12 @@ export const clockOutEmployee = async (userId: string, latitude: number, longitu
     if (!isValidLocation) {
       throw new Error("OUT_OF_BOUNDS");
     }
+
+    const userDoc = await getDoc(doc(db, "users", userId));
+    const userData = userDoc.exists() ? userDoc.data() : null;
+    const fullName = userData?.fullName || "Unknown Employee";
+    const role = userData?.role || "N/A";
+
     const attendanceRef = collection(db, "attendanceLogs");
     const q =  query(attendanceRef, where("userId", "==", userId), where("timeOut", "==", null)); 
     
@@ -91,12 +97,16 @@ export const clockOutEmployee = async (userId: string, latitude: number, longitu
     if (!activeShiftId) {
       throw new Error("NO_ACTIVE_SHIFT");
     }
+
     const shiftDocRef = doc(db, "attendanceLogs", activeShiftId); 
     console.log("Targeting document with ID:", activeShiftId);
-     await updateDoc(shiftDocRef, {
+    
+    await updateDoc(shiftDocRef, { 
       timeOut: serverTimestamp(),
       lat: latitude,
       lng: longitude,
+      fullName, 
+      role,     
     });
 
     console.log("Success! Clocked out of shift:", activeShiftId);
