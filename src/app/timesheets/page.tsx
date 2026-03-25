@@ -120,7 +120,7 @@ export default function TimesheetsPage() {
 
         <Navbar />
         
-        <div className="relative z-10 w-full max-w-7xl mx-auto px-6 py-12">
+        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
           
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
             <div>
@@ -158,7 +158,7 @@ export default function TimesheetsPage() {
           <div className="grid grid-cols-1 gap-6">
             
             {/* Main Stats / Timesheet Table */}
-            <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl">
+            <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl">
                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6">
                   {isAdmin ? "Employee Aggregates" : "Daily Breakdown"}
                </h3>

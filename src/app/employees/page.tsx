@@ -65,7 +65,7 @@ export default function EmployeesPage() {
 
         <Navbar />
         
-        <div className="relative z-10 w-full max-w-7xl mx-auto px-6 py-12">
+        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
           
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
             <div>
@@ -129,7 +129,7 @@ export default function EmployeesPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredEmployees.length > 0 ? (
               filteredEmployees.map(employee => (
-                <div key={employee.id} className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl p-6 shadow-xl shadow-gray-200/20 dark:shadow-none hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 group flex flex-col">
+                <div key={employee.id} className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl p-4 sm:p-6 shadow-xl shadow-gray-200/20 dark:shadow-none hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 group flex flex-col">
                   
                   <div className="flex items-start justify-between mb-4">
                     <div className="w-14 h-14 rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center text-white text-xl font-bold uppercase shadow-lg shadow-teal-500/30">

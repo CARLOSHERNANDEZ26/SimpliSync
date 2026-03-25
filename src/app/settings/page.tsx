@@ -20,7 +20,7 @@ export default function SettingsPage() {
 
         <Navbar />
 
-        <div className="relative z-10 w-full max-w-7xl mx-auto px-6 py-12">
+        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
           <div className="flex flex-col space-y-8 animate-fade-in-up">
             <div className="space-y-4 text-center lg:text-left">
               <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-gray-900 dark:text-white mb-2 transition-colors">

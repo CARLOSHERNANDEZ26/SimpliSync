@@ -127,7 +127,7 @@ export default function DashboardPage() {
 
         <Navbar />
         
-        <div className="relative z-10 w-full max-w-7xl mx-auto px-6 py-12">
+        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
           <div className="flex flex-col lg:flex-row gap-12">
             
             {/* Left Column: Actions / Admin Stats */}
@@ -141,7 +141,7 @@ export default function DashboardPage() {
               {isAdmin ? (
                 <>
                   {/* Admin Overview Metrics */}
-                  <div className="p-6 rounded-3xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 shadow-xl space-y-5">
+                  <div className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 shadow-xl space-y-5">
                     <h3 className="text-lg font-bold text-gray-900 dark:text-white items-center flex gap-2">
                       <Activity className="w-5 h-5 text-teal-500" />
                       Key Metrics
@@ -181,7 +181,7 @@ export default function DashboardPage() {
                   </div>
 
                   {/* Pending Actions & Events */}
-                  <div className="p-6 rounded-3xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 shadow-xl space-y-6">
+                  <div className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 shadow-xl space-y-6">
                     <div>
                       <div className="flex items-center justify-between mb-3">
                         <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -243,7 +243,7 @@ export default function DashboardPage() {
                   </div>
                 </>
               ) : (
-                <div className="p-8 rounded-3xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 shadow-xl">
+                <div className="p-5 sm:p-8 rounded-2xl sm:rounded-3xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 shadow-xl">
                   <ClockInButton />
                   <div className="my-6 h-px bg-gray-200 dark:bg-white/10"></div>
                   <ClockOutButton />

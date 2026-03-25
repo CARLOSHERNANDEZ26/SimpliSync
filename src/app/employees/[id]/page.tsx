@@ -122,7 +122,7 @@ export default function EmployeeProfilePage() {
 
         <Navbar />
         
-        <div className="relative z-10 w-full max-w-4xl mx-auto px-6 py-12">
+        <div className="relative z-10 w-full max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
           
           <Link href="/employees" className="inline-flex items-center gap-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-teal-600 dark:hover:text-teal-400 mb-8 mt-2 transition-colors">
             <ArrowLeft className="w-4 h-4" />
@@ -184,7 +184,7 @@ export default function EmployeeProfilePage() {
             <div className="md:col-span-2 space-y-6">
               
               {/* Work Information */}
-              <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-8 shadow-xl">
+              <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl sm:rounded-3xl p-5 sm:p-8 shadow-xl">
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
                   <Building2 className="w-5 h-5 text-teal-500" />
                   Work Information
@@ -227,7 +227,7 @@ export default function EmployeeProfilePage() {
               </div>
 
               {/* Emergency Contact */}
-              <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-8 shadow-xl">
+              <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl sm:rounded-3xl p-5 sm:p-8 shadow-xl">
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
                   <Phone className="w-5 h-5 text-rose-500" />
                   Emergency Contact
@@ -268,7 +268,7 @@ export default function EmployeeProfilePage() {
             {/* Right Col: Dates & Status */}
             <div className="space-y-6">
               
-              <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl">
+              <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl">
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-5 flex items-center gap-2">
                   <Calendar className="w-5 h-5 text-teal-500" />
                   Important Dates
@@ -296,7 +296,7 @@ export default function EmployeeProfilePage() {
               </div>
 
               {isAdmin && (
-                <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl">
+                <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl">
                   <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-5 flex items-center gap-2">
                     <Activity className="w-5 h-5 text-amber-500" />
                     Account Status

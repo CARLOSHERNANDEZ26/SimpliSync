@@ -128,7 +128,7 @@ export default function LeavePage() {
 
         <Navbar />
         
-        <div className="relative z-10 w-full max-w-7xl mx-auto px-6 py-12">
+        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
           <div className="mb-10">
             <h1 className="text-4xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
               <CalendarIcon className="w-10 h-10 text-teal-500" />
@@ -145,7 +145,7 @@ export default function LeavePage() {
             <div className="lg:col-span-1 space-y-8">
               
               {!isAdmin && (
-                <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl">
+                <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl">
                   <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Request Time Off</h3>
                   <form onSubmit={handleSubmitRequest} className="space-y-4">
                     <div className="space-y-1.5">
@@ -156,14 +156,14 @@ export default function LeavePage() {
                       </select>
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-1.5">
                         <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Start Date</label>
-                        <input type="date" required value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 focus:ring-2 focus:ring-teal-500 text-gray-900 dark:text-white" />
+                        <input type="date" required value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-3 sm:px-4 py-3 focus:ring-2 focus:ring-teal-500 text-gray-900 dark:text-white" />
                       </div>
                       <div className="space-y-1.5">
                         <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">End Date</label>
-                        <input type="date" required value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 focus:ring-2 focus:ring-teal-500 text-gray-900 dark:text-white" />
+                        <input type="date" required value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-3 sm:px-4 py-3 focus:ring-2 focus:ring-teal-500 text-gray-900 dark:text-white" />
                       </div>
                     </div>
 
@@ -184,7 +184,7 @@ export default function LeavePage() {
               )}
 
               {isAdmin && (
-                 <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl">
+                 <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl">
                     <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center justify-between">
                       Action Required
                       <span className="bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 text-sm px-3 py-1 rounded-full">{pendingRequests.length} pending</span>
@@ -226,7 +226,7 @@ export default function LeavePage() {
 
             {/* Right Col: History Table */}
             <div className="lg:col-span-2">
-              <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl h-full">
+              <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl h-full">
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6">
                   {isAdmin ? "Recent Leave History" : "My Leave History"}
                 </h3>
