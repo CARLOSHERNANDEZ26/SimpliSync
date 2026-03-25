@@ -3,7 +3,7 @@ import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 // You can add getFirestore later when we do the attendance logs!
 
-const firebaseConfig = {
+export const firebaseConfig = {
   apiKey: "AIzaSyDaALq9GGgLHiNBiuIQeohIKw_YQ0qzdJs",
   authDomain: "simplisync-2925f.firebaseapp.com",
   projectId: "simplisync-2925f",

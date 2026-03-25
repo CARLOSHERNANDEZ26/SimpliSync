@@ -67,7 +67,7 @@ export default function ClockOutButton() {
         disabled={isLoading || !isClockedIn}
         className={`px-8 py-3 rounded-xl text-white font-bold tracking-wide transition-all flex items-center justify-center gap-2 w-full sm:w-auto
           ${isLoading || !isClockedIn 
-            ? "bg-gray-300 dark:bg-gray-800 text-gray-500 cursor-not-allowed shadow-none scale-100" 
+            ? "bg-gray-700 dark:bg-gray-800 text-gray-100 dark:text-gray-500 cursor-not-allowed shadow-none scale-100" 
             : "bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 shadow-lg shadow-rose-500/30 hover:shadow-rose-500/50 active:scale-95"
           }`}
       >
@@ -102,7 +102,7 @@ export default function ClockOutButton() {
           ${statusMsg.includes("Success") 
             ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800" 
             : statusMsg.includes("Verifying")
-            ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border border-blue-200 dark:border-blue-800"
+            ? "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400 border border-teal-200 dark:border-teal-800"
             : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border border-red-200 dark:border-red-800"
           }`}
         >

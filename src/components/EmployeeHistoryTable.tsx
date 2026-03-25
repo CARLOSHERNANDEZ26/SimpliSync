@@ -78,7 +78,7 @@ export default function EmployeeHistoryTable() {
   const getStatusStyles = (status: string) => {
     if (/^Late/.test(status)) return 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-400';
     if (/^On Time/.test(status)) return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400';
-    if (status === 'Valid' || status === 'Completed') return 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400';
+    if (status === 'Valid' || status === 'Completed') return 'bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-400';
     return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400';
   };
 

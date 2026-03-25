@@ -15,18 +15,19 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorMsg(""); 
+    setErrorMsg("");
     setIsLoading(true);
 
     try {
-      await loginEmployee(email, password);
+      const loginIdentifier = email.includes("@") ? email : `${email.replace(/\s+/g, '').toLowerCase()}@simplisync.local`;
+      await loginEmployee(loginIdentifier, password);
       toast.success("Logged in successfully!");
       router.push("/dashboard");
     } catch (err) {
-      const errorText = err instanceof Error && err.message === "Invalido" 
-        ? "Invalid email or password. Please try again." 
+      const errorText = err instanceof Error && err.message === "Invalido"
+        ? "Invalid email or password. Please try again."
         : "An unexpected error occurred. Please try again.";
-      
+
       setErrorMsg(errorText);
       toast.error(errorText);
       setIsLoading(false);
@@ -41,7 +42,7 @@ export default function LoginPage() {
 
       {/* Glassmorphism Card */}
       <div className="relative z-10 w-full max-w-md p-8 sm:p-10 bg-white/70 dark:bg-white/[0.03] backdrop-blur-2xl border border-gray-200 dark:border-white/10 rounded-3xl shadow-xl dark:shadow-[0_8px_32px_0_rgba(0,0,0,0.36)] transition-all duration-500">
-        
+
         {/* Logo Section */}
         <div className="flex flex-col items-center justify-center mb-10">
           <div className="relative w-24 h-24 mb-4 flex items-center justify-center">
@@ -62,7 +63,7 @@ export default function LoginPage() {
           </h1>
           <p className="text-gray-600 dark:text-gray-400 text-sm mt-2 tracking-wide transition-colors">Enterprise Synchronization</p>
         </div>
-        
+
         {/* Error Message */}
         {errorMsg && (
           <div className="mb-6 p-4 bg-red-100 dark:bg-red-500/10 border border-red-200 dark:border-red-500/50 rounded-lg text-red-600 dark:text-red-500 text-sm font-medium text-center animate-pulse transition-colors">
@@ -73,11 +74,11 @@ export default function LoginPage() {
         {/* Login Form */}
         <form onSubmit={handleLogin} className="flex flex-col gap-6">
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider ml-1 transition-colors">Email Address</label>
+            <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider ml-1 transition-colors">Name or Email Address</label>
             <div className="relative group">
               <input
-                type="email"
-                placeholder="admin@simplisync.local"
+                type="text"
+                placeholder="juandelacruz or name@simplisync.local"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-teal-500/30 dark:focus:ring-teal-500/50 focus:border-teal-500 transition-all duration-300 shadow-sm dark:shadow-none"
@@ -85,7 +86,7 @@ export default function LoginPage() {
               />
             </div>
           </div>
-          
+
           <div className="flex flex-col gap-1.5">
             <div className="flex justify-between items-center ml-1">
               <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider transition-colors">Password</label>
@@ -93,7 +94,7 @@ export default function LoginPage() {
             <div className="relative group">
               <input
                 type={showPassword ? "text" : "password"}
-                placeholder="••••••••"
+                placeholder=""
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 rounded-xl px-4 py-3.5 pr-12 focus:outline-none focus:ring-2 focus:ring-teal-500/30 dark:focus:ring-teal-500/50 focus:border-teal-500 transition-all duration-300 shadow-sm dark:shadow-none"
@@ -119,8 +120,8 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             disabled={isLoading}
             className="mt-4 w-full bg-gradient-to-r from-teal-600 to-emerald-500 hover:from-teal-500 hover:to-emerald-400 text-white font-semibold py-3.5 rounded-xl shadow-[0_4px_14px_0_rgba(20,184,166,0.39)] hover:shadow-[0_6px_20px_rgba(20,184,166,0.23)] dark:shadow-[0_0_20px_rgba(20,184,166,0.3)] dark:hover:shadow-[0_0_30px_rgba(20,184,166,0.5)] transform hover:-translate-y-0.5 transition-all duration-300 flex justify-center items-center disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none"
           >
@@ -134,7 +135,7 @@ export default function LoginPage() {
             )}
           </button>
         </form>
-        
+
         <div className="mt-8 text-center">
           <p className="text-xs text-gray-500 dark:text-gray-500 transition-colors">
             Secure login provided by <span className="text-gray-700 dark:text-gray-400 font-medium">SimpliSync Auth</span>

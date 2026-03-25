@@ -8,7 +8,7 @@ import { signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { useTheme } from "next-themes";
-import { Moon, Sun, Settings, LayoutDashboard, LogOut } from "lucide-react";
+import { Moon, Sun, Settings, LayoutDashboard, LogOut, Users, Calendar, Clock, CalendarDays } from "lucide-react";
 
 export default function Navbar() {
   const { user } = useAuth();
@@ -17,6 +17,7 @@ export default function Navbar() {
   
   // The Hydration Fix State
   const [mounted, setMounted] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
@@ -25,18 +26,19 @@ export default function Navbar() {
     return () => cancelAnimationFrame(frame);
   }, []);
 
+  const confirmLogout = () => {
+    setShowLogoutModal(true);
+  };
+
   const handleLogout = async () => {
-    const isConfirmed = window.confirm("Are you sure you want to log out?");
-    
-    if (!isConfirmed) return;
-    
+    setShowLogoutModal(false);
     await signOut(auth);
     toast.success("Successfully logged out.");
     router.push("/login");
-
   };
 
   return (
+    <>
     <nav className="fixed top-0 left-0 z-50 w-full border-b border-gray-200 dark:border-white/10 bg-white/70 dark:bg-black/40 backdrop-blur-md px-6 py-4 flex justify-between items-center transition-colors duration-500">
       <div className="flex items-center gap-3">
         {/* Small Logo */}
@@ -71,6 +73,46 @@ export default function Navbar() {
           <LayoutDashboard className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" />
         </Link>
 
+        {/* Directory Link */}
+        <Link
+          href="/employees"
+          className="p-2.5 rounded-xl text-gray-600 dark:text-gray-300 hover:text-teal-600 dark:hover:text-teal-400 hover:bg-gray-100 dark:hover:bg-white/10 active:bg-gray-200 dark:active:bg-white/20 transition-all active:scale-95 flex items-center justify-center group"
+          aria-label="Directory"
+          title="Employee Directory"
+        >
+          <Users className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" />
+        </Link>
+
+        {/* Leave Management Link */}
+        <Link
+          href="/leave"
+          className="p-2.5 rounded-xl text-gray-600 dark:text-gray-300 hover:text-teal-600 dark:hover:text-teal-400 hover:bg-gray-100 dark:hover:bg-white/10 active:bg-gray-200 dark:active:bg-white/20 transition-all active:scale-95 flex items-center justify-center group"
+          aria-label="Leave Management"
+          title="Leave Management"
+        >
+          <Calendar className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" />
+        </Link>
+        
+        {/* Timesheets Link */}
+        <Link
+          href="/timesheets"
+          className="p-2.5 rounded-xl text-gray-600 dark:text-gray-300 hover:text-teal-600 dark:hover:text-teal-400 hover:bg-gray-100 dark:hover:bg-white/10 active:bg-gray-200 dark:active:bg-white/20 transition-all active:scale-95 flex items-center justify-center group"
+          aria-label="Timesheets"
+          title="Timesheets"
+        >
+          <Clock className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" />
+        </Link>
+        
+        {/* Company Calendar Link */}
+        <Link
+          href="/calendar"
+          className="p-2.5 rounded-xl text-gray-600 dark:text-gray-300 hover:text-teal-600 dark:hover:text-teal-400 hover:bg-gray-100 dark:hover:bg-white/10 active:bg-gray-200 dark:active:bg-white/20 transition-all active:scale-95 flex items-center justify-center group"
+          aria-label="Company Calendar"
+          title="Company Calendar"
+        >
+          <CalendarDays className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" />
+        </Link>
+
         {/* Hydration-Safe Theme Toggle */}
         <button
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
@@ -98,7 +140,7 @@ export default function Navbar() {
         </Link>
 
         <button
-          onClick={handleLogout}
+          onClick={confirmLogout}
           className="px-4 py-2.5 ml-1 sm:ml-2 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 active:bg-rose-100 dark:active:bg-rose-500/20 transition-all active:scale-95 flex items-center gap-2 group"
           title="Logout"
         >
@@ -107,5 +149,30 @@ export default function Navbar() {
         </button>
       </div>
     </nav>
+      {/* Custom Logout Confirmation Modal */}
+      {showLogoutModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-[#1a1a1a] p-6 rounded-2xl shadow-2xl max-w-sm w-full mx-4 border border-gray-200 dark:border-white/10 animate-fade-in-up">
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Confirm Logout</h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">Are you sure you want to log out of your account?</p>
+            <div className="flex justify-end gap-3">
+              <button 
+                onClick={() => setShowLogoutModal(false)}
+                className="px-4 py-2 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors font-medium active:scale-95"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleLogout}
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 text-white transition-all font-medium shadow-md shadow-rose-500/30 active:scale-95 flex items-center gap-2"
+              >
+                <LogOut className="w-4 h-4" />
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
