@@ -12,6 +12,7 @@ import AddEmployeeModal from "@/components/AddEmployeeModal";
 interface Employee {
   id: string;
   name: string;
+  fullName: string;
   email: string;
   position?: string;
   department?: string;
@@ -45,9 +46,11 @@ export default function EmployeesPage() {
   }, [user?.uid]);
 
   const departments = ["All", ...Array.from(new Set(employees.map(e => e.department).filter(Boolean)))];
+const filteredEmployees = employees.filter(emp => {
 
-  const filteredEmployees = employees.filter(emp => {
-    const matchesSearch = emp.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    const employeeName = emp.fullName || emp.name || ""; 
+
+    const matchesSearch = employeeName.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           emp.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           (emp.position || "").toLowerCase().includes(searchQuery.toLowerCase());
     
@@ -74,7 +77,7 @@ export default function EmployeesPage() {
                 Employee Directory
               </h1>
               <p className="text-gray-500 dark:text-gray-400 mt-2 text-lg">
-                View and manage your organization's team members.
+                View and manage your organization&apos;s team members.
               </p>
             </div>
             
@@ -133,7 +136,7 @@ export default function EmployeesPage() {
                   
                   <div className="flex items-start justify-between mb-4">
                     <div className="w-14 h-14 rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center text-white text-xl font-bold uppercase shadow-lg shadow-teal-500/30">
-                      {employee.name.charAt(0)}
+                      {(employee.fullName || employee.name || "U").charAt(0)}
                     </div>
                     {employee.status === "inactive" ? (
                       <span className="px-2.5 py-1 rounded-full bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-semibold">
@@ -146,7 +149,7 @@ export default function EmployeesPage() {
                     )}
                   </div>
 
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">{employee.name}</h3>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">{employee.fullName || employee.name || "Unknown Employee"}</h3>
                   <p className="text-teal-600 dark:text-teal-400 font-medium text-sm mb-4">{employee.position || "Staff"}</p>
                   
                   <div className="space-y-2 mt-auto">
@@ -156,11 +159,14 @@ export default function EmployeesPage() {
                     </div>
                     <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
                       <Calendar className="w-4 h-4" />
-                      Joined {employee.joinDate ? new Date(employee.joinDate).toLocaleDateString() : "N/A"}
+                      Joined {employee.joinDate && !isNaN(Date.parse(employee.joinDate)) 
+                        ? new Date(employee.joinDate).toLocaleDateString() 
+                        : "N/A"}
                     </div>
                   </div>
 
-                  {isAdmin && (
+                  {/* BUG FIX: Employees can now view their OWN profile, or Admins can view all */}
+                  {(isAdmin || user?.uid === employee.id) && (
                     <Link 
                       href={`/employees/${employee.id}`}
                       className="mt-6 w-full py-2.5 bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 border border-gray-200 dark:border-white/10 rounded-xl text-gray-700 dark:text-gray-300 font-medium text-sm flex items-center justify-center gap-2 transition-all active:scale-95 group-hover:border-teal-500/30"

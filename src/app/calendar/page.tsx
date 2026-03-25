@@ -10,6 +10,7 @@ import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 interface Holiday {
   id: string;
   name: string;
+  fullName: string;
   date: string;
   type: string;
 }
@@ -18,11 +19,18 @@ export default function CalendarPage() {
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [currentDate, setCurrentDate] = useState(new Date());
 
-  useEffect(() => {
+useEffect(() => {
     const q = query(collection(db, "holidays"), orderBy("date", "asc"));
+    
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setHolidays(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Holiday)));
+    }, (error) => {
+
+      if (error.code !== "permission-denied") {
+        console.error("Calendar sync error:", error);
+      }
     });
+    
     return () => unsubscribe();
   }, []);
 
@@ -62,8 +70,8 @@ export default function CalendarPage() {
         </div>
         <div className="flex-1 overflow-y-auto space-y-0.5 sm:space-y-1 custom-scrollbar pr-0 sm:pr-1">
           {dayHolidays.map(hol => (
-            <div key={hol.id} className="text-[8px] sm:text-xs font-semibold px-1 sm:px-2 py-0.5 sm:py-1 rounded-sm sm:rounded-md bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 line-clamp-1 group-hover:line-clamp-none group-active:line-clamp-none text-balance transition-all cursor-pointer" title={hol.name}>
-              <span className="hidden sm:inline">🎊 </span>{hol.name}
+            <div key={hol.id} className="text-[8px] sm:text-xs font-semibold px-1 sm:px-2 py-0.5 sm:py-1 rounded-sm sm:rounded-md bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 line-clamp-1 group-hover:line-clamp-none group-active:line-clamp-none text-balance transition-all cursor-pointer" title={hol.fullName || hol.name}>
+              <span className="hidden sm:inline">🎊 </span>{hol.fullName || hol.name}
             </div>
           ))}
         </div>

@@ -8,7 +8,7 @@ import toast from "react-hot-toast"; // Using Ace's new toast notifications!
 export default function ProfileSettings() {
   const { user } = useAuth();
   const [fullName, setFullName] = useState("");
-  const [role, setRole] = useState("");
+  const [position, setPosition] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
 
@@ -19,7 +19,7 @@ export default function ProfileSettings() {
         const data = await getUserProfile(user.uid);
         if (data) {
           setFullName(data.fullName || "");
-          setRole(data.role || "");
+          setPosition(data.position || "");
         }
       }
       setIsFetching(false);
@@ -33,9 +33,10 @@ export default function ProfileSettings() {
     
     setIsLoading(true);
     try {
-      await updateUserProfile(user.uid, fullName, role);
+      await updateUserProfile(user.uid, fullName, position);
       toast.success("Profile updated successfully!"); // Trigger the satisfying popup
     } catch (error) {
+      console.error("Error updating profile:", error);
       toast.error("Failed to update profile.");
     } finally {
       setIsLoading(false);
@@ -67,8 +68,8 @@ export default function ProfileSettings() {
             <label className="block text-xs font-semibold tracking-wide text-gray-500 uppercase mb-1">Position / Role</label>
             <input 
               type="text" 
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
+              value={position}
+              onChange={(e) => setPosition(e.target.value)}
               placeholder="e.g. Frontend Developer"
               required
               className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white focus:ring-2 focus:ring-teal-500 outline-none transition-all"

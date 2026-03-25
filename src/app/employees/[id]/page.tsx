@@ -13,7 +13,7 @@ import toast from "react-hot-toast";
 
 interface EmployeeProfile {
   id?: string;
-  name: string;
+  fullName: string;
   email: string;
   position?: string;
   department?: string;
@@ -26,7 +26,10 @@ interface EmployeeProfile {
 }
 
 export default function EmployeeProfilePage() {
-  const { id } = useParams();
+  // BUG FIX: Consolidate the `id` extraction into one safe block
+  const params = useParams();
+  const id = Array.isArray(params.id) ? params.id[0] : params.id; 
+  
   const router = useRouter();
   const { user } = useAuth();
   
@@ -37,17 +40,16 @@ export default function EmployeeProfilePage() {
 
   // Form State
   const [formData, setFormData] = useState<EmployeeProfile>({
-    name: "", email: "", position: "", department: "", joinDate: "", birthDate: "", status: "active",
+    fullName: "", email: "", position: "", department: "", joinDate: "", birthDate: "", status: "active",
     emergencyContactName: "", emergencyContactRelation: "", emergencyContactPhone: ""
   });
 
   const isAdmin = user?.email === "admin@simplisync.local";
-  // Users can edit their own profile OR admin can edit anyone
   const canEdit = isAdmin || user?.uid === id;
 
   useEffect(() => {
     const fetchProfile = async () => {
-      if (!id || typeof id !== "string") return;
+      if (!id) return;
       try {
         const docRef = doc(db, "users", id);
         const docSnap = await getDoc(docRef);
@@ -55,7 +57,7 @@ export default function EmployeeProfilePage() {
           const data = docSnap.data() as EmployeeProfile;
           setProfile(data);
           setFormData({
-            name: data.name || "",
+            fullName: data.fullName || "",
             email: data.email || "",
             position: data.position || "",
             department: data.department || "",
@@ -132,11 +134,11 @@ export default function EmployeeProfilePage() {
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
             <div className="flex items-center gap-5">
               <div className="w-20 h-20 rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center text-white text-3xl font-bold uppercase shadow-xl shadow-teal-500/20">
-                {profile?.name?.charAt(0) || "U"}
+                {profile?.fullName?.charAt(0) || "U"}
               </div>
               <div>
                 <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
-                  {profile?.name}
+                  {profile?.fullName}
                 </h1>
                 <p className="text-teal-600 dark:text-teal-400 font-medium mt-1">
                   {profile?.position || "Staff"} • {profile?.department || "No Department"}
@@ -194,15 +196,14 @@ export default function EmployeeProfilePage() {
                   <div className="space-y-1">
                     <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Full Name</label>
                     {isEditing ? (
-                      <input name="name" value={formData.name} onChange={handleChange} className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-teal-500 text-gray-900 dark:text-white" />
+                      <input name="fullName" value={formData.fullName} onChange={handleChange} className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-teal-500 text-gray-900 dark:text-white" />
                     ) : (
-                      <div className="text-gray-900 dark:text-white font-medium py-2.5">{profile?.name}</div>
+                      <div className="text-gray-900 dark:text-white font-medium py-2.5">{profile?.fullName}</div>
                     )}
                   </div>
                   
                   <div className="space-y-1">
                     <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Email Address</label>
-                    {/* ReadOnly for email typically unless doing Firebase Auth update flow */}
                     <div className="text-gray-900 dark:text-white font-medium py-2.5">{profile?.email}</div>
                   </div>
 
@@ -239,7 +240,7 @@ export default function EmployeeProfilePage() {
                     {isEditing ? (
                       <input name="emergencyContactName" value={formData.emergencyContactName} onChange={handleChange} placeholder="e.g. Jane Doe" className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-teal-500 text-gray-900 dark:text-white" />
                     ) : (
-                      <div className="text-gray-900 dark:text-white font-medium py-2.5">{profile?.emergencyContactName || "—"}</div>
+                      <div className="text-gray-900 dark:text-white font-medium py-2.5">{profile?.emergencyContactName || <span className="text-red-500">Not Yet Set</span>}</div>
                     )}
                   </div>
 
@@ -248,7 +249,7 @@ export default function EmployeeProfilePage() {
                     {isEditing ? (
                       <input name="emergencyContactRelation" value={formData.emergencyContactRelation} onChange={handleChange} placeholder="e.g. Spouse" className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-teal-500 text-gray-900 dark:text-white" />
                     ) : (
-                      <div className="text-gray-900 dark:text-white font-medium py-2.5">{profile?.emergencyContactRelation || "—"}</div>
+                      <div className="text-gray-900 dark:text-white font-medium py-2.5">{profile?.emergencyContactRelation || <span className="text-red-500">Not Yet Set</span>}</div>
                     )}
                   </div>
 
@@ -257,7 +258,7 @@ export default function EmployeeProfilePage() {
                     {isEditing ? (
                       <input name="emergencyContactPhone" type="tel" value={formData.emergencyContactPhone} onChange={handleChange} placeholder="+1 234 567 8900" className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-teal-500 text-gray-900 dark:text-white" />
                     ) : (
-                      <div className="text-gray-900 dark:text-white font-medium py-2.5">{profile?.emergencyContactPhone || "—"}</div>
+                      <div className="text-gray-900 dark:text-white font-medium py-2.5">{profile?.emergencyContactPhone || <span className="text-red-500">Not Yet Set</span>}</div>
                     )}
                   </div>
                 </div>
@@ -280,7 +281,13 @@ export default function EmployeeProfilePage() {
                     {isEditing ? (
                       <input type="date" name="joinDate" value={formData.joinDate} onChange={handleChange} className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2 focus:ring-2 focus:ring-teal-500 text-gray-900 dark:text-white" />
                     ) : (
-                      <div className="text-gray-900 dark:text-white font-medium py-2">{profile?.joinDate ? new Date(profile.joinDate).toLocaleDateString() : "—"}</div>
+                      <div className="text-gray-900 dark:text-white font-medium py-2">
+                        {profile?.joinDate && !isNaN(Date.parse(profile.joinDate)) 
+                          ? new Date(profile.joinDate).toLocaleDateString(undefined,
+                            { year: 'numeric', month: 'long', day: 'numeric' }
+                          ) 
+                          : <span className="text-red-500">Not Set</span>}
+                      </div>
                     )}
                   </div>
 
@@ -289,7 +296,14 @@ export default function EmployeeProfilePage() {
                     {isEditing ? (
                       <input type="date" name="birthDate" value={formData.birthDate} onChange={handleChange} className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2 focus:ring-2 focus:ring-teal-500 text-gray-900 dark:text-white" />
                     ) : (
-                      <div className="text-gray-900 dark:text-white font-medium py-2">{profile?.birthDate ? new Date(profile.birthDate).toLocaleDateString() : "—"}</div>
+                      <div className="text-gray-900 dark:text-white font-medium py-2">
+                        {/* BUG FIX: Safely parsing birthDate */}
+                        {profile?.birthDate && !isNaN(Date.parse(profile.birthDate)) 
+                          ? new Date(profile.birthDate).toLocaleDateString(undefined,
+                            { year: 'numeric', month: 'long', day: 'numeric' }
+                          ) 
+                          :<span className="text-red-500">Not Yet Set</span>}
+                      </div>
                     )}
                   </div>
                 </div>

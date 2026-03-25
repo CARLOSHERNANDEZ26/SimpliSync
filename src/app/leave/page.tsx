@@ -18,7 +18,7 @@ interface LeaveRequest {
   endDate: string;
   reason: string;
   status: "pending" | "approved" | "rejected";
-  createdAt: any;
+  createdAt: { seconds: number; nanoseconds: number } | null;
 }
 
 export default function LeavePage() {
@@ -41,20 +41,25 @@ export default function LeavePage() {
       ? query(collection(db, "leaveRequests"))
       : query(collection(db, "leaveRequests"), where("userId", "==", user.uid));
 
+    // 🔥 Added the error silencer as the second parameter
     const unsubscribe = onSnapshot(baseQuery, (snapshot) => {
       const fetched = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       } as LeaveRequest));
-      
-      // Sort client-side to avoid Firebase composite index requirements
-      fetched.sort((a, b) => {
-        const timeA = a.createdAt?.seconds || 0;
+
+      fetched.sort((a, b) => { 
+        const timeA = a.createdAt?.seconds || 0; 
         const timeB = b.createdAt?.seconds || 0;
         return timeB - timeA;
       });
       
       setRequests(fetched);
+    }, (error) => {
+      // Ignore the permission error if it happens exactly during logout
+      if (error.code !== "permission-denied") {
+        console.error("Leave requests sync error:", error);
+      }
     });
 
     return () => unsubscribe();
@@ -103,6 +108,7 @@ export default function LeavePage() {
       await updateDoc(doc(db, "leaveRequests", id), { status: newStatus });
       toast.success(`Request ${newStatus}!`);
     } catch (error) {
+      console.error("Error updating request status:", error);
       toast.error("Failed to update status.");
     }
   };
@@ -150,7 +156,7 @@ export default function LeavePage() {
                   <form onSubmit={handleSubmitRequest} className="space-y-4">
                     <div className="space-y-1.5">
                       <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Leave Type</label>
-                      <select value={type} onChange={(e) => setType(e.target.value as any)} className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 focus:ring-2 focus:ring-teal-500 text-gray-900 dark:text-white">
+                      <select value={type} onChange={(e) => setType(e.target.value as "pto" | "sick")} className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 focus:ring-2 focus:ring-teal-500 text-gray-900 dark:text-white">
                         <option value="pto">Paid Time Off (PTO)</option>
                         <option value="sick">Sick Leave</option>
                       </select>
@@ -203,7 +209,7 @@ export default function LeavePage() {
                                 {new Date(req.startDate).toLocaleDateString()} - {new Date(req.endDate).toLocaleDateString()}
                               </span>
                             </div>
-                            <p className="text-sm text-gray-600 dark:text-gray-300 italic">"{req.reason}"</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-300 italic" >&quot;{req.reason}&quot;</p>
                             <div className="flex gap-2 pt-2 border-t border-gray-200 dark:border-white/10">
                               <button onClick={() => handleUpdateStatus(req.id, "approved")} className="flex-1 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 dark:bg-emerald-500/20 dark:hover:bg-emerald-500/30 dark:text-emerald-400 rounded-lg text-sm font-semibold transition-colors active:scale-95">
                                 Approve
@@ -216,7 +222,7 @@ export default function LeavePage() {
                         ))
                       ) : (
                         <div className="text-center py-10 text-gray-500 dark:text-gray-400 italic bg-slate-50 dark:bg-white/5 rounded-2xl border border-dashed border-gray-200 dark:border-white/10">
-                          No pending requests! You're all caught up.
+                          No pending requests! You&apos;re all caught up.
                         </div>
                       )}
                     </div>

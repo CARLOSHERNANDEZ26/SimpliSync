@@ -6,14 +6,14 @@ import toast from "react-hot-toast";
 
 interface Holiday {
   id: string;
-  name: string;
+  holidayName: string;
   date: string;
   type: string;
 }
 
 export default function HolidaySettings() {
   const [holidays, setHolidays] = useState<Holiday[]>([]);
-  const [name, setName] = useState("");
+  const [holidayName, setName] = useState("");
   const [date, setDate] = useState("");
   const [type, setType] = useState("Company-Wide");
   const [isAdding, setIsAdding] = useState(false);
@@ -28,11 +28,11 @@ export default function HolidaySettings() {
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !date) return;
+    if (!holidayName || !date) return;
     
     setIsAdding(true);
     try {
-      await addDoc(collection(db, "holidays"), { name, date, type });
+      await addDoc(collection(db, "holidays"), { holidayName, date, type });
       toast.success("Holiday added!");
       setName("");
       setDate("");
@@ -48,6 +48,7 @@ export default function HolidaySettings() {
       await deleteDoc(doc(db, "holidays", id));
       toast.success("Holiday removed.");
     } catch (error) {
+      console.error("Error deleting holiday:", error);
       toast.error("Failed to remove.");
     }
   };
@@ -69,7 +70,7 @@ export default function HolidaySettings() {
           <input
             type="text"
             placeholder="Holiday Name"
-            value={name}
+            value={holidayName}
             onChange={(e) => setName(e.target.value)}
             className="bg-slate-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 focus:ring-2 focus:ring-teal-500 focus:outline-none transition-all dark:text-white text-sm"
             required
@@ -108,7 +109,7 @@ export default function HolidaySettings() {
           holidays.map(holiday => (
             <div key={holiday.id} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-white/5 border border-gray-200 dark:border-white/10">
               <div>
-                <div className="font-bold text-gray-900 dark:text-white text-sm">{holiday.name}</div>
+                <div className="font-bold text-gray-900 dark:text-white text-sm">{holiday.holidayName}</div>
                 <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{new Date(holiday.date).toLocaleDateString()} • {holiday.type}</div>
               </div>
               <button

@@ -10,7 +10,7 @@ import ClockOutButton from "@/components/ClockOutButton";
 import AdminLogsTable from "@/components/AdminLogsTable";
 import EmployeeHistoryTable from "@/components/EmployeeHistoryTable";
 import HRChatbot from "@/components/HRChatbot"; // Import the chatbot
-import { Users, Activity, FileText, PieChart, Calendar, ChevronRight, Clock } from "lucide-react";
+import { Users, Activity, FileText, PieChart, Calendar, Clock } from "lucide-react";
 import Link from "next/link";
 
 interface AttendanceLog {
@@ -25,20 +25,28 @@ interface AttendanceLog {
 
 interface EmployeeData {
   id: string;
-  name: string;
+  fullName: string;
   department?: string;
   birthDate?: string;
   joinDate?: string;
   status?: string;
   role?: string;
-  [key: string]: any;
+  [key: string]: unknown;
+}
+
+interface PendingLeave {
+  id: string;
+  userName: string;
+  type: "pto" | "sick";
+  reason: string;
+  status: string;
 }
 
 export default function DashboardPage() {
   const { user } = useAuth();
   const [logs, setLogs] = useState<AttendanceLog[]>([]); 
   const [employees, setEmployees] = useState<EmployeeData[]>([]);
-  const [pendingLeaves, setPendingLeaves] = useState<any[]>([]);
+  const [pendingLeaves, setPendingLeaves] = useState<PendingLeave[]>([]);
   const isAdmin = user?.email === "admin@simplisync.local";
 
   useEffect(() => {
@@ -59,7 +67,7 @@ export default function DashboardPage() {
 
       const leavesQuery = query(collection(db, "leaveRequests"), where("status", "==", "pending"));
       unsubscribeLeaves = onSnapshot(leavesQuery, (snapshot) => {
-        setPendingLeaves(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        setPendingLeaves(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PendingLeave)));
       });
     }
 
@@ -227,7 +235,7 @@ export default function DashboardPage() {
                           upcomingBirthdays.map((emp) => (
                             <div key={emp.id} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-black/20 border border-gray-100 dark:border-white/5">
                               <div>
-                                <div className="font-medium text-gray-900 dark:text-white text-sm">{emp.name}'s Birthday</div>
+                                <div className="font-medium text-gray-900 dark:text-white text-sm">{emp.fullName}&apos;s Birthday</div>
                                 <div className="text-xs text-gray-500 dark:text-gray-400">This Month</div>
                               </div>
                               <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xs font-bold">

@@ -13,7 +13,7 @@ export const clockInEmployee = async (userId: string, latitude: number, longitud
     const userDoc = await getDoc(doc(db, "users", userId));
     const userData = userDoc.exists() ? userDoc.data() : null;
     const fullName = userData?.fullName || "Unknown Employee";
-    const role = userData?.role || "N/A";
+    const position = userData?.position || "N/A";
 
     const now = new Date();
     const targetTime = new Date();
@@ -47,7 +47,7 @@ export const clockInEmployee = async (userId: string, latitude: number, longitud
     const docRef = await addDoc(attendanceRef, {
       userId,
       fullName, 
-      role,    
+      position,    
       timeIn: serverTimestamp(),
       timeOut: null,
       lat: latitude,
@@ -77,7 +77,7 @@ export const clockOutEmployee = async (userId: string, latitude: number, longitu
     const userDoc = await getDoc(doc(db, "users", userId));
     const userData = userDoc.exists() ? userDoc.data() : null;
     const fullName = userData?.fullName || "Unknown Employee";
-    const role = userData?.role || "N/A";
+    const position = userData?.position || "N/A";
 
     const attendanceRef = collection(db, "attendanceLogs");
     const q =  query(attendanceRef, where("userId", "==", userId), where("timeOut", "==", null)); 
@@ -106,7 +106,7 @@ export const clockOutEmployee = async (userId: string, latitude: number, longitu
       lat: latitude,
       lng: longitude,
       fullName, 
-      role,     
+      position,     
     });
 
     console.log("Success! Clocked out of shift:", activeShiftId);

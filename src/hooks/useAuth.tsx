@@ -44,9 +44,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             setLoading(false);
           },
           (error) => { 
+            if (error.code !== "permission-denied") {
             console.error("Auth Listener Error:", error);
             setIsClockedIn(false);
             setLoading(false);
+            }
           }
         );
 

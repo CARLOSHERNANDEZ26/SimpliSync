@@ -3,15 +3,18 @@
 import { useState } from "react";
 import { addEmployee } from "@/services/auth";
 import toast from "react-hot-toast";
-import { X } from "lucide-react";
+import { X, ShieldAlert } from "lucide-react";
 
 export default function AddEmployeeModal({ onClose }: { onClose: () => void }) {
-  const [name, setName] = useState("");
+  const [fullname, setName] = useState("");
   const [position, setPosition] = useState("");
   const [department, setDepartment] = useState("");
   const [joinDate, setJoinDate] = useState("");
   const [birthDate, setBirthDate] = useState("");
   const [password, setPassword] = useState("");
+  
+  // 🔥 NEW: State for the System Role
+  const [role, setRole] = useState("employee"); 
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -19,11 +22,12 @@ export default function AddEmployeeModal({ onClose }: { onClose: () => void }) {
     setIsLoading(true);
 
     try {
-      await addEmployee(name, position, department, joinDate, birthDate, password);
-      toast.success("Employee created successfully!");
+      // 🔥 NEW: Pass the 'role' state into the function
+      await addEmployee(fullname, position, department, joinDate, birthDate, password, role);
+      toast.success(`${fullname} has been added as ${role === 'admin' ? 'an Admin' : 'an Employee'}!`);
       onClose();
     } catch (err) {
-      toast.error("Failed to create employee.");
+      toast.error("Failed to create user.");
     } finally {
       setIsLoading(false);
     }
@@ -39,8 +43,8 @@ export default function AddEmployeeModal({ onClose }: { onClose: () => void }) {
           <X className="w-5 h-5" />
         </button>
 
-        <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Add New Employee</h3>
-        <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">Create credentials for a new employee. They will log in using this name and password.</p>
+        <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Add New User</h3>
+        <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">Create credentials and assign system access levels.</p>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
@@ -48,35 +52,37 @@ export default function AddEmployeeModal({ onClose }: { onClose: () => void }) {
             <input
               type="text"
               placeholder="Juan Dela Cruz"
-              value={name}
+              value={fullname}
               onChange={(e) => setName(e.target.value)}
               className="w-full bg-slate-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all font-medium"
               required
             />
           </div>
 
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider ml-1">Position / Role</label>
-            <input
-              type="text"
-              placeholder="e.g. Sales Representative"
-              value={position}
-              onChange={(e) => setPosition(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all font-medium"
-              required
-            />
-          </div>
+          <div className="flex gap-4">
+            <div className="flex flex-col gap-1.5 w-1/2">
+              <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider ml-1">Position / Job Title</label>
+              <input
+                type="text"
+                placeholder="e.g. Developer"
+                value={position}
+                onChange={(e) => setPosition(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all font-medium"
+                required
+              />
+            </div>
 
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider ml-1">Department</label>
-            <input
-              type="text"
-              placeholder="e.g. Engineering"
-              value={department}
-              onChange={(e) => setDepartment(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all font-medium"
-              required
-            />
+            <div className="flex flex-col gap-1.5 w-1/2">
+              <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider ml-1">Department</label>
+              <input
+                type="text"
+                placeholder="e.g. IT"
+                value={department}
+                onChange={(e) => setDepartment(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all font-medium"
+                required
+              />
+            </div>
           </div>
 
           <div className="flex gap-4">
@@ -103,7 +109,23 @@ export default function AddEmployeeModal({ onClose }: { onClose: () => void }) {
             </div>
           </div>
 
-          <div className="flex flex-col gap-1.5">
+          {/* 🔥 NEW: System Role Dropdown */}
+          <div className="flex flex-col gap-1.5 p-3 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-xl mt-2">
+            <label className="text-xs font-bold text-amber-800 dark:text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+              <ShieldAlert className="w-4 h-4" />
+              System Access Level
+            </label>
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              className="w-full bg-white dark:bg-black/40 border border-amber-200 dark:border-amber-500/30 text-gray-900 dark:text-white rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all font-medium appearance-none cursor-pointer"
+            >
+              <option value="employee">Standard Employee</option>
+              <option value="admin">Administrator (Full Access)</option>
+            </select>
+          </div>
+
+          <div className="flex flex-col gap-1.5 mt-2">
             <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider ml-1">Initial Password</label>
             <input
               type="text"
@@ -121,7 +143,7 @@ export default function AddEmployeeModal({ onClose }: { onClose: () => void }) {
             disabled={isLoading}
             className="mt-4 w-full bg-gradient-to-r from-teal-600 to-emerald-500 hover:from-teal-500 hover:to-emerald-400 text-white font-bold py-3.5 rounded-xl transition-all flex justify-center items-center shadow-lg shadow-teal-500/30 disabled:opacity-70 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-95"
           >
-            {isLoading ? "Creating..." : "Create Employee"}
+            {isLoading ? "Creating..." : "Create User"}
           </button>
         </form>
       </div>

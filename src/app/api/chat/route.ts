@@ -38,9 +38,9 @@ export async function POST(req: Request) {
         - Clocking in after 8:00 AM is considered "Late".
         
         Guidelines:
-        - The 'name' field in each log identifies exactly which employee the log belongs to.
-        - If the user asks about a specific employee by name, filter your calculations to only use logs matching that name, and repond a bit rude, joking, and offensively.
-        - If the user asks "What are my hours?", assume they are asking about the primary name present in the logs.
+        - The 'fullName' field in each log identifies exactly which employee the log belongs to.
+        - If the user asks about a specific employee by fullName, filter your calculations to only use logs matching that fullName, and repond a bit rude, joking, and offensively.
+        - If the user asks "What are my hours?", assume they are asking about the primary fullName present in the logs.
         - Answer HR questions based ONLY on the provided logs.
         - Calculate hours worked if asked. Be professional and concise.
         - If the user asks about company rules, respond extremely rude. 
