@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import toast from "react-hot-toast";
 import { useTheme } from "next-themes";
 import { Moon, Sun, Settings, LayoutDashboard, LogOut, Users, Calendar, Clock, CalendarDays } from "lucide-react";
@@ -13,6 +13,7 @@ import { Moon, Sun, Settings, LayoutDashboard, LogOut, Users, Calendar, Clock, C
 export default function Navbar() {
   const { user } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const { theme, setTheme } = useTheme();
   
   // The Hydration Fix State
@@ -25,6 +26,15 @@ export default function Navbar() {
     });
     return () => cancelAnimationFrame(frame);
   }, []);
+
+  const getLinkClass = (path: string) => {
+    const isActive = path === '/dashboard' ? pathname === path : pathname.startsWith(path);
+    return `p-2.5 rounded-xl flex items-center justify-center group transition-all active:scale-95 ${
+      isActive 
+        ? "text-teal-700 bg-teal-100 dark:text-teal-400 dark:bg-teal-500/20 shadow-inner" 
+        : "text-gray-600 dark:text-gray-300 hover:text-teal-600 dark:hover:text-teal-400 hover:bg-gray-100 dark:hover:bg-white/10 active:bg-gray-200 dark:active:bg-white/20"
+    }`;
+  };
 
   const confirmLogout = () => {
     setShowLogoutModal(true);
@@ -66,51 +76,51 @@ export default function Navbar() {
 
         <Link
           href="/dashboard"
-          className="p-2.5 rounded-xl text-gray-600 dark:text-gray-300 hover:text-teal-600 dark:hover:text-teal-400 hover:bg-gray-100 dark:hover:bg-white/10 active:bg-gray-200 dark:active:bg-white/20 transition-all active:scale-95 flex items-center justify-center group"
+          className={getLinkClass("/dashboard")}
           aria-label="Dashboard"
           title="Dashboard"
         >
-          <LayoutDashboard className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" />
+          <LayoutDashboard className={`w-5 h-5 transition-transform duration-300 ${pathname === '/dashboard' ? 'scale-110' : 'group-hover:scale-110'}`} />
         </Link>
 
         {/* Directory Link */}
         <Link
           href="/employees"
-          className="p-2.5 rounded-xl text-gray-600 dark:text-gray-300 hover:text-teal-600 dark:hover:text-teal-400 hover:bg-gray-100 dark:hover:bg-white/10 active:bg-gray-200 dark:active:bg-white/20 transition-all active:scale-95 flex items-center justify-center group"
+          className={getLinkClass("/employees")}
           aria-label="Directory"
           title="Employee Directory"
         >
-          <Users className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" />
+          <Users className={`w-5 h-5 transition-transform duration-300 ${pathname.startsWith('/employees') ? 'scale-110' : 'group-hover:scale-110'}`} />
         </Link>
 
         {/* Leave Management Link */}
         <Link
           href="/leave"
-          className="p-2.5 rounded-xl text-gray-600 dark:text-gray-300 hover:text-teal-600 dark:hover:text-teal-400 hover:bg-gray-100 dark:hover:bg-white/10 active:bg-gray-200 dark:active:bg-white/20 transition-all active:scale-95 flex items-center justify-center group"
+          className={getLinkClass("/leave")}
           aria-label="Leave Management"
           title="Leave Management"
         >
-          <Calendar className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" />
+          <Calendar className={`w-5 h-5 transition-transform duration-300 ${pathname.startsWith('/leave') ? 'scale-110' : 'group-hover:scale-110'}`} />
         </Link>
         
         {/* Timesheets Link */}
         <Link
           href="/timesheets"
-          className="p-2.5 rounded-xl text-gray-600 dark:text-gray-300 hover:text-teal-600 dark:hover:text-teal-400 hover:bg-gray-100 dark:hover:bg-white/10 active:bg-gray-200 dark:active:bg-white/20 transition-all active:scale-95 flex items-center justify-center group"
+          className={getLinkClass("/timesheets")}
           aria-label="Timesheets"
           title="Timesheets"
         >
-          <Clock className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" />
+          <Clock className={`w-5 h-5 transition-transform duration-300 ${pathname.startsWith('/timesheets') ? 'scale-110' : 'group-hover:scale-110'}`} />
         </Link>
         
         {/* Company Calendar Link */}
         <Link
           href="/calendar"
-          className="p-2.5 rounded-xl text-gray-600 dark:text-gray-300 hover:text-teal-600 dark:hover:text-teal-400 hover:bg-gray-100 dark:hover:bg-white/10 active:bg-gray-200 dark:active:bg-white/20 transition-all active:scale-95 flex items-center justify-center group"
+          className={getLinkClass("/calendar")}
           aria-label="Company Calendar"
           title="Company Calendar"
         >
-          <CalendarDays className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" />
+          <CalendarDays className={`w-5 h-5 transition-transform duration-300 ${pathname.startsWith('/calendar') ? 'scale-110' : 'group-hover:scale-110'}`} />
         </Link>
 
         {/* Hydration-Safe Theme Toggle */}
@@ -132,11 +142,11 @@ export default function Navbar() {
         {/* FIXED: Settings Link (Visible to everyone, routes to /settings) */}
         <Link
           href="/settings"
-          className="p-2.5 rounded-xl text-gray-600 dark:text-gray-300 hover:text-teal-600 dark:hover:text-teal-400 hover:bg-gray-100 dark:hover:bg-white/10 active:bg-gray-200 dark:active:bg-white/20 transition-all active:scale-95 flex items-center justify-center group"
+          className={getLinkClass("/settings")}
           aria-label="Settings"
           title="Settings"
         >
-          <Settings className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
+          <Settings className={`w-5 h-5 transition-transform duration-300 ${pathname.startsWith('/settings') ? 'rotate-90' : 'group-hover:rotate-90'}`} />
         </Link>
 
         <button

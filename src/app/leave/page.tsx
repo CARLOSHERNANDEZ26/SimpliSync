@@ -231,9 +231,9 @@ export default function LeavePage() {
                   {isAdmin ? "Recent Leave History" : "My Leave History"}
                 </h3>
                 
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse min-w-[600px]">
-                    <thead>
+                <div className="w-full">
+                  <table className="w-full text-left border-collapse block xl:table">
+                    <thead className="hidden xl:table-header-group">
                       <tr className="border-b border-gray-200 dark:border-white/10">
                         {isAdmin && <th className="pb-3 text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Employee</th>}
                         <th className="pb-3 text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Type</th>
@@ -242,38 +242,43 @@ export default function LeavePage() {
                         <th className="pb-3 text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100 dark:divide-white/5">
+                    <tbody className="block xl:table-row-group divide-y xl:divide-y dark:divide-white/5 divide-transparent xl:divide-gray-100">
                       {(isAdmin ? pastRequests : requests).length > 0 ? (
                         (isAdmin ? pastRequests : requests).map(req => (
-                          <tr key={req.id} className="group hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
+                          <tr key={req.id} className="block xl:table-row group hover:bg-slate-50 dark:hover:bg-white/5 transition-colors mb-4 xl:mb-0 bg-slate-50 dark:bg-white/5 xl:bg-transparent rounded-2xl xl:rounded-none p-4 xl:p-0 border border-gray-100 dark:border-white/5 xl:border-none shadow-sm xl:shadow-none">
                             {isAdmin && (
-                              <td className="py-4 pr-4">
+                              <td className="flex justify-between items-center xl:table-cell py-2 xl:py-4 xl:pr-4 border-b border-gray-100 dark:border-white/5 xl:border-none">
+                                <span className="xl:hidden text-xs text-gray-500 uppercase font-semibold">Employee</span>
                                 <div className="font-medium text-gray-900 dark:text-white">{req.userName}</div>
                               </td>
                             )}
-                            <td className="py-4 pr-4">
+                            <td className="flex justify-between items-center xl:table-cell py-2 xl:py-4 xl:pr-4 border-b border-gray-100 dark:border-white/5 xl:border-none">
+                               <span className="xl:hidden text-xs text-gray-500 uppercase font-semibold">Type</span>
                               <span className="font-semibold text-teal-600 dark:text-teal-400 uppercase text-xs tracking-wider">
                                 {req.type}
                               </span>
                             </td>
-                            <td className="py-4 pr-4">
-                              <div className="text-sm text-gray-900 dark:text-white">
-                                {new Date(req.startDate).toLocaleDateString()} - <br/>{new Date(req.endDate).toLocaleDateString()}
+                            <td className="flex justify-between items-center xl:table-cell py-2 xl:py-4 xl:pr-4 border-b border-gray-100 dark:border-white/5 xl:border-none">
+                              <span className="xl:hidden text-xs text-gray-500 uppercase font-semibold">Dates</span>
+                              <div className="text-sm text-gray-900 dark:text-white text-right xl:text-left">
+                                {new Date(req.startDate).toLocaleDateString()} - <br className="hidden xl:block"/>{new Date(req.endDate).toLocaleDateString()}
                               </div>
                             </td>
-                            <td className="py-4 pr-4">
-                              <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2 max-w-[200px]" title={req.reason}>
+                            <td className="flex flex-col xl:table-cell py-2 xl:py-4 xl:pr-4 border-b border-gray-100 dark:border-white/5 xl:border-none">
+                              <span className="xl:hidden text-xs text-gray-500 uppercase font-semibold mb-1">Reason</span>
+                              <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-3 xl:line-clamp-2 xl:max-w-[200px]" title={req.reason}>
                                 {req.reason}
                               </p>
                             </td>
-                            <td className="py-4">
+                            <td className="flex justify-between items-center xl:table-cell py-3 xl:py-4">
+                              <span className="xl:hidden text-xs text-gray-500 uppercase font-semibold">Status</span>
                               {getStatusBadge(req.status)}
                             </td>
                           </tr>
                         ))
                       ) : (
-                        <tr>
-                          <td colSpan={5} className="py-8 text-center text-gray-500 dark:text-gray-400 italic">
+                        <tr className="block xl:table-row">
+                          <td colSpan={5} className="block xl:table-cell py-8 text-center text-gray-500 dark:text-gray-400 italic">
                             No leave history found.
                           </td>
                         </tr>

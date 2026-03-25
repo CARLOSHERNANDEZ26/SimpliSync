@@ -163,9 +163,9 @@ export default function TimesheetsPage() {
                   {isAdmin ? "Employee Aggregates" : "Daily Breakdown"}
                </h3>
                
-               <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse min-w-[600px]">
-                    <thead>
+               <div className="w-full">
+                  <table className="w-full text-left border-collapse block lg:table">
+                    <thead className="hidden lg:table-header-group">
                       <tr className="border-b border-gray-200 dark:border-white/10">
                         <th className="pb-3 text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{isAdmin ? "Employee" : "Date"}</th>
                         <th className="pb-3 text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total Clocked</th>
@@ -173,26 +173,30 @@ export default function TimesheetsPage() {
                         <th className="pb-3 text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{isAdmin ? "Total Shifts" : "Shift Timeline"}</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100 dark:divide-white/5">
+                    <tbody className="block lg:table-row-group divide-y lg:divide-y dark:divide-white/5 divide-transparent lg:divide-gray-100">
                       {Object.keys(employeeStats).length > 0 ? (
                           Object.keys(employeeStats).map(key => {
                               const stat = employeeStats[key];
                               return (
-                                <tr key={key} className="group hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
-                                    <td className="py-4 pr-4">
+                                <tr key={key} className="block lg:table-row group hover:bg-slate-50 dark:hover:bg-white/5 transition-colors mb-4 lg:mb-0 bg-slate-50 dark:bg-white/5 lg:bg-transparent rounded-2xl lg:rounded-none p-4 lg:p-0 border border-gray-100 dark:border-white/5 lg:border-none shadow-sm lg:shadow-none">
+                                    <td className="flex justify-between items-center lg:table-cell py-2 lg:py-4 lg:pr-4 border-b border-gray-100 dark:border-white/5 lg:border-none">
+                                        <span className="lg:hidden text-xs text-gray-500 uppercase font-semibold">{isAdmin ? "Employee" : "Date"}</span>
                                         <div className="font-semibold text-gray-900 dark:text-white">{stat.name}</div>
                                     </td>
-                                    <td className="py-4 pr-4">
+                                    <td className="flex justify-between items-center lg:table-cell py-2 lg:py-4 lg:pr-4 border-b border-gray-100 dark:border-white/5 lg:border-none">
+                                        <span className="lg:hidden text-xs text-gray-500 uppercase font-semibold">Total Clocked</span>
                                         <div className="font-bold text-teal-600 dark:text-teal-400">{formatMsToHrs(stat.totalMs)} hrs</div>
                                     </td>
-                                    <td className="py-4 pr-4">
+                                    <td className="flex justify-between items-center lg:table-cell py-2 lg:py-4 lg:pr-4 border-b border-gray-100 dark:border-white/5 lg:border-none">
+                                        <span className="lg:hidden text-xs text-gray-500 uppercase font-semibold">Overtime</span>
                                         {stat.overtimeMs > 0 ? (
                                              <div className="font-semibold text-rose-600 dark:text-rose-400">+{formatMsToHrs(stat.overtimeMs)} hrs</div>
                                         ) : (
                                              <div className="text-gray-400 dark:text-gray-600">—</div>
                                         )}
                                     </td>
-                                    <td className="py-4 pr-4">
+                                    <td className="flex flex-col lg:table-cell py-3 lg:py-4 lg:pr-4">
+                                        <span className="lg:hidden text-xs text-gray-500 uppercase font-semibold mb-1">{isAdmin ? "Total Shifts" : "Shift Timeline"}</span>
                                         {isAdmin ? (
                                             <div className="text-gray-600 dark:text-gray-300">{stat.logCount} shifts logged</div>
                                         ) : (
@@ -209,8 +213,8 @@ export default function TimesheetsPage() {
                               );
                           })
                       ) : (
-                         <tr>
-                          <td colSpan={4} className="py-8 text-center text-gray-500 dark:text-gray-400 italic bg-slate-50 dark:bg-white/5 rounded-2xl border border-dashed border-gray-200 dark:border-white/10 mt-4 block w-full">
+                         <tr className="block lg:table-row">
+                          <td colSpan={4} className="block lg:table-cell py-8 text-center text-gray-500 dark:text-gray-400 italic bg-slate-50 dark:bg-white/5 rounded-2xl border border-dashed border-gray-200 dark:border-white/10 mt-4 lg:w-full">
                             No logs found for this period.
                           </td>
                         </tr>
