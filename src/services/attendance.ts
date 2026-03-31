@@ -54,6 +54,10 @@ export const clockInEmployee = async (userId: string, latitude: number, longitud
       lng: longitude,
       status: finalStatus, 
     });
+
+     await updateDoc(doc(db, "users", userId), {
+      workStatus: "Working"
+    });
     
     console.log("Attendance record created with ID:", docRef.id);
     return true;
@@ -107,6 +111,10 @@ export const clockOutEmployee = async (userId: string, latitude: number, longitu
       lng: longitude,
       fullName, 
       position,     
+    });
+
+    await updateDoc(doc(db, "users", userId), {
+      workStatus: "Offline"
     });
 
     console.log("Success! Clocked out of shift:", activeShiftId);

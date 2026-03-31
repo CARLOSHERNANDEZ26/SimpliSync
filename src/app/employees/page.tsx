@@ -18,6 +18,7 @@ interface Employee {
   department?: string;
   joinDate?: string;
   status?: string;
+  workstatus?: string;
 }
 
 export default function EmployeesPage() {
@@ -138,13 +139,19 @@ const filteredEmployees = employees.filter(emp => {
                     <div className="w-14 h-14 rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center text-white text-xl font-bold uppercase shadow-lg shadow-teal-500/30">
                       {(employee.fullName || employee.name || "U").charAt(0)}
                     </div>
+                   {/* 🔥 THE 3-WAY LIVE STATUS CHECK */}
                     {employee.status === "inactive" ? (
                       <span className="px-2.5 py-1 rounded-full bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-semibold">
-                        Inactive
+                        Offboarded
+                      </span>
+                    ) : employee.workstatus === "Working" ? (
+                      <span className="px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs font-semibold flex items-center gap-1.5 border border-emerald-200 dark:border-emerald-500/30">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                        Working
                       </span>
                     ) : (
-                      <span className="px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold">
-                        Active
+                      <span className="px-2.5 py-1 rounded-full bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 text-xs font-semibold border border-gray-200 dark:border-white/10">
+                        Offline
                       </span>
                     )}
                   </div>
