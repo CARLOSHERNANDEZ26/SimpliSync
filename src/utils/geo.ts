@@ -1,5 +1,5 @@
-export const OFFICE_LAT = 14.859617183051714;
-export const OFFICE_LNG = 120.24503394213015;
+export const OFFICE_LAT = 14.942155;
+export const OFFICE_LNG = 120.217151;
 export const ALLOWED_RADIUS_METERS = 50; // The employee must be within 50 meters
 
 // The Haversine Formula: Calculates the distance between two points on a sphere

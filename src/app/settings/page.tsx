@@ -2,7 +2,7 @@
 
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Navbar from "@/components/Navbar";
-import ProfileSettings from "@/components/ProfileSettings";
+import PreferencesSettings from "@/components/PreferencesSettings";
 import AdminSettings from "@/components/AdminSettings";
 import HolidaySettings from "@/components/HolidaySettings";
 import { useAuth } from "@/hooks/useAuth";
@@ -31,18 +31,16 @@ export default function SettingsPage() {
               </p>
             </div>
 
-            <div className={`grid grid-cols-1 ${isAdmin ? "lg:grid-cols-2" : ""} gap-6 items-stretch`}>
-              {!isAdmin && (
-                <div className="w-full">
-                  <ProfileSettings />
-                </div>
-              )}
+            <div className={`grid grid-cols-1 ${isAdmin ? "xl:grid-cols-3" : "max-w-md mx-auto"} gap-6 items-stretch w-full`}>
+               <div className="w-full flex">
+                 <PreferencesSettings />
+               </div>
               {isAdmin && (
                 <>
-                  <div className="w-full">
+                  <div className="w-full flex">
                     <AdminSettings />
                   </div>
-                  <div className="w-full">
+                  <div className="w-full flex">
                     <HolidaySettings />
                   </div>
                 </>

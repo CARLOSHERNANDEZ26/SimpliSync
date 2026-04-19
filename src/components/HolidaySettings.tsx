@@ -54,13 +54,13 @@ export default function HolidaySettings() {
   };
 
   return (
-    <div className="bg-white dark:bg-black/40 border border-gray-200 dark:border-white/10 rounded-3xl p-8 backdrop-blur-xl shadow-2xl transition-all duration-300 flex flex-col h-full animate-fade-in-up" style={{animationDelay: '0.2s'}}>
+    <div className="w-full h-full bg-white dark:bg-black/40 border border-gray-200 dark:border-white/10 rounded-3xl p-6 backdrop-blur-xl shadow-2xl transition-all duration-300 flex flex-col animate-fade-in-up" style={{animationDelay: '0.2s'}}>
       <div className="flex items-center gap-3 mb-6">
         <div className="p-3 bg-teal-100 dark:bg-teal-500/20 rounded-2xl text-teal-600 dark:text-teal-400">
           <Calendar className="w-6 h-6" />
         </div>
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Holiday Calendar</h2>
+          <h3 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">Holiday Calendar</h3>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Configure company holidays.</p>
         </div>
       </div>

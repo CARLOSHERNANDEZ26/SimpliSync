@@ -9,7 +9,6 @@ export default function AddEmployeeModal({ onClose }: { onClose: () => void }) {
   const [fullname, setName] = useState("");
   const [position, setPosition] = useState("");
   const [department, setDepartment] = useState("");
-  const [joinDate, setJoinDate] = useState("");
   const [birthDate, setBirthDate] = useState("");
   const [password, setPassword] = useState("");
   
@@ -22,8 +21,11 @@ export default function AddEmployeeModal({ onClose }: { onClose: () => void }) {
     setIsLoading(true);
 
     try {
+      // Automatically assign the join date as the day of account creation
+      const autoJoinDate = new Date().toISOString().split("T")[0];
+      
       // 🔥 NEW: Pass the 'role' state into the function
-      await addEmployee(fullname, position, department, joinDate, birthDate, password, role);
+      await addEmployee(fullname, position, department, autoJoinDate, birthDate, password, role);
       toast.success(`${fullname} has been added as ${role === 'admin' ? 'an Admin' : 'an Employee'}!`);
       onClose();
     } catch (err) {
@@ -85,28 +87,15 @@ export default function AddEmployeeModal({ onClose }: { onClose: () => void }) {
             </div>
           </div>
 
-          <div className="flex gap-4">
-            <div className="flex flex-col gap-1.5 w-1/2">
-              <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider ml-1">Join Date</label>
-              <input
-                type="date"
-                value={joinDate}
-                onChange={(e) => setJoinDate(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all font-medium"
-                required
-              />
-            </div>
-            
-            <div className="flex flex-col gap-1.5 w-1/2">
-              <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider ml-1">Birth Date</label>
-              <input
-                type="date"
-                value={birthDate}
-                onChange={(e) => setBirthDate(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all font-medium"
-                required
-              />
-            </div>
+          <div className="flex flex-col gap-1.5 w-full">
+            <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider ml-1">Birth Date</label>
+            <input
+              type="date"
+              value={birthDate}
+              onChange={(e) => setBirthDate(e.target.value)}
+              className="w-full bg-slate-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all font-medium"
+              required
+            />
           </div>
 
           {/* 🔥 NEW: System Role Dropdown */}

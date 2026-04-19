@@ -10,7 +10,7 @@ import ClockOutButton from "@/components/ClockOutButton";
 import AdminLogsTable from "@/components/AdminLogsTable";
 import EmployeeHistoryTable from "@/components/EmployeeHistoryTable";
 import HRChatbot from "@/components/HRChatbot"; // Import the chatbot
-import { Users, Activity, FileText, PieChart, Calendar, Clock } from "lucide-react";
+import { Users, Activity, FileText, PieChart, Calendar, Clock, ChevronsUpDown } from "lucide-react";
 import Link from "next/link";
 
 interface AttendanceLog {
@@ -128,34 +128,39 @@ export default function DashboardPage() {
 
   return (
     <ProtectedRoute>
-      <main className="min-h-screen w-full relative overflow-hidden pt-[73px] bg-slate-50 dark:bg-[#0a0a0a]">
+      <main className="min-h-screen lg:h-screen w-full relative overflow-y-auto lg:overflow-hidden pt-[73px] bg-slate-50 dark:bg-[#0a0a0a] flex flex-col">
         {/* Dynamic Background Glows */}
         <div className="absolute top-0 left-0 w-[40rem] h-[40rem] bg-teal-400/20 dark:bg-teal-600/10 rounded-full blur-[150px] pointer-events-none"></div>
         <div className="absolute bottom-0 right-0 w-[30rem] h-[30rem] bg-emerald-400/20 dark:bg-emerald-600/10 rounded-full blur-[120px] pointer-events-none"></div>
 
         <Navbar />
         
-        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
-          <div className="flex flex-col lg:flex-row gap-12">
+        <div className="relative z-10 w-full flex-grow lg:h-full flex flex-col max-w-7xl mx-auto px-4 sm:px-6 py-6 pb-24 lg:pb-8 min-h-0">
+          <div className="flex flex-col lg:flex-row gap-8 flex-1 min-h-0">
             
             {/* Left Column: Actions / Admin Stats */}
-            <div className="w-full lg:w-1/3 space-y-6">
-              <div>
+            <div className="w-full lg:w-1/3 flex flex-col space-y-6 lg:h-full">
+              <div className="shrink-0">
                 <h2 className="text-4xl font-bold text-gray-900 dark:text-white">
                 Welcome, {user?.displayName || (user?.email?.split('@')[0] ? user.email.split('@')[0].charAt(0).toUpperCase() + user.email.split('@')[0].slice(1) : "User")}
               </h2>
               </div>
               
               {isAdmin ? (
-                <>
+                <div className="flex flex-col flex-1 min-h-0 space-y-6">
                   {/* Admin Overview Metrics */}
-                  <div className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 shadow-xl space-y-5">
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white items-center flex gap-2">
-                      <Activity className="w-5 h-5 text-teal-500" />
-                      Key Metrics
-                    </h3>
+                  <div className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 shadow-xl flex flex-col min-h-0 flex-[0.8] overflow-y-auto hide-scrollbar relative">
+                    <div className="flex items-center justify-between shrink-0 mb-4 sticky top-0 bg-white dark:bg-[#151515] z-10 pb-2">
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-white items-center flex gap-2">
+                        <Activity className="w-5 h-5 text-teal-500" />
+                        Key Metrics
+                      </h3>
+                      <div className="text-xs text-gray-400 flex items-center gap-1" title="Scrollable Container">
+                        <ChevronsUpDown className="w-3.5 h-3.5" />
+                      </div>
+                    </div>
                     
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-4 shrink-0 mb-5">
                       <div className="p-4 rounded-2xl bg-slate-50 dark:bg-black/20 border border-gray-100 dark:border-white/5">
                         <Users className="w-6 h-6 text-teal-500 mb-2" />
                         <div className="text-2xl font-bold text-gray-900 dark:text-white">{employeeCount}</div>
@@ -189,13 +194,18 @@ export default function DashboardPage() {
                   </div>
 
                   {/* Pending Actions & Events */}
-                  <div className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 shadow-xl space-y-6">
-                    <div>
+                  <div className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 shadow-xl flex flex-col flex-1 min-h-0 overflow-y-auto hide-scrollbar relative">
+                    <div className="shrink-0 mb-5 sticky top-0 bg-white dark:bg-[#151515] z-10 pb-2">
                       <div className="flex items-center justify-between mb-3">
-                        <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                          <Clock className="w-5 h-5 text-amber-500" />
-                          Pending Actions
-                        </h3>
+                        <div className="flex items-center gap-3">
+                          <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                            <Clock className="w-5 h-5 text-amber-500" />
+                            Pending Actions
+                          </h3>
+                          <div className="text-xs text-gray-400 flex items-center gap-1" title="Scrollable Container">
+                            <ChevronsUpDown className="w-3.5 h-3.5" />
+                          </div>
+                        </div>
                         {pendingLeaves.length > 0 && (
                           <span className="bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 text-xs px-2.5 py-1 rounded-full font-bold">{pendingLeaves.length}</span>
                         )}
@@ -249,7 +259,7 @@ export default function DashboardPage() {
                       </div>
                     </div>
                   </div>
-                </>
+                </div>
               ) : (
                 <div className="p-5 sm:p-8 rounded-2xl sm:rounded-3xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 shadow-xl">
                   <ClockInButton />
@@ -260,7 +270,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Right Column: Tables */}
-            <div className="w-full lg:w-2/3">
+            <div className="w-full lg:w-2/3 lg:h-full lg:overflow-y-auto pr-2 custom-scrollbar lg:pb-10">
               {isAdmin ? <AdminLogsTable /> : <EmployeeHistoryTable />}
             </div>
 

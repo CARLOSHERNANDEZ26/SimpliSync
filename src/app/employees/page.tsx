@@ -5,9 +5,10 @@ import Navbar from "@/components/Navbar";
 import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/hooks/useAuth";
-import { Search, Users as UsersIcon, ChevronRight, ShieldAlert, Building2, Calendar, Phone, UserPlus } from "lucide-react";
+import { Search, Users as UsersIcon, ChevronRight, ShieldAlert, Building2, Calendar, Phone, UserPlus, Clock } from "lucide-react";
 import Link from "next/link";
 import AddEmployeeModal from "@/components/AddEmployeeModal";
+import EmployeeProfileView from "@/components/EmployeeProfileView";
 
 interface Employee {
   id: string;
@@ -60,6 +61,20 @@ const filteredEmployees = employees.filter(emp => {
     return matchesSearch && matchesDept;
   });
 
+  if (!isAdmin && user?.uid) {
+    return (
+      <ProtectedRoute>
+        <main className="min-h-screen w-full relative overflow-hidden pt-[73px] bg-slate-50 dark:bg-[#0a0a0a]">
+          <div className="absolute top-0 left-0 w-[40rem] h-[40rem] bg-teal-400/20 dark:bg-teal-600/10 rounded-full blur-[150px] pointer-events-none"></div>
+          <div className="absolute bottom-0 right-0 w-[30rem] h-[30rem] bg-emerald-400/20 dark:bg-emerald-600/10 rounded-full blur-[120px] pointer-events-none"></div>
+
+          <Navbar />
+          <EmployeeProfileView userId={user.uid} />
+        </main>
+      </ProtectedRoute>
+    );
+  }
+
   return (
     <ProtectedRoute>
       <main className="min-h-screen w-full relative overflow-hidden pt-[73px] bg-slate-50 dark:bg-[#0a0a0a]">
@@ -93,15 +108,7 @@ const filteredEmployees = employees.filter(emp => {
             )}
           </div>
 
-          {!isAdmin && (
-            <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 p-4 rounded-xl flex items-start gap-3 mb-8">
-              <ShieldAlert className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-              <div>
-                <h3 className="text-amber-800 dark:text-amber-200 font-medium">Restricted Access</h3>
-                <p className="text-amber-700/80 dark:text-amber-300/80 text-sm mt-1">You are viewing the public directory. Only administrators can view full background details and edit profiles.</p>
-              </div>
-            </div>
-          )}
+          {/* Employees no longer see this view, only admins do */}
 
           {/* Filters & Search */}
           <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 p-4 rounded-2xl flex flex-col sm:flex-row gap-4 mb-8 shadow-sm">
@@ -129,68 +136,98 @@ const filteredEmployees = employees.filter(emp => {
             </div>
           </div>
 
-          {/* Employee Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredEmployees.length > 0 ? (
-              filteredEmployees.map(employee => (
-                <div key={employee.id} className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl p-4 sm:p-6 shadow-xl shadow-gray-200/20 dark:shadow-none hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 group flex flex-col">
-                  
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="w-14 h-14 rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center text-white text-xl font-bold uppercase shadow-lg shadow-teal-500/30">
-                      {(employee.fullName || employee.name || "U").charAt(0)}
-                    </div>
-                   {/* 🔥 THE 3-WAY LIVE STATUS CHECK */}
-                    {employee.status === "inactive" ? (
-                      <span className="px-2.5 py-1 rounded-full bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-semibold">
-                        Offboarded
-                      </span>
-                    ) : employee.workstatus === "Working" ? (
-                      <span className="px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs font-semibold flex items-center gap-1.5 border border-emerald-200 dark:border-emerald-500/30">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                        Working
-                      </span>
+          {/* Employee Directory Table */}
+          <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl overflow-hidden">
+             <div className="overflow-x-auto">
+               <table className="w-full text-left border-collapse">
+                 <thead>
+                   <tr className="border-b border-gray-200 dark:border-white/10">
+                     <th className="pb-3 px-4 text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Employee</th>
+                     <th className="pb-3 px-4 text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Position</th>
+                     <th className="pb-3 px-4 text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Department</th>
+                     <th className="pb-3 px-4 text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Join Date</th>
+                     <th className="pb-3 px-4 text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                     <th className="pb-3 px-4 text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Action</th>
+                   </tr>
+                 </thead>
+                 <tbody className="divide-y divide-gray-100 dark:divide-white/5">
+                    {filteredEmployees.length > 0 ? (
+                      filteredEmployees.map(employee => (
+                        <tr key={employee.id} className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group">
+                           <td className="py-4 px-4 whitespace-nowrap">
+                             <div className="flex items-center gap-3">
+                               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center text-white font-bold uppercase shadow-sm">
+                                 {(employee.fullName || employee.name || "U").charAt(0)}
+                               </div>
+                               <div>
+                                 <div className="font-semibold text-gray-900 dark:text-white">
+                                    {employee.fullName || employee.name || "Unknown Employee"}
+                                 </div>
+                                 <div className="text-xs text-gray-500 dark:text-gray-400">{employee.email}</div>
+                               </div>
+                             </div>
+                           </td>
+                           <td className="py-4 px-4 whitespace-nowrap">
+                             <div className="text-gray-700 dark:text-gray-300 font-medium">{employee.position || "Staff"}</div>
+                           </td>
+                           <td className="py-4 px-4 whitespace-nowrap">
+                             <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-sm">
+                               <Building2 className="w-4 h-4" />
+                               {employee.department || "N/A"}
+                             </div>
+                           </td>
+                           <td className="py-4 px-4 whitespace-nowrap">
+                             <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-sm">
+                               <Calendar className="w-4 h-4" />
+                               {employee.joinDate && !isNaN(Date.parse(employee.joinDate)) ? new Date(employee.joinDate).toLocaleDateString() : "N/A"}
+                             </div>
+                           </td>
+                           <td className="py-4 px-4 whitespace-nowrap">
+                              {employee.status === "inactive" ? (
+                                <span className="inline-flex px-2.5 py-1 rounded-full bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-semibold">
+                                  Offboarded
+                                </span>
+                              ) : employee.workstatus === "Working" ? (
+                                <span className="inline-flex px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs font-semibold items-center gap-1.5 border border-emerald-200 dark:border-emerald-500/30">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                  Working
+                                </span>
+                              ) : (
+                                <span className="inline-flex px-2.5 py-1 rounded-full bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 text-xs font-semibold border border-gray-200 dark:border-white/10">
+                                  Offline
+                                </span>
+                              )}
+                           </td>
+                           <td className="py-4 px-4 whitespace-nowrap flex justify-end gap-2">
+                             <Link 
+                                href={`/timesheets?employeeId=${employee.id}&employeeName=${encodeURIComponent(employee.fullName || employee.name || "Employee")}`}
+                                className="inline-flex items-center justify-center py-2 px-3 bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 border border-indigo-200 dark:border-indigo-500/30 rounded-lg text-indigo-700 dark:text-indigo-400 font-medium text-sm transition-all shadow-sm active:scale-95"
+                                title="View Timesheet"
+                             >
+                                <Clock className="w-4 h-4 sm:mr-1.5" />
+                                <span className="hidden sm:inline">Timesheet</span>
+                             </Link>
+                             <Link 
+                                href={`/employees/${employee.id}`}
+                                className="inline-flex items-center justify-center py-2 px-3 bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 border border-gray-200 dark:border-white/10 rounded-lg text-teal-600 dark:text-teal-400 font-medium text-sm transition-all shadow-sm active:scale-95"
+                             >
+                                View Profile
+                             </Link>
+                           </td>
+                        </tr>
+                      ))
                     ) : (
-                      <span className="px-2.5 py-1 rounded-full bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 text-xs font-semibold border border-gray-200 dark:border-white/10">
-                        Offline
-                      </span>
+                      <tr>
+                        <td colSpan={6} className="py-16 text-center text-gray-500 dark:text-gray-400">
+                           <UsersIcon className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+                           <h3 className="text-lg font-medium text-gray-900 dark:text-white">No employees found</h3>
+                           <p className="mt-1">Try adjusting your search or filters.</p>
+                        </td>
+                      </tr>
                     )}
-                  </div>
-
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">{employee.fullName || employee.name || "Unknown Employee"}</h3>
-                  <p className="text-teal-600 dark:text-teal-400 font-medium text-sm mb-4">{employee.position || "Staff"}</p>
-                  
-                  <div className="space-y-2 mt-auto">
-                    <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                      <Building2 className="w-4 h-4" />
-                      {employee.department || "No Department"}
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                      <Calendar className="w-4 h-4" />
-                      Joined {employee.joinDate && !isNaN(Date.parse(employee.joinDate)) 
-                        ? new Date(employee.joinDate).toLocaleDateString() 
-                        : "N/A"}
-                    </div>
-                  </div>
-
-                  {/* BUG FIX: Employees can now view their OWN profile, or Admins can view all */}
-                  {(isAdmin || user?.uid === employee.id) && (
-                    <Link 
-                      href={`/employees/${employee.id}`}
-                      className="mt-6 w-full py-2.5 bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 border border-gray-200 dark:border-white/10 rounded-xl text-gray-700 dark:text-gray-300 font-medium text-sm flex items-center justify-center gap-2 transition-all active:scale-95 group-hover:border-teal-500/30"
-                    >
-                      View Full Profile
-                      <ChevronRight className="w-4 h-4" />
-                    </Link>
-                  )}
-                </div>
-              ))
-            ) : (
-              <div className="col-span-full py-16 text-center bg-white dark:bg-white/5 border border-dashed border-gray-300 dark:border-white/20 rounded-3xl">
-                <UsersIcon className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white">No employees found</h3>
-                <p className="text-gray-500 dark:text-gray-400 mt-1">Try adjusting your search or filters.</p>
-              </div>
-            )}
+                 </tbody>
+               </table>
+             </div>
           </div>
 
         </div>

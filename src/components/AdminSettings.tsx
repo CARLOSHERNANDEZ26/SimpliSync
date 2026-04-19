@@ -51,9 +51,9 @@ useEffect(() => {
   }
 
   return (
-    <div className="w-full max-w-2xl mt-8 bg-white dark:bg-white/5 backdrop-blur-md rounded-2xl shadow-sm border border-gray-200 dark:border-white/10 p-6">
+    <div className="w-full h-full bg-white dark:bg-white/5 backdrop-blur-md rounded-3xl shadow-sm border border-gray-200 dark:border-white/10 p-6 flex flex-col animate-fade-in-up" style={{animationDelay: '0.1s'}}>
       <div className="mb-6 border-b border-gray-200 dark:border-white/10 pb-4">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white">Company Settings</h2>
+        <h3 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">Company Settings</h3>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage global rules for the SimpliSync platform.</p>
       </div>
 

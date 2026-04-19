@@ -48,7 +48,7 @@ useEffect(() => {
   // Generate calendar grid
   const days = [];
   for (let i = 0; i < firstDayOfMonth; i++) {
-    days.push(<div key={`empty-${i}`} className="h-16 sm:h-24 md:h-32 border border-gray-100 dark:border-white/5 bg-slate-50/50 dark:bg-white/5 opacity-50"></div>);
+    days.push(<div key={`empty-${i}`} className="min-h-[4rem] sm:min-h-[6rem] md:min-h-0 h-full border border-gray-100 dark:border-white/5 bg-slate-50/50 dark:bg-white/5 opacity-50"></div>);
   }
 
   for (let d = 1; d <= daysInMonth; d++) {
@@ -62,7 +62,7 @@ useEffect(() => {
     const isToday = new Date().toDateString() === currentIterDate.toDateString();
 
     days.push(
-      <div key={d} className={`h-16 sm:h-24 md:h-32 border border-gray-100 dark:border-white/5 p-1 sm:p-2 flex flex-col transition-colors hover:bg-slate-50 dark:hover:bg-white/5 ${isToday ? 'bg-teal-50/30 dark:bg-teal-900/10' : 'bg-white dark:bg-black/20'}`}>
+      <div key={d} className={`min-h-[4rem] sm:min-h-[6rem] md:min-h-0 h-full border border-gray-100 dark:border-white/5 p-1 sm:p-2 flex flex-col transition-colors hover:bg-slate-50 dark:hover:bg-white/5 ${isToday ? 'bg-teal-50/30 dark:bg-teal-900/10' : 'bg-white dark:bg-black/20'}`}>
         <div className="flex justify-between items-center mb-0.5 sm:mb-1">
           <span className={`text-[10px] sm:text-sm font-medium ${isToday ? 'w-4 h-4 sm:w-6 sm:h-6 rounded-full bg-teal-500 text-white flex items-center justify-center' : 'text-gray-700 dark:text-gray-300'}`}>
             {d}
@@ -84,15 +84,15 @@ useEffect(() => {
 
   return (
     <ProtectedRoute>
-      <main className="min-h-screen w-full relative overflow-hidden pt-[73px] bg-slate-50 dark:bg-[#0a0a0a]">
+      <main className="h-screen w-full relative overflow-hidden pt-[73px] bg-slate-50 dark:bg-[#0a0a0a] flex flex-col">
         <div className="absolute top-0 left-0 w-[40rem] h-[40rem] bg-teal-400/20 dark:bg-teal-600/10 rounded-full blur-[150px] pointer-events-none"></div>
         <div className="absolute bottom-0 right-0 w-[30rem] h-[30rem] bg-emerald-400/20 dark:bg-emerald-600/10 rounded-full blur-[120px] pointer-events-none"></div>
 
         <Navbar />
         
-        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
+        <div className="relative z-10 w-full h-full flex flex-col max-w-7xl mx-auto px-4 sm:px-6 py-6 pb-8 min-h-0">
           
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-4 shrink-0">
             <div>
               <h1 className="text-4xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
                 <CalendarDays className="w-10 h-10 text-teal-500" />
@@ -116,7 +116,7 @@ useEffect(() => {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl md:rounded-3xl overflow-hidden shadow-xl">
+          <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl md:rounded-3xl overflow-hidden shadow-xl flex flex-col flex-1 min-h-0">
             {/* Calendar Header */}
             <div className="grid grid-cols-7 bg-slate-50 dark:bg-black/40 border-b border-gray-200 dark:border-white/10">
               {weekDays.map(day => (
@@ -127,7 +127,7 @@ useEffect(() => {
             </div>
             
             {/* Calendar Grid */}
-            <div className="grid grid-cols-7 bg-gray-200 dark:bg-white/10 gap-px">
+            <div className="grid grid-cols-7 bg-gray-200 dark:bg-white/10 gap-px flex-1 auto-rows-[minmax(5rem,1fr)] sm:auto-rows-[minmax(6rem,1fr)] md:auto-rows-[minmax(0,1fr)] overflow-y-auto custom-scrollbar">
               {days}
             </div>
           </div>
