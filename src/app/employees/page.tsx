@@ -5,7 +5,7 @@ import Navbar from "@/components/Navbar";
 import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/hooks/useAuth";
-import { Search, Users as UsersIcon, ChevronRight, ShieldAlert, Building2, Calendar, Phone, UserPlus, Clock } from "lucide-react";
+import { Search, Users as UsersIcon, Building2, Calendar, UserPlus, Clock } from "lucide-react";
 import Link from "next/link";
 import AddEmployeeModal from "@/components/AddEmployeeModal";
 import EmployeeProfileView from "@/components/EmployeeProfileView";
@@ -33,8 +33,6 @@ export default function EmployeesPage() {
 
   useEffect(() => {
     if (!user?.uid) return;
-    
-    // Only fetching employees
     const usersQuery = query(collection(db, "users"), where("role", "==", "employee"));
     const unsubscribe = onSnapshot(usersQuery, (snapshot) => {
       const emps = snapshot.docs.map(doc => ({
@@ -48,19 +46,23 @@ export default function EmployeesPage() {
   }, [user?.uid]);
 
   const departments = ["All", ...Array.from(new Set(employees.map(e => e.department).filter(Boolean)))];
-const filteredEmployees = employees.filter(emp => {
 
+  const filteredEmployees = employees.filter(emp => { 
     const employeeName = emp.fullName || emp.name || ""; 
+    const email = emp.email || "";
+    const position = emp.position || "";
 
-    const matchesSearch = employeeName.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          emp.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          (emp.position || "").toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = 
+      employeeName.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      position.toLowerCase().includes(searchQuery.toLowerCase());
     
     const matchesDept = departmentFilter === "All" || emp.department === departmentFilter;
     
     return matchesSearch && matchesDept;
   });
 
+  // View for non-admin users: Shows only their own profile
   if (!isAdmin && user?.uid) {
     return (
       <ProtectedRoute>
@@ -74,6 +76,7 @@ const filteredEmployees = employees.filter(emp => {
       </ProtectedRoute>
     );
   }
+
 
   return (
     <ProtectedRoute>
@@ -107,8 +110,6 @@ const filteredEmployees = employees.filter(emp => {
               </button>
             )}
           </div>
-
-          {/* Employees no longer see this view, only admins do */}
 
           {/* Filters & Search */}
           <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 p-4 rounded-2xl flex flex-col sm:flex-row gap-4 mb-8 shadow-sm">
@@ -187,6 +188,11 @@ const filteredEmployees = employees.filter(emp => {
                                 <span className="inline-flex px-2.5 py-1 rounded-full bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-semibold">
                                   Offboarded
                                 </span>
+                              ) : employee.status === "Out of Bounds" ? (
+                                <span className="px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 text-xs font-semibold flex items-center gap-1.5 border border-amber-200 dark:border-amber-500/30 shadow-sm animate-pulse">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                     Out of Bounds
+                                     </span>
                               ) : employee.workstatus === "Working" ? (
                                 <span className="inline-flex px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs font-semibold items-center gap-1.5 border border-emerald-200 dark:border-emerald-500/30">
                                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>

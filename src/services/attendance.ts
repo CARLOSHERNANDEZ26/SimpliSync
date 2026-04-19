@@ -1,11 +1,22 @@
 import { db } from "../lib/firebase";
 import { collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc, doc, orderBy, getDoc } from "firebase/firestore";
 import { isWithinSmartZone } from "@/utils/geo";    
-import { time } from "console";
 
 export const clockInEmployee = async (userId: string, latitude: number, longitude: number) => {
   try {
-    const isValidLocation = isWithinSmartZone(latitude, longitude);
+    // 1. Fetch Company Settings FIRST
+    const settingsSnap = await getDoc(doc(db, "settings", "company"));
+    const settingsData = settingsSnap.exists() ? settingsSnap.data() : null;
+
+    // 2. Set coordinates with fallbacks
+    const officeLat = settingsData?.officeLat || 14.942155;
+    const officeLng = settingsData?.officeLng || 120.217151;
+    const allowedRadius = settingsData?.allowedRadius || 50;
+    const shiftStartTime = settingsData?.shiftStartTime || "08:00";
+
+    // 3. Perform the dynamic location check with ALL 5 arguments
+    const isValidLocation = isWithinSmartZone(latitude, longitude, officeLat, officeLng, allowedRadius);
+    
     if (!isValidLocation) {
       throw new Error("Out_Of_Smart_Zone.");
     }
@@ -17,24 +28,10 @@ export const clockInEmployee = async (userId: string, latitude: number, longitud
 
     const now = new Date();
     const targetTime = new Date();
-    let targetHour = 8;
-    let targetMinute = 0;
-
-    try {
-      const settingsSnap = await getDoc(doc(db, "settings", "company"));
-      if (settingsSnap.exists() && settingsSnap.data().shiftStartTime) {
-        const timeString = settingsSnap.data().shiftStartTime; 
-        const [hourStr, minuteStr] = timeString.split(':');
-        targetHour = parseInt(hourStr, 10);
-        targetMinute = parseInt(minuteStr, 10);
-      }
-    } catch (e) {
-      console.warn("Could not load company settings, defaulting to 8:00 AM", e);
-    }
-
-    targetTime.setHours(targetHour, targetMinute, 0, 0);
+    const [hourStr, minuteStr] = shiftStartTime.split(':');
+    targetTime.setHours(parseInt(hourStr, 10), parseInt(minuteStr, 10), 0, 0);
+    
     let finalStatus = "On Time";
-
     if (now > targetTime) {
       const diffInMs = now.getTime() - targetTime.getTime();
       const diffInMins = Math.floor(diffInMs / (1000 * 60));
@@ -70,10 +67,17 @@ export const clockInEmployee = async (userId: string, latitude: number, longitud
     throw new Error("Failed to clock in. Please try again.");       
   }
 };
-
 export const clockOutEmployee = async (userId: string, latitude: number, longitude: number) => {
   try {
-    const isValidLocation = isWithinSmartZone(latitude, longitude);
+    const settingsSnap = await getDoc(doc(db, "settings", "company"));
+    const settingsData = settingsSnap.exists() ? settingsSnap.data() : null;
+    
+    const officeLat = settingsData?.officeLat || 14.942155;
+    const officeLng = settingsData?.officeLng || 120.217151;
+    const allowedRadius = settingsData?.allowedRadius || 50;
+
+    const isValidLocation = isWithinSmartZone(latitude, longitude, officeLat, officeLng, allowedRadius);
+    
     if (!isValidLocation) {
       throw new Error("OUT_OF_BOUNDS");
     }
@@ -87,8 +91,7 @@ export const clockOutEmployee = async (userId: string, latitude: number, longitu
     const q =  query(attendanceRef, where("userId", "==", userId), where("timeOut", "==", null)); 
     
     const querySnapshot = await getDocs(q);
-    console.log("Query returned documents:", querySnapshot.size);
-
+    
     let activeShiftId = null;
 
     querySnapshot.forEach((document) => {
@@ -103,7 +106,6 @@ export const clockOutEmployee = async (userId: string, latitude: number, longitu
     }
 
     const shiftDocRef = doc(db, "attendanceLogs", activeShiftId); 
-    console.log("Targeting document with ID:", activeShiftId);
     
     await updateDoc(shiftDocRef, { 
       timeOut: serverTimestamp(),
@@ -114,10 +116,9 @@ export const clockOutEmployee = async (userId: string, latitude: number, longitu
     });
 
     await updateDoc(doc(db, "users", userId), {
-      workStatus: "Offline"
+      workStatus: "Offline" 
     });
 
-    console.log("Success! Clocked out of shift:", activeShiftId);
     return true;
 
   } catch (error) {
@@ -127,7 +128,6 @@ export const clockOutEmployee = async (userId: string, latitude: number, longitu
     if (error instanceof Error && error.message === "NO_ACTIVE_SHIFT") {
       throw new Error("You don't have an active shift to clock out of!");
     }
-    console.error("Database Error:", error);
     throw new Error("Failed to clock out. Please try again.");
   }
 };
@@ -135,59 +135,7 @@ export const clockOutEmployee = async (userId: string, latitude: number, longitu
 export const fetchAllAttendanceLogs = async () => {
   try {
     const attendanceRef = collection(db, "attendanceLogs");
-
     const q = query(attendanceRef, orderBy("timeIn", "desc"));
-
-    const querySnapshot = await getDocs(q);
-
-    const logs: {
-      id: string;
-      userId: string;
-      timeIn: Date | null;
-      timeOut: Date | null;
-      status: string;
-      lat: number;
-      lng: number;
-    }[] = [];
-
-    querySnapshot.forEach((document) => {
-      const data = document.data();
-
-      const formattedTimeIn = data.timeIn ? data.timeIn.toDate() : null;
-      const formattedTimeOut = data.timeOut ? data.timeOut.toDate() : null;
-
-      logs.push({
-        id: document.id,
-        userId: data.userId,
-        timeIn: formattedTimeIn,
-        timeOut: formattedTimeOut,
-        status: data.status,
-        lat: data.lat,
-        lng: data.lng,
-      });
-    });
-
-    console.log(`Successfully fetched ${logs.length} logs!`);
-    return logs;
-
-  } catch (error) {
-    console.error("Error fetching logs:", error);
-    throw new Error("Failed to fetch attendance records.");
-  }
-
-  
-};
-
-export const fetchUserAttendanceLogs = async (userId: string) => {
-  try {
-    const attendanceRef = collection(db, "attendanceLogs");
-
-    const q = query(
-      attendanceRef, 
-      where("userId", "==", userId),
-      orderBy("timeIn", "desc")
-    );
-
     const querySnapshot = await getDocs(q);
 
     const logs: {
@@ -212,11 +160,115 @@ export const fetchUserAttendanceLogs = async (userId: string) => {
         lng: data.lng,
       });
     });
-
     return logs;
-
   } catch (error) {
-    console.error("Error fetching user logs:", error);
+    console.error("Error fetching attendance logs:", error);
+    throw new Error("Failed to fetch attendance records.");
+  }
+};
+
+export async function verifyLocationPing(userId: string, latitude: number, longitude: number) {  
+  try{
+    const settingsSnap = await getDoc(doc(db, "settings", "company")); 
+    const settingsData = settingsSnap.exists() ? settingsSnap.data() : null; 
+    
+    const officeLat = settingsData?.officeLat || 14.942155; 
+    const officeLng = settingsData?.officeLng || 120.217151;
+    const allowedRadius = settingsData?.allowedRadius || 50;
+
+    
+    const isValidLocation = isWithinSmartZone(latitude, longitude, officeLat, officeLng, allowedRadius);
+    
+    await updateDoc(doc(db, "users", userId), {
+      workStatus: isValidLocation ? "Working" : "Out of Bounds", 
+      lastPing: serverTimestamp(),
+    });
+    
+    return isValidLocation;
+  }catch (error) {
+    console.error("Ping Error:", error);
+  }
+}
+
+export const resolveDanglingShift = async (
+  shiftId: string,
+  userId: string,
+  manualTimeOut: Date,
+  reason: string
+) => {
+  try {
+    const shiftDocRef = doc(db, "attendanceLogs", shiftId);
+    const userDocRef = doc(db, "users", userId);
+    
+    await updateDoc(shiftDocRef, {
+      timeOut: manualTimeOut,
+      status: "Pending HR Review",
+      exceptionReason: reason,
+      resolvedAt: serverTimestamp(),
+    });
+
+    await updateDoc(userDocRef, {
+      workStatus: "Offline" 
+    });
+
+    return { success: true, message: "Shift resolved successfully." };
+  } catch (error) {    
+    console.error("Error resolving shift:", error);
+    throw error;
+  }
+}
+
+export const fetchUserAttendanceLogs = async (userId: string) => {
+  try {
+    const attendanceRef = collection(db, "attendanceLogs");
+    const q = query(attendanceRef, where("userId", "==", userId), orderBy("timeIn", "desc"));
+    const querySnapshot = await getDocs(q);
+
+    const logs: {
+      id: string;
+      userId: string;
+      timeIn: Date | null;
+      timeOut: Date | null;
+      status: string;
+      lat: number;
+      lng: number;
+    }[] = [];
+
+    querySnapshot.forEach((document) => {
+      const data = document.data();
+      logs.push({
+        id: document.id,
+        userId: data.userId,
+        timeIn: data.timeIn ? data.timeIn.toDate() : null,
+        timeOut: data.timeOut ? data.timeOut.toDate() : null,
+        status: data.status,
+        lat: data.lat,
+        lng: data.lng,
+      });
+    });
+    return logs;
+  } catch (error) {
+    console.error("Error fetching user attendance logs:", error);
     throw new Error("Failed to fetch your attendance records.");
+  }
+};
+
+export const adminForceClockOut = async (userId: string, shiftId: string) => {
+  try {
+    const shiftDocRef = doc(db, "attendanceLogs", shiftId);
+    
+    await updateDoc(shiftDocRef, {
+      timeOut: serverTimestamp(),
+      status: "Force Clocked Out (Admin)",
+    });
+
+    await updateDoc(doc(db, "users", userId), {
+      workStatus: "Offline" 
+    });
+
+    return { success: true, message: "Employee forcefully clocked out." };
+  } catch (error) {
+    console.error("Admin Override Error:", error);
+    throw new Error("Failed to execute Admin Override.");
   }
 };

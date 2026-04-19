@@ -1,6 +1,6 @@
-export const OFFICE_LAT = 14.942155;
-export const OFFICE_LNG = 120.217151;
-export const ALLOWED_RADIUS_METERS = 50; // The employee must be within 50 meters
+// export const OFFICE_LAT = 14.942155;
+// export const OFFICE_LNG = 120.217151;
+// export const ALLOWED_RADIUS_METERS = 50; // The employee must be within 50 meters
 
 // The Haversine Formula: Calculates the distance between two points on a sphere
 export const getDistanceFromLatLonInMeters = (lat1: number, lon1: number, lat2: number, lon2: number) => {
@@ -20,16 +20,10 @@ const deg2rad = (deg: number) => {
   return deg * (Math.PI / 180);
 };
 
-// YOUR MISSION GOES HERE:
-export const isWithinSmartZone = (userLat: number, userLng: number) => {
 
-  const distance = getDistanceFromLatLonInMeters(userLat, userLng, OFFICE_LAT, OFFICE_LNG);
-  return distance <= ALLOWED_RADIUS_METERS;
+export const isWithinSmartZone = (userLat: number, userLng: number, officeLat: number, officeLng: number, allowedRadius: number) => {
 
-
-
-  // 1. Call the 'getDistanceFromLatLonInMeters' function using the user's location and the OFFICE location.
-  // 2. Save the result in a variable called 'distance'.
-  // 3. Write an 'if' statement: If 'distance' is less than or equal to ALLOWED_RADIUS_METERS, return true.
-  // 4. Else, return false.
+  
+  const distance = getDistanceFromLatLonInMeters(userLat, userLng, officeLat, officeLng);
+  return distance <= allowedRadius;
 };

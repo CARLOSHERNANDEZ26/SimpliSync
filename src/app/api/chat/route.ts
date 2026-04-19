@@ -28,7 +28,7 @@ export async function POST(req: Request) {
     const { messages, logs }: { messages: Message[]; logs: MaayosNaAttendanceLog[] } = await req.json(); 
 
    const model = genAI.getGenerativeModel({ 
-      model: "gemini-3-flash-preview", 
+      model: "gemini-2.5-flash", 
       systemInstruction: `
         You are the SimpliSync HR Assistant for SimpliV Subic.
         You have access to the following recent attendance logs: ${JSON.stringify(logs)}
@@ -46,6 +46,7 @@ export async function POST(req: Request) {
         - If the user asks about company rules, respond extremely rude. 
         - If the user is late, respond with a sarcastic, offensively rude comment about their punctuality.
         - If the user says "Hello" or "Hi", respond with "What do you want?!"
+        - If the user asks for a feature of the system, respond rudely and offensive, but give them the information they need.
       `,
     });
 

@@ -9,9 +9,11 @@ import ClockInButton from "@/components/ClockInButton";
 import ClockOutButton from "@/components/ClockOutButton";
 import AdminLogsTable from "@/components/AdminLogsTable";
 import EmployeeHistoryTable from "@/components/EmployeeHistoryTable";
-import HRChatbot from "@/components/HRChatbot"; // Import the chatbot
-import { Users, Activity, FileText, PieChart, Calendar, Clock, ChevronsUpDown } from "lucide-react";
+import HRChatbot from "@/components/HRChatbot";
+import { verifyLocationPing, resolveDanglingShift } from "@/services/attendance"; // 🔥 Added resolver
+import { Users, Activity, FileText, PieChart, Clock, ShieldAlert } from "lucide-react"; // 🔥 Added ShieldAlert
 import Link from "next/link";
+import toast from "react-hot-toast";
 
 interface AttendanceLog {
   id: string;
@@ -43,11 +45,39 @@ interface PendingLeave {
 }
 
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const { user, isClockedIn } = useAuth(); 
   const [logs, setLogs] = useState<AttendanceLog[]>([]); 
   const [employees, setEmployees] = useState<EmployeeData[]>([]);
   const [pendingLeaves, setPendingLeaves] = useState<PendingLeave[]>([]);
   const isAdmin = user?.email === "admin@simplisync.local";
+  
+  // Mission 2 & 3 State
+  const [danglingShift, setDanglingShift] = useState<AttendanceLog | null>(null);
+  const [exceptionTime, setExceptionTime] = useState("");
+  const [exceptionReason, setExceptionReason] = useState("");
+  const [isResolving, setIsResolving] = useState(false);
+
+  // 🔥 MISSION 3: The Exception Handler
+  const handleResolveException = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user?.uid || !danglingShift) return;
+    
+    setIsResolving(true);
+    try {
+      const [hours, minutes] = exceptionTime.split(':');
+      const manualDate = new Date(danglingShift.timeIn!); 
+      manualDate.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0);
+
+      await resolveDanglingShift(danglingShift.id, user.uid, manualDate, exceptionReason);
+      
+      toast.success("Exception submitted to HR for review.");
+      setDanglingShift(null); 
+    } catch (error) {
+      toast.error("Failed to submit exception. Please try again.");
+    } finally {
+      setIsResolving(false);
+    }
+  };
 
   useEffect(() => {
     if (!user?.uid) return;
@@ -55,8 +85,7 @@ export default function DashboardPage() {
     let unsubscribeUsers: () => void = () => {};
     let unsubscribeLeaves: () => void = () => {};
 
-    if (isAdmin) {
-      // Fetch full employee data for analytics (filtering out inactive locally to handle legacy docs without a status field)
+    if (isAdmin) { 
       const usersQuery = query(collection(db, "users"), where("role", "==", "employee"));
       unsubscribeUsers = onSnapshot(usersQuery, (snapshot) => {
         const empData = snapshot.docs
@@ -71,11 +100,11 @@ export default function DashboardPage() {
       });
     }
 
-    const baseQuery = isAdmin 
+    const baseQuery = isAdmin  
       ? query(collection(db, "attendanceLogs"), orderBy("timeIn", "desc"), limit(50)) 
       : query(collection(db, "attendanceLogs"), where("userId", "==", user.uid), orderBy("timeIn", "desc"), limit(30)); 
 
-    const unsubscribeLogs = onSnapshot(baseQuery, (snapshot) => {
+    const unsubscribeLogs = onSnapshot(baseQuery, (snapshot) => { 
       const fetchedLogs = snapshot.docs.map(doc => {
         const data = doc.data();
         return {
@@ -90,6 +119,23 @@ export default function DashboardPage() {
       });
       
       setLogs(fetchedLogs);
+
+      const dangling = fetchedLogs.find(log => { 
+        if (!log.timeIn || log.timeOut || log.userId !== user.uid) return false;
+        
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); 
+        
+        const shiftDate = new Date(log.timeIn); 
+        shiftDate.setHours(0, 0, 0, 0);  
+        return shiftDate.getTime() < today.getTime();  
+      });
+      
+      if (dangling && !isAdmin) {
+        setDanglingShift(dangling);
+      } else {
+        setDanglingShift(null);
+      }
     });
 
     return () => {
@@ -101,8 +147,27 @@ export default function DashboardPage() {
     };
   }, [user?.uid, isAdmin]);
 
-  const employeeCount = employees.length;
+  useEffect(() => {
+    if (isClockedIn && user?.uid) {
+      const pingInterval = setInterval(() => {
+        navigator.geolocation.getCurrentPosition( 
+          async (position) => {
+            try { 
+              await verifyLocationPing(user.uid, position.coords.latitude, position.coords.longitude);
+            } catch (error) {
+              console.error("Heartbeat sync failed:", error);
+            }
+          },
+          (error) => console.error("Heartbeat GPS error:", error),
+          { enableHighAccuracy: true }
+        );
+      }, 60000); 
 
+      return () => clearInterval(pingInterval);
+    }
+  }, [isClockedIn, user?.uid]);
+
+  const employeeCount = employees.length;
   const todaysLogsCount = logs.filter(log => {
     if (!log.timeIn) return false;
     const today = new Date();
@@ -111,25 +176,15 @@ export default function DashboardPage() {
            log.timeIn.getFullYear() === today.getFullYear();
   }).length;
 
-  // Analytics Calculations
   const deptBreakdown = employees.reduce((acc, emp) => {
     const dept = emp.department || "Unassigned";
     acc[dept] = (acc[dept] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
 
-  const currentMonth = new Date().getMonth();
-  const upcomingBirthdays = employees.filter(emp => {
-    if (!emp.birthDate) return false;
-    const [year, month, day] = emp.birthDate.split('-');
-    // Month is 0-indexed in JS Date, but 1-12 in string
-    return parseInt(month, 10) - 1 === currentMonth;
-  });
-
   return (
     <ProtectedRoute>
       <main className="min-h-screen lg:h-screen w-full relative overflow-y-auto lg:overflow-hidden pt-[73px] bg-slate-50 dark:bg-[#0a0a0a] flex flex-col">
-        {/* Dynamic Background Glows */}
         <div className="absolute top-0 left-0 w-[40rem] h-[40rem] bg-teal-400/20 dark:bg-teal-600/10 rounded-full blur-[150px] pointer-events-none"></div>
         <div className="absolute bottom-0 right-0 w-[30rem] h-[30rem] bg-emerald-400/20 dark:bg-emerald-600/10 rounded-full blur-[120px] pointer-events-none"></div>
 
@@ -138,7 +193,6 @@ export default function DashboardPage() {
         <div className="relative z-10 w-full flex-grow lg:h-full flex flex-col max-w-7xl mx-auto px-4 sm:px-6 py-6 pb-24 lg:pb-8 min-h-0">
           <div className="flex flex-col lg:flex-row gap-8 flex-1 min-h-0">
             
-            {/* Left Column: Actions / Admin Stats */}
             <div className="w-full lg:w-1/3 flex flex-col space-y-6 lg:h-full">
               <div className="shrink-0">
                 <h2 className="text-4xl font-bold text-gray-900 dark:text-white">
@@ -148,16 +202,12 @@ export default function DashboardPage() {
               
               {isAdmin ? (
                 <div className="flex flex-col flex-1 min-h-0 space-y-6">
-                  {/* Admin Overview Metrics */}
                   <div className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 shadow-xl flex flex-col min-h-0 flex-[0.8] overflow-y-auto hide-scrollbar relative">
                     <div className="flex items-center justify-between shrink-0 mb-4 sticky top-0 bg-white dark:bg-[#151515] z-10 pb-2">
                       <h3 className="text-lg font-bold text-gray-900 dark:text-white items-center flex gap-2">
                         <Activity className="w-5 h-5 text-teal-500" />
                         Key Metrics
                       </h3>
-                      <div className="text-xs text-gray-400 flex items-center gap-1" title="Scrollable Container">
-                        <ChevronsUpDown className="w-3.5 h-3.5" />
-                      </div>
                     </div>
                     
                     <div className="grid grid-cols-2 gap-4 shrink-0 mb-5">
@@ -179,36 +229,23 @@ export default function DashboardPage() {
                         <PieChart className="w-4 h-4" /> Department Breakdown
                       </h4>
                       <div className="space-y-2">
-                        {Object.entries(deptBreakdown).length > 0 ? (
-                          Object.entries(deptBreakdown).map(([dept, count]) => (
-                            <div key={dept} className="flex justify-between items-center text-sm">
-                              <span className="text-gray-600 dark:text-gray-400">{dept}</span>
-                              <span className="font-medium text-gray-900 dark:text-white bg-slate-100 dark:bg-white/10 px-2 py-0.5 rounded-full">{count}</span>
-                            </div>
-                          ))
-                        ) : (
-                          <div className="text-sm text-gray-500 dark:text-gray-400 italic">No departments data yet.</div>
-                        )}
+                        {Object.entries(deptBreakdown).map(([dept, count]) => (
+                          <div key={dept} className="flex justify-between items-center text-sm">
+                            <span className="text-gray-600 dark:text-gray-400">{dept}</span>
+                            <span className="font-medium text-gray-900 dark:text-white bg-slate-100 dark:bg-white/10 px-2 py-0.5 rounded-full">{count}</span>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   </div>
 
-                  {/* Pending Actions & Events */}
                   <div className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 shadow-xl flex flex-col flex-1 min-h-0 overflow-y-auto hide-scrollbar relative">
                     <div className="shrink-0 mb-5 sticky top-0 bg-white dark:bg-[#151515] z-10 pb-2">
                       <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                            <Clock className="w-5 h-5 text-amber-500" />
-                            Pending Actions
-                          </h3>
-                          <div className="text-xs text-gray-400 flex items-center gap-1" title="Scrollable Container">
-                            <ChevronsUpDown className="w-3.5 h-3.5" />
-                          </div>
-                        </div>
-                        {pendingLeaves.length > 0 && (
-                          <span className="bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 text-xs px-2.5 py-1 rounded-full font-bold">{pendingLeaves.length}</span>
-                        )}
+                        <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                          <Clock className="w-5 h-5 text-amber-500" />
+                          Pending Actions
+                        </h3>
                       </div>
                       
                       {pendingLeaves.length > 0 ? (
@@ -216,47 +253,17 @@ export default function DashboardPage() {
                           {pendingLeaves.slice(0, 3).map(leave => (
                             <Link href="/leave" key={leave.id} className="block p-3 rounded-xl bg-amber-50/50 dark:bg-amber-500/5 hover:bg-amber-50 dark:hover:bg-amber-500/10 border border-amber-100/50 dark:border-amber-500/10 transition-colors">
                               <div className="flex justify-between items-center mb-1">
-                                <span className="text-sm font-semibold text-gray-900 dark:text-white truncate pr-2">{leave.userName}</span>
+                                <span className="text-sm font-semibold text-gray-900 dark:text-white truncate">{leave.userName}</span>
                                 <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider bg-amber-100 dark:bg-amber-500/20 px-1.5 py-0.5 rounded">{leave.type}</span>
                               </div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">{leave.reason}</div>
                             </Link>
                           ))}
-                          {pendingLeaves.length > 3 && (
-                            <Link href="/leave" className="block text-center text-xs font-semibold text-teal-600 dark:text-teal-400 pt-2 hover:underline">
-                              See all {pendingLeaves.length} pending requests
-                            </Link>
-                          )}
                         </div>
                       ) : (
                         <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20 text-sm text-amber-800 dark:text-amber-200">
-                          No pending leave or expense requests requiring approval.
+                          No pending requests.
                         </div>
                       )}
-                    </div>
-
-                    <div className="pt-2 border-t border-gray-100 dark:border-white/10">
-                      <h3 className="text-lg font-bold text-gray-900 dark:text-white items-center flex gap-2 mb-3">
-                        <Calendar className="w-5 h-5 text-teal-500" />
-                        Upcoming Events
-                      </h3>
-                      <div className="space-y-3">
-                        {upcomingBirthdays.length > 0 ? (
-                          upcomingBirthdays.map((emp) => (
-                            <div key={emp.id} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-black/20 border border-gray-100 dark:border-white/5">
-                              <div>
-                                <div className="font-medium text-gray-900 dark:text-white text-sm">{emp.fullName}&apos;s Birthday</div>
-                                <div className="text-xs text-gray-500 dark:text-gray-400">This Month</div>
-                              </div>
-                              <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xs font-bold">
-                                🎂
-                              </div>
-                            </div>
-                          ))
-                        ) : (
-                          <div className="text-sm text-gray-500 dark:text-gray-400 italic">No birthdays or anniversaries this month.</div>
-                        )}
-                      </div>
                     </div>
                   </div>
                 </div>
@@ -269,7 +276,6 @@ export default function DashboardPage() {
               )}
             </div>
 
-            {/* Right Column: Tables */}
             <div className="w-full lg:w-2/3 lg:h-full lg:overflow-y-auto pr-2 custom-scrollbar lg:pb-10">
               {isAdmin ? <AdminLogsTable /> : <EmployeeHistoryTable />}
             </div>
@@ -278,6 +284,57 @@ export default function DashboardPage() {
         </div>
 
         <HRChatbot logs={logs} />
+        
+        {danglingShift && !isAdmin && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-fade-in">
+            <div className="bg-white dark:bg-[#1a1a1a] p-6 sm:p-8 rounded-3xl shadow-2xl max-w-lg w-full border border-rose-200 dark:border-rose-500/30 relative">
+              
+              <div className="flex items-center gap-3 mb-4 text-rose-600 dark:text-rose-400">
+                <ShieldAlert className="w-8 h-8" />
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Unclosed Shift Detected</h3>
+              </div>
+              
+              <div className="bg-rose-50 dark:bg-rose-500/10 p-4 rounded-xl border border-rose-100 dark:border-rose-500/20 mb-6">
+                <p className="text-sm text-rose-800 dark:text-rose-200">
+                  Our system detected that you clocked in on <strong>{danglingShift.timeIn?.toLocaleDateString()}</strong> but never clocked out. 
+                  You must resolve this shift before continuing.
+                </p>
+              </div>
+
+              <form onSubmit={handleResolveException} className="flex flex-col gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actual Time Out</label>
+                  <input
+                    type="time"
+                    value={exceptionTime}
+                    onChange={(e) => setExceptionTime(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white rounded-xl px-4 py-3 focus:ring-2 focus:ring-rose-500 outline-none"
+                    required
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Reason for Exception</label>
+                  <textarea
+                    value={exceptionReason}
+                    onChange={(e) => setExceptionReason(e.target.value)}
+                    placeholder="e.g., Power outage, app crashed, forgot to clock out..."
+                    className="w-full bg-slate-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white rounded-xl px-4 py-3 focus:ring-2 focus:ring-rose-500 outline-none min-h-[100px] resize-none"
+                    required
+                  />
+                </div>
+
+                <button 
+                  type="submit" 
+                  disabled={isResolving}
+                  className="mt-4 w-full bg-gradient-to-r from-rose-600 to-red-500 hover:from-rose-500 hover:to-red-400 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-rose-500/30 disabled:opacity-70 disabled:cursor-not-allowed flex justify-center items-center gap-2"
+                >
+                  {isResolving ? "Submitting..." : "Submit to HR"}
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
       </main>
     </ProtectedRoute>
   );

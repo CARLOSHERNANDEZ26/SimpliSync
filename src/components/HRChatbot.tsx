@@ -39,7 +39,9 @@ export default function HRChatbot({ logs }: { logs: AttendanceLog[] }) {
     setInput("");
     setIsTyping(true);
 
-    const optimizedLogs = logs.map(log => ({ 
+    const recentLogs = logs.slice(0, 15);
+
+    const optimizedLogs = recentLogs.map(log => ({ 
       name: log.fullName || "Unknown Employee", 
       date: log.timeIn ? log.timeIn.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) : "N/A",
       timeIn: log.timeIn ? log.timeIn.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "N/A",
@@ -48,10 +50,10 @@ export default function HRChatbot({ logs }: { logs: AttendanceLog[] }) {
     }));
 
     try {
-      const response = await fetch("/api/chat", {
+      const response = await fetch("/api/chat", { 
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+        headers: { "Content-Type": "application/json" }, 
+        body: JSON.stringify({ 
           messages: newMessages,
           logs: optimizedLogs, 
         }),

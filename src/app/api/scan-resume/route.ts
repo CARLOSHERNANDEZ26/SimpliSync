@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-
-
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
@@ -16,10 +14,10 @@ export async function POST(req: NextRequest) {
     const buffer = Buffer.from(arrayBuffer);
     const base64Data = buffer.toString("base64");
 
-    // Use Gemini API directly with Native PDF Parsing!
-    const apiKey = process.env.GEMINI_API_KEY;
+    // 🔥 FIX 1: Make sure this exactly matches the env variable used in your chatbot!
+    const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
     if (!apiKey) {
-      console.warn("GEMINI_API_KEY not found. Using simulated data for testing.");
+      console.warn("GOOGLE_GEMINI_API_KEY not found. Using simulated data for testing.");
       await new Promise(res => setTimeout(res, 2000));
       return NextResponse.json({
         fullName: "Jane Doe (Mock Scan)",
@@ -32,12 +30,19 @@ export async function POST(req: NextRequest) {
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    
+    // 🔥 FIX 2: Force the model to output strict JSON using generationConfig
+    const model = genAI.getGenerativeModel({ 
+      model: "gemini-2.5-flash",
+      generationConfig: {
+        responseMimeType: "application/json",
+      }
+    });
 
     const prompt = `
-    Extract the following information from the provided resume and return it strictly as a JSON object. Do not include markdown formatting or backticks around the JSON.
+    Extract the following information from the provided resume.
     
-    Expected JSON format:
+    Expected JSON schema:
     {
       "fullName": "...",
       "personalEmail": "...",
@@ -63,23 +68,15 @@ export async function POST(req: NextRequest) {
         } 
       }
     ]);
+    
     const response = await result.response;
-    let jsonString = response.text().trim();
     
-    // Clean up potential markdown code block artifacts
-    if (jsonString.startsWith("\`\`\`json")) {
-        jsonString = jsonString.replace(/^\`\`\`json/, "");
-        jsonString = jsonString.replace(/\`\`\`$/, "");
-    } else if (jsonString.startsWith("\`\`\`")) {
-        jsonString = jsonString.replace(/^\`\`\`/, "");
-        jsonString = jsonString.replace(/\`\`\`$/, "");
-    }
-    
-    const parsedData = JSON.parse(jsonString);
+   0  
+    const parsedData = JSON.parse(response.text());
 
     return NextResponse.json(parsedData);
-  } catch (error: any) {
+  } catch (error) {
     console.error("Resume Scan API Error:", error);
-    return NextResponse.json({ error: error?.message || "Failed to process resume." }, { status: 500 });
+    return NextResponse.json({ error: "Failed to process resume." }, { status: 500 });
   }
 }

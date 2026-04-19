@@ -37,17 +37,29 @@ export default function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <AuthProvider>
             <Toaster 
-              position="top-center" 
-              reverseOrder={false}
-              toastOptions={{
-                className: '!bg-[#fff] dark:!bg-[#1c1c1e] !text-black dark:!text-white !rounded-[24px] !shadow-[0_8px_30px_rgb(0,0,0,0.12)] !font-semibold !px-6 !py-4 !border !border-gray-100 dark:!border-white/10 !backdrop-blur-none',
-                style: {
-                  background: 'transparent',
-                  color: 'inherit',
-                  boxShadow: 'none',
-                }
-              }}
-            />
+  position="top-center" 
+  reverseOrder={false}
+  toastOptions={{
+
+    duration: 4000,
+    
+    className: "bg-white text-gray-900 dark:bg-[#151515] dark:text-white border border-gray-100 dark:border-white/10 shadow-2xl rounded-2xl font-semibold px-5 py-3.5 tracking-wide",
+    
+    success: {
+      iconTheme: {
+        primary: '#10b981', 
+        secondary: '#ffffff',
+      },
+    },
+    
+    error: {
+      iconTheme: {
+        primary: '#f43f5e', 
+        secondary: '#ffffff',
+      },
+    },
+  }} 
+/>
             {children}
           </AuthProvider>
         </ThemeProvider>
