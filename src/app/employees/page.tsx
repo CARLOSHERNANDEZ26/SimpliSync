@@ -5,10 +5,11 @@ import Navbar from "@/components/Navbar";
 import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/hooks/useAuth";
-import { Search, Users as UsersIcon, Building2, Calendar, UserPlus, Clock } from "lucide-react";
+import { Search, Users as UsersIcon, Building2, Calendar, UserPlus, Clock, CalendarDays } from "lucide-react";
 import Link from "next/link";
 import AddEmployeeModal from "@/components/AddEmployeeModal";
 import EmployeeProfileView from "@/components/EmployeeProfileView";
+import ViewScheduleModal from "@/components/ViewScheduleModal";
 
 interface Employee {
   id: string;
@@ -20,6 +21,8 @@ interface Employee {
   joinDate?: string;
   status?: string;
   workstatus?: string;
+  scheduleDays?: string[];
+  scheduleHours?: { start: string; end: string; };
 }
 
 export default function EmployeesPage() {
@@ -28,6 +31,7 @@ export default function EmployeesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("All");
   const [showAddEmployee, setShowAddEmployee] = useState(false);
+  const [selectedScheduleEmployee, setSelectedScheduleEmployee] = useState<Employee | null>(null);
 
   const isAdmin = user?.email === "admin@simplisync.local";
 
@@ -87,7 +91,7 @@ export default function EmployeesPage() {
 
         <Navbar />
         
-        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
+        <div className="relative z-10 w-full max-w-[98%] 2xl:max-w-screen-2xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
           
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
             <div>
@@ -213,6 +217,14 @@ export default function EmployeesPage() {
                                 <Clock className="w-4 h-4 sm:mr-1.5" />
                                 <span className="hidden sm:inline">Timesheet</span>
                              </Link>
+                             <button
+                                onClick={() => setSelectedScheduleEmployee(employee)}
+                                className="inline-flex items-center justify-center py-2 px-3 bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 dark:hover:bg-amber-500/20 border border-amber-200 dark:border-amber-500/30 rounded-lg text-amber-700 dark:text-amber-400 font-medium text-sm transition-all shadow-sm active:scale-95"
+                                title="View Schedule"
+                             >
+                                <CalendarDays className="w-4 h-4 sm:mr-1.5" />
+                                <span className="hidden sm:inline">Schedule</span>
+                             </button>
                              <Link 
                                 href={`/employees/${employee.id}`}
                                 className="inline-flex items-center justify-center py-2 px-3 bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 border border-gray-200 dark:border-white/10 rounded-lg text-teal-600 dark:text-teal-400 font-medium text-sm transition-all shadow-sm active:scale-95"
@@ -240,6 +252,10 @@ export default function EmployeesPage() {
 
         {showAddEmployee && (
           <AddEmployeeModal onClose={() => setShowAddEmployee(false)} />
+        )}
+        
+        {selectedScheduleEmployee && (
+          <ViewScheduleModal employee={selectedScheduleEmployee} onClose={() => setSelectedScheduleEmployee(null)} />
         )}
       </main>
     </ProtectedRoute>

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { addEmployee } from "@/services/auth";
 import toast from "react-hot-toast";
-import { X, ShieldAlert } from "lucide-react";
+import { X, ShieldAlert, CalendarClock } from "lucide-react";
 
 export default function AddEmployeeModal({ onClose }: { onClose: () => void }) {
   const [fullname, setName] = useState("");
@@ -16,6 +16,18 @@ export default function AddEmployeeModal({ onClose }: { onClose: () => void }) {
   const [role, setRole] = useState("employee"); 
   const [isLoading, setIsLoading] = useState(false);
 
+  // 🔥 NEW: Schedule States
+  const [scheduleDays, setScheduleDays] = useState<string[]>(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]);
+  const [scheduleHours, setScheduleHours] = useState({ start: "09:00", end: "17:00" });
+
+  const allDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+  const toggleDay = (day: string) => {
+    setScheduleDays(prev => 
+      prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
+    );
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -24,8 +36,8 @@ export default function AddEmployeeModal({ onClose }: { onClose: () => void }) {
       // Automatically assign the join date as the day of account creation
       const autoJoinDate = new Date().toISOString().split("T")[0];
       
-      // 🔥 NEW: Pass the 'role' state into the function
-      await addEmployee(fullname, position, department, autoJoinDate, birthDate, password, role);
+      // 🔥 NEW: Pass the 'role' and schedule state into the function
+      await addEmployee(fullname, position, department, autoJoinDate, birthDate, password, role, scheduleDays, scheduleHours);
       toast.success(`${fullname} has been added as ${role === 'admin' ? 'an Admin' : 'an Employee'}!`);
       onClose();
     } catch (err) {
@@ -96,6 +108,57 @@ export default function AddEmployeeModal({ onClose }: { onClose: () => void }) {
               className="w-full bg-slate-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all font-medium"
               required
             />
+          </div>
+
+          {/* 🔥 NEW: Schedule Assignment */}
+          <div className="flex flex-col gap-3 p-4 bg-teal-50/50 dark:bg-teal-500/5 border border-teal-100 dark:border-teal-500/20 rounded-xl mt-2">
+            <label className="text-xs font-bold text-teal-800 dark:text-teal-400 uppercase tracking-wider flex items-center gap-1.5">
+              <CalendarClock className="w-4 h-4" />
+              Work Schedule
+            </label>
+            
+            <div className="flex flex-col gap-2">
+               <label className="text-xs text-gray-500 dark:text-gray-400 font-semibold">Working Days</label>
+               <div className="flex flex-wrap gap-2">
+                 {allDays.map(day => (
+                   <button
+                     key={day}
+                     type="button"
+                     onClick={() => toggleDay(day)}
+                     className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                       scheduleDays.includes(day) 
+                         ? "bg-teal-500 text-white shadow-md shadow-teal-500/30" 
+                         : "bg-white dark:bg-black/20 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-white/10 hover:border-teal-300 dark:hover:border-teal-500/50"
+                     }`}
+                   >
+                     {day.slice(0, 3)}
+                   </button>
+                 ))}
+               </div>
+            </div>
+
+            <div className="flex gap-4 mt-2">
+              <div className="flex flex-col gap-1 w-1/2">
+                <label className="text-xs text-gray-500 dark:text-gray-400 font-semibold">Start Time</label>
+                <input
+                  type="time"
+                  value={scheduleHours.start}
+                  onChange={(e) => setScheduleHours(prev => ({ ...prev, start: e.target.value }))}
+                  className="w-full bg-white dark:bg-black/20 border border-teal-100 dark:border-teal-500/30 text-gray-900 dark:text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all font-medium"
+                  required
+                />
+              </div>
+              <div className="flex flex-col gap-1 w-1/2">
+                <label className="text-xs text-gray-500 dark:text-gray-400 font-semibold">End Time</label>
+                <input
+                  type="time"
+                  value={scheduleHours.end}
+                  onChange={(e) => setScheduleHours(prev => ({ ...prev, end: e.target.value }))}
+                  className="w-full bg-white dark:bg-black/20 border border-teal-100 dark:border-teal-500/30 text-gray-900 dark:text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all font-medium"
+                  required
+                />
+              </div>
+            </div>
           </div>
 
           {/* 🔥 NEW: System Role Dropdown */}

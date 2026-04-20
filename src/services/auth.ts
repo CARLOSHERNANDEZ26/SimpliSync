@@ -18,7 +18,7 @@ import { getAuth, createUserWithEmailAndPassword, updateProfile } from "firebase
 import { firebaseConfig, db } from "../lib/firebase";
 
 
-export const addEmployee = async (fullName: string, position: string, department: string, joinDate: string, birthDate: string, password: string, role: string) => {
+export const addEmployee = async (fullName: string, position: string, department: string, joinDate: string, birthDate: string, password: string, role: string, scheduleDays: string[] = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"], scheduleHours: { start: string, end: string } = { start: "09:00", end: "17:00" }) => {
   const email = `${fullName.replace(/\s+/g, '').toLowerCase()}@simplisync.local`;
   
   const secondaryApp = initializeApp(firebaseConfig, `SecondaryApp-${Date.now()}`);
@@ -38,6 +38,8 @@ export const addEmployee = async (fullName: string, position: string, department
       birthDate,
       status: "active",
       role: role, 
+      scheduleDays,
+      scheduleHours,
       createdAt: serverTimestamp()
     });
     

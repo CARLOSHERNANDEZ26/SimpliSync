@@ -88,14 +88,14 @@ export default function SettingsPage() {
 
   return (
     <ProtectedRoute>
-      <main className="min-h-screen w-full bg-slate-50 dark:bg-[#0a0a0a] text-gray-900 dark:text-white font-sans relative overflow-hidden transition-colors duration-500 pt-[73px]">
+      <main className="min-h-screen w-full bg-slate-50 dark:bg-[#0a0a0a] text-gray-900 dark:text-white font-sans relative overflow-y-auto overflow-x-hidden transition-colors duration-500 pt-[73px] pb-20">
         {/* Dynamic Background Glows */}
         <div className="absolute top-0 left-0 w-[40rem] h-[40rem] bg-teal-400/20 dark:bg-teal-600/10 rounded-full blur-[150px] pointer-events-none"></div>
         <div className="absolute bottom-0 right-0 w-[30rem] h-[30rem] bg-emerald-400/20 dark:bg-emerald-600/10 rounded-full blur-[120px] pointer-events-none"></div>
 
         <Navbar />
 
-        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
+        <div className="relative z-10 w-full max-w-[95%] 2xl:max-w-[100rem] mx-auto px-4 sm:px-6 py-6 sm:py-12">
           <div className="flex flex-col space-y-8 animate-fade-in-up">
             <div className="space-y-4 text-center lg:text-left">
               <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-gray-900 dark:text-white mb-2 transition-colors">
@@ -106,19 +106,20 @@ export default function SettingsPage() {
               </p>
             </div>
 
-            <div className={`grid grid-cols-1 ${isAdmin ? "xl:grid-cols-3" : "max-w-md mx-auto"} gap-6 items-start w-full`}>
-               <div className="w-full flex flex-col gap-6">
+            <div className={`grid grid-cols-1 ${isAdmin ? "lg:grid-cols-2 lg:max-w-5xl xl:max-w-none xl:grid-cols-4 mx-auto" : "max-w-md mx-auto"} gap-6 items-start w-full`}>
+               <div className="w-full flex h-full order-1 lg:order-last">
                  <PreferencesSettings />
                </div>
                
               {isAdmin && (
                 <>
-                  <div className="w-full flex flex-col gap-6">
-                    <AdminSettings />
+                  <div className="w-full flex h-full">
                     <HolidaySettings />
                   </div>
-
-                  <div className="w-full flex flex-col">
+                  <div className="w-full flex h-full">
+                    <AdminSettings />
+                  </div>
+                  <div className="w-full flex flex-col h-full">
                     <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl backdrop-blur-md">
                       <div className="flex items-center gap-3 mb-6">
                         <div className="p-2.5 bg-teal-100 dark:bg-teal-500/20 rounded-xl">
@@ -189,7 +190,10 @@ export default function SettingsPage() {
                           </button>
                         </div>
                       </div>
+
+                      
                     </div>
+                    
                   </div>
                 </>
               )}
