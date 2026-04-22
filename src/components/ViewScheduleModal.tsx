@@ -1,4 +1,4 @@
-"use client";
+  "use client";
 
 import { useState, useEffect } from "react";
 import { X, Calendar as CalendarIcon, Clock, Save, Edit3, CheckCircle2 } from "lucide-react";
@@ -50,27 +50,28 @@ export default function ViewScheduleModal({ employee, onClose }: ViewScheduleMod
         const logsRef = collection(db, "attendanceLogs");
         // Create range for current month
         const startOfMonth = new Date(currentYear, currentMonth, 1);
-        const endOfMonth = new Date(currentYear, currentMonth + 1, 0, 23, 59, 59);
+        const endOfMonth = new Date(currentYear, currentMonth + 1, 0, 23, 59, 59, 999); 
 
         // Use optimized query relying on Firebase composite index
-        const q = query(
+       const q = query(
           logsRef, 
-          where("userId", "==", employee.id),
-          where("timeIn", ">=", startOfMonth),
-          where("timeIn", "<=", endOfMonth)
+          where("userId", "==", employee.id)
         );
 
         const snapshot = await getDocs(q);
         const present = new Set<number>();
+        
         snapshot.docs.forEach(doc => {
           const data = doc.data();
           if (data.timeIn) {
             const date = data.timeIn.toDate();
-            present.add(date.getDate());
+            if (date.getTime() >= startOfMonth.getTime() && date.getTime() <= endOfMonth.getTime()) {
+              present.add(date.getDate());
+            }
           }
         });
         setPresentDays(present);
-      } catch (error) {
+      } catch (error: unknown) {
         console.error("Failed to fetch attendance for calendar", error);
       } finally {
         setIsLoadingLogs(false);
@@ -94,7 +95,8 @@ export default function ViewScheduleModal({ employee, onClose }: ViewScheduleMod
         scheduleHours
       });
       toast.success("Schedule updated successfully!");
-    } catch (e) {
+    } catch (error: unknown) {
+      console.error("Failed to update schedule", error);
       toast.error("Failed to update schedule.");
     } finally {
       setIsSaving(false);
@@ -311,7 +313,12 @@ export default function ViewScheduleModal({ employee, onClose }: ViewScheduleMod
                     <input
                       type="time"
                       value={scheduleHours.start}
-                      onClick={(e) => (e.target as any).showPicker && (e.target as any).showPicker()}
+                     onClick={(e) => {
+  const target = e.target as HTMLInputElement;
+  if (typeof target.showPicker === 'function') {
+    target.showPicker();
+  }
+}}
                       onChange={(e) => setScheduleHours(prev => ({ ...prev, start: e.target.value }))}
                       className="w-full bg-white dark:bg-black/20 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all font-bold tracking-widest text-lg cursor-pointer"
                     />
@@ -321,7 +328,12 @@ export default function ViewScheduleModal({ employee, onClose }: ViewScheduleMod
                     <input
                       type="time"
                       value={scheduleHours.end}
-                      onClick={(e) => (e.target as any).showPicker && (e.target as any).showPicker()}
+                     onClick={(e) => {
+  const target = e.target as HTMLInputElement;
+  if (typeof target.showPicker === 'function') {
+    target.showPicker();
+  }
+}}
                       onChange={(e) => setScheduleHours(prev => ({ ...prev, end: e.target.value }))}
                       className="w-full bg-white dark:bg-black/20 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all font-bold tracking-widest text-lg cursor-pointer"
                     />

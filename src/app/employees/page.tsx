@@ -20,7 +20,7 @@ interface Employee {
   department?: string;
   joinDate?: string;
   status?: string;
-  workstatus?: string;
+  workStatus?: string;
   scheduleDays?: string[];
   scheduleHours?: { start: string; end: string; };
 }
@@ -197,7 +197,7 @@ export default function EmployeesPage() {
                                   <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
                                      Out of Bounds
                                      </span>
-                              ) : employee.workstatus === "Working" ? (
+                              ) : employee.workStatus === "Working" ? (
                                 <span className="inline-flex px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs font-semibold items-center gap-1.5 border border-emerald-200 dark:border-emerald-500/30">
                                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                                   Working

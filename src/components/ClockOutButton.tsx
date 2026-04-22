@@ -19,7 +19,7 @@ export default function ClockOutButton() {
         const currentHour = new Date(data.datetime).getHours();
         setIsAllowed((currentHour >= 12 && currentHour < 13) || currentHour >= 17);
       } catch (error) {
-        console.error("Error fetching server time:", error);
+        //console.error("Error fetching server time:", error);
       }
     };
     fetchStrictTime(); 

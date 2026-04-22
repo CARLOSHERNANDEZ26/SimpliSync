@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
 
-// Safety check to ensure your environment variable is loaded
+
 if (!process.env.GOOGLE_GEMINI_API_KEY) {
   console.error("CRITICAL: GOOGLE_GEMINI_API_KEY is missing from environment variables.");
 }
@@ -69,8 +69,21 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ text: response.text() }); 
 
-  } catch (error) {
-    console.error("Chat Error:", error);
+  } catch (err: unknown) { 
+    console.error("Chat Error:", err);
+
+    const error = err as { message?: string; status?: number };
+  
+    if (
+      error.message?.includes("503") || 
+      error.message?.includes("high demand") || 
+      error.status === 503
+    ) {
+      return NextResponse.json({ 
+        text: "Ugh, the servers are completely overloaded because too many employees are bothering me with stupid questions right now. Give me a minute and try again." 
+      });
+    }
+
     return NextResponse.json({ error: "Failed to process chat" }, { status: 500 });
   }
-}
+} 

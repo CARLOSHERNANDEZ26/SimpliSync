@@ -6,6 +6,7 @@ import { collection, query, orderBy, onSnapshot, doc, deleteDoc, getDocs, where 
 import { db } from "@/lib/firebase"; 
 import { adminForceClockOut } from "@/services/attendance";
 import toast from "react-hot-toast";
+import ConfirmModal from "@/components/ConfirmModal";
 
 interface AttendanceLog {
   id: string;
@@ -25,6 +26,9 @@ export default function AdminLogsTable() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedLog, setSelectedLog] = useState<AttendanceLog | null>(null);
+  const [isForceOutLoading, setIsForceOutLoading] = useState(false);
      
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const today = new Date();
@@ -119,6 +123,22 @@ export default function AdminLogsTable() {
     }
   };
 
+  const executeForceClockOut = async () => {
+    if (!selectedLog) return;  
+    setIsForceOutLoading(true); 
+    try { 
+      await adminForceClockOut(selectedLog.userId, selectedLog.id);
+      toast.success("Employee clocked out successfully.");
+      setIsModalOpen(false); 
+      setSelectedLog(null);
+    } catch (error) {
+      console.error("Force clock out error:", error);
+      toast.error("Failed to force clock out.");
+    } finally { 
+      setIsForceOutLoading(false); 
+    } 
+  }; 
+
   const formatTime = (date: Date | null) => date ? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "--:--";
   const formatDate = (date: Date | null) => date ? date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : "N/A";
 
@@ -199,15 +219,9 @@ export default function AdminLogsTable() {
                 <td className="px-6 py-4 text-right">
                    {!log.timeOut && (
                    <button onClick={async () => {
-                     if (window.confirm(`Are you sure you want to force clock out ${log.fullName}?`)) {
-                          try {
-                              await adminForceClockOut(log.userId, log.id);
-                              toast.success(`${log.fullName} forcefully clocked out.`);
-                               } catch (error) {
-                                  console.error("Force clock out error:", error);
-                                 toast.error("Failed to execute override.");
-                                 }
-                                }
+                    setSelectedLog(log);
+                    setIsModalOpen(true);
+                     
                                }}
   className="text-[10px] bg-rose-500 text-white px-2 py-1 rounded mr-2 hover:bg-rose-600 transition-colors shadow-sm"
 >
@@ -223,6 +237,19 @@ export default function AdminLogsTable() {
           </tbody>
         </table>
       </div>
+
+      <ConfirmModal 
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          setSelectedLog(null); 
+        }}
+        onConfirm={executeForceClockOut}
+        title="Force Clock Out"
+        message={`Are you sure you want to end the active shift for ${selectedLog?.fullName}? This action cannot be undone and will mark their status as "Force Clocked Out (Admin)".`}
+        confirmText="End Shift"
+        isLoading={isForceOutLoading}
+      />
     </div>
   );
 }

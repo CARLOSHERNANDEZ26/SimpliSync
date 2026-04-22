@@ -23,8 +23,15 @@ export default function LoginPage() {
       await loginEmployee(loginIdentifier, password);
       toast.success("Logged in successfully!");
       router.push("/dashboard");
-    } catch (err) {
-      const errorText = err instanceof Error && err.message === "Invalido"
+    } catch (err: unknown) {
+      const error = err as { code?: string; message?: string };
+      const isAuthError = 
+        error.code === "auth/invalid-credential" || 
+        error.code === "auth/user-not-found" || 
+        error.code === "auth/wrong-password" ||
+        error.message?.includes("Invalido");
+
+      const errorText = isAuthError
         ? "Invalid email or password. Please try again."
         : "An unexpected error occurred. Please try again.";
 

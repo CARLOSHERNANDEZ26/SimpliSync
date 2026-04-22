@@ -4,6 +4,7 @@ import { useState, useEffect, createContext, useContext } from "react";
 import { onAuthStateChanged, User } from "firebase/auth";
 import { auth, db } from "../lib/firebase"; 
 import { collection, query, where, onSnapshot } from "firebase/firestore";
+import { verifyLocationPing } from "@/services/attendance"; 
 
 interface AuthContextType {
   user: User | null;
@@ -22,6 +23,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isClockedIn, setIsClockedIn] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  
   useEffect(() => {
     let unsubscribeDb: () => void;
 
@@ -29,13 +31,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setUser(currentUser);
 
       if (currentUser) {
-        
         const activeShiftQuery = query(
           collection(db, "attendanceLogs"),
           where("userId", "==", currentUser.uid),
           where("timeOut", "==", null) 
         );
-
 
         unsubscribeDb = onSnapshot(
           activeShiftQuery, 
@@ -45,9 +45,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           },
           (error) => { 
             if (error.code !== "permission-denied") {
-            console.error("Auth Listener Error:", error);
-            setIsClockedIn(false);
-            setLoading(false);
+              console.error("Auth Listener Error:", error);
+              setIsClockedIn(false);
+              setLoading(false);
             }
           }
         );
@@ -68,6 +68,32 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     };
   }, []);
+
+  useEffect(() => {
+    let pingInterval: NodeJS.Timeout;
+
+    if (user && isClockedIn) {
+      const sendPing = () => {
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              verifyLocationPing(user.uid, position.coords.latitude, position.coords.longitude);
+            },
+            (error) => console.error("Heartbeat GPS failed:", error),
+            { enableHighAccuracy: true }
+          );
+        }
+      };
+
+      sendPing();
+
+      pingInterval = setInterval(sendPing, 60000);
+    }
+
+    return () => {
+      if (pingInterval) clearInterval(pingInterval);
+    };
+  }, [user, isClockedIn]); 
 
   return (
     <AuthContext.Provider value={{ user, isClockedIn, loading }}>

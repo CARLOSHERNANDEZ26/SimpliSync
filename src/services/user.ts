@@ -1,7 +1,6 @@
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
-// 🔥 FIX: Changed 'role' to 'position' so we don't overwrite security access
 export const updateUserProfile = async (uid: string, fullName: string, position: string) => {
   if (!uid) throw new Error("User ID is required");
 
@@ -10,7 +9,7 @@ export const updateUserProfile = async (uid: string, fullName: string, position:
   try {
     await setDoc(userRef, {
       fullName: fullName,
-      position: position, // Save it as their job title
+      position: position, 
       isActive: true
     }, { merge: true }); 
     

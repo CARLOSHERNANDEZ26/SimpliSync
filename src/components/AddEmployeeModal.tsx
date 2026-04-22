@@ -33,14 +33,13 @@ export default function AddEmployeeModal({ onClose }: { onClose: () => void }) {
     setIsLoading(true);
 
     try {
-      // Automatically assign the join date as the day of account creation
       const autoJoinDate = new Date().toISOString().split("T")[0];
-      
-      // 🔥 NEW: Pass the 'role' and schedule state into the function
+
       await addEmployee(fullname, position, department, autoJoinDate, birthDate, password, role, scheduleDays, scheduleHours);
       toast.success(`${fullname} has been added as ${role === 'admin' ? 'an Admin' : 'an Employee'}!`);
       onClose();
-    } catch (err) {
+    } catch (error) {
+      console.error("Error adding employee:", error);
       toast.error("Failed to create user.");
     } finally {
       setIsLoading(false);

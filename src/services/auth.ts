@@ -2,17 +2,16 @@ import { auth } from "../lib/firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { serverTimestamp, doc, setDoc } from "firebase/firestore";
 
+// ✅ THE FIX: Throwing the error back to the UI
 export const loginEmployee = async (email: string, password: string) => {
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
-   return userCredential.user; 
-   
-  } catch (error) {
-    console.error("Login error:", error);
-    return { user: null, error: "Invalido" };
+    return userCredential.user;
+  } catch (error: unknown) {
+    console.error("Login Error:", error);
+    throw error; 
   }
 };
-
 import { initializeApp } from "firebase/app";
 import { getAuth, createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { firebaseConfig, db } from "../lib/firebase";
