@@ -3,19 +3,14 @@
 import { useState, useEffect } from "react"; 
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
-import { auth } from "@/lib/firebase";
-import { signOut } from "firebase/auth";
-import { useRouter, usePathname } from "next/navigation";
-import toast from "react-hot-toast";
-import { Moon, Sun, Settings, LayoutDashboard, LogOut, Users, Calendar, Clock, CalendarDays } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { Settings, LayoutDashboard, Users, Calendar, Clock, CalendarDays, Sparkles } from "lucide-react";
 
 export default function Navbar() {
   const { user } = useAuth();
-  const router = useRouter();
   const pathname = usePathname();
-  
-  // The Hydration Fix State
-  const [mounted, setMounted] = useState(false);
+  const isAdmin = user?.email === "admin@simplisync.local";
+  const [mounted, setMounted] = useState(false); 
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
@@ -32,11 +27,9 @@ export default function Navbar() {
         : "text-gray-600 dark:text-gray-300 hover:text-teal-600 dark:hover:text-teal-400 hover:bg-gray-100 dark:hover:bg-white/10 active:bg-gray-200 dark:active:bg-white/20"
     }`;
   };
-
-
+  if (!mounted) return null; 
 
   return (
-    <>
     <nav className="fixed top-0 left-0 z-50 w-full border-b border-gray-200 dark:border-white/10 bg-white/70 dark:bg-black/40 backdrop-blur-md px-6 py-4 flex justify-between items-center transition-colors duration-500">
       <div className="flex items-center gap-3">
         {/* Small Logo */}
@@ -62,67 +55,42 @@ export default function Navbar() {
           <span className="text-sm text-gray-700 dark:text-gray-200 font-medium transition-colors">{user?.email}</span>
         </div>
 
-        <Link
-          href="/dashboard"
-          className={getLinkClass("/dashboard")}
-          aria-label="Dashboard"
-          title="Dashboard"
-        >
+        <Link href="/dashboard" className={getLinkClass("/dashboard")} aria-label="Dashboard" title="Dashboard">
           <LayoutDashboard className={`w-5 h-5 transition-transform duration-300 ${pathname === '/dashboard' ? 'scale-110' : 'group-hover:scale-110'}`} />
         </Link>
 
         {/* Directory Link */}
-        <Link
-          href="/employees"
-          className={getLinkClass("/employees")}
-          aria-label="Directory"
-          title="Employee Directory"
-        >
+        <Link href="/employees" className={getLinkClass("/employees")} aria-label="Directory" title="Employee Directory">
           <Users className={`w-5 h-5 transition-transform duration-300 ${pathname.startsWith('/employees') ? 'scale-110' : 'group-hover:scale-110'}`} />
         </Link>
         
         {/* Timesheets Link */}
-        <Link
-          href="/timesheets"
-          className={getLinkClass("/timesheets")}
-          aria-label="Timesheets"
-          title="Timesheets"
-        >
+        <Link href="/timesheets" className={getLinkClass("/timesheets")} aria-label="Timesheets" title="Timesheets">
           <Clock className={`w-5 h-5 transition-transform duration-300 ${pathname.startsWith('/timesheets') ? 'scale-110' : 'group-hover:scale-110'}`} />
         </Link>
 
-                {/* Leave Management Link */}
-        <Link
-          href="/leave"
-          className={getLinkClass("/leave")}
-          aria-label="Leave Management"
-          title="Leave Management"
-        >
-          
+        {/* Leave Management Link */}
+        <Link href="/leave" className={getLinkClass("/leave")} aria-label="Leave Management" title="Leave Management">
           <Calendar className={`w-5 h-5 transition-transform duration-300 ${pathname.startsWith('/leave') ? 'scale-110' : 'group-hover:scale-110'}`} />
         </Link>
         
         {/* Company Calendar Link */}
-        <Link
-          href="/calendar"
-          className={getLinkClass("/calendar")}
-          aria-label="Company Calendar"
-          title="Company Calendar"
-        >
+        <Link href="/calendar" className={getLinkClass("/calendar")} aria-label="Company Calendar" title="Company Calendar">
           <CalendarDays className={`w-5 h-5 transition-transform duration-300 ${pathname.startsWith('/calendar') ? 'scale-110' : 'group-hover:scale-110'}`} />
         </Link>
 
-        {/* FIXED: Settings Link (Visible to everyone, routes to /settings) */}
-        <Link
-          href="/settings"
-          className={getLinkClass("/settings")}
-          aria-label="Settings"
-          title="Settings"
-        >
+        {/* AI Policy Lab (Only renders for the Admin) */}
+        {isAdmin && (
+          <Link href="/admin/memo-generator" className={getLinkClass("/admin/memo-generator")} aria-label="AI Policy Lab" title="AI Policy Lab">
+            <Sparkles className={`w-5 h-5 transition-transform duration-300 ${pathname.startsWith('/admin/memo-generator') ? 'scale-110 text-indigo-500' : 'group-hover:scale-110 text-indigo-500'}`} />
+          </Link>
+        )}
+
+        {/* Settings Link */}
+        <Link href="/settings" className={getLinkClass("/settings")} aria-label="Settings" title="Settings">
           <Settings className={`w-5 h-5 transition-transform duration-300 ${pathname.startsWith('/settings') ? 'rotate-90' : 'group-hover:rotate-90'}`} />
         </Link>
       </div>
     </nav>
-    </>
   );
 }

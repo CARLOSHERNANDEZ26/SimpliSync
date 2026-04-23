@@ -3,20 +3,21 @@
 import { useState, useEffect } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Navbar from "@/components/Navbar";
-import { collection, query, where, orderBy, onSnapshot, addDoc, updateDoc, doc, serverTimestamp } from "firebase/firestore";
+import { collection, query, where, onSnapshot, addDoc, updateDoc, doc, serverTimestamp, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/hooks/useAuth";
-import { Calendar as CalendarIcon, Clock, CheckCircle, XCircle, Send } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, CheckCircle, XCircle, ExternalLink } from "lucide-react";
 import toast from "react-hot-toast";
 
 interface LeaveRequest {
   id: string;
   userId: string;
   userName: string;
-  type: "pto" | "sick";
+  type: "vl" | "sl" | "sil";
   startDate: string;
   endDate: string;
   reason: string;
+  attachmentUrl?: string;
   status: "pending" | "approved" | "rejected";
   createdAt: { seconds: number; nanoseconds: number } | null;
 }
@@ -27,12 +28,12 @@ export default function LeavePage() {
 
   const [requests, setRequests] = useState<LeaveRequest[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // New Request Form
-  const [type, setType] = useState<"pto" | "sick">("pto");
+  const [balances, setBalances] = useState({ vl: 0, sl: 0, sil: 0 });
+  const [type, setType] = useState<"vl" | "sl" | "sil">("vl");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [reason, setReason] = useState("");
+  const [attachmentUrl, setAttachmentUrl] = useState(""); 
 
   useEffect(() => {
     if (!user?.uid) return;
@@ -41,40 +42,52 @@ export default function LeavePage() {
       ? query(collection(db, "leaveRequests"))
       : query(collection(db, "leaveRequests"), where("userId", "==", user.uid));
 
-    // 🔥 Added the error silencer as the second parameter
     const unsubscribe = onSnapshot(baseQuery, (snapshot) => {
       const fetched = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       } as LeaveRequest));
 
-      fetched.sort((a, b) => { 
-        const timeA = a.createdAt?.seconds || 0; 
-        const timeB = b.createdAt?.seconds || 0;
-        return timeB - timeA;
-      });
-      
+      fetched.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
       setRequests(fetched);
     }, (error) => {
-      // Ignore the permission error if it happens exactly during logout
-      if (error.code !== "permission-denied") {
-        console.error("Leave requests sync error:", error);
-      }
+      if (error.code !== "permission-denied") console.error("Sync error:", error);
     });
 
     return () => unsubscribe();
   }, [user?.uid, isAdmin]);
 
+  useEffect(() => {
+    if (!user?.uid || isAdmin) return;
+    
+    const userDocRef = doc(db, "users", user.uid);
+    const unsubscribeUser = onSnapshot(userDocRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setBalances({
+          vl: data.vlCredits || 0,
+          sl: data.slCredits || 0,
+          sil: data.silCredits || 0
+        });
+      }
+    });
+
+    return () => unsubscribeUser();
+  }, [user?.uid, isAdmin]);
+
   const handleSubmitRequest = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!startDate || !endDate || !reason) {
-      toast.error("Please fill all required fields.");
-      return;
-    }
+    if (!startDate || !endDate || !reason) return toast.error("Fill all fields.");
     
-    if (new Date(startDate) > new Date(endDate)) {
-      toast.error("End date must be after start date.");
-      return;
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    if (start > end) return toast.error("Check your dates.");
+
+    const diffDays = Math.ceil(Math.abs(end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    const currentBalance = balances[type];
+
+    if (currentBalance < diffDays) {
+      return toast.error(`Insufficient balance. You only have ${currentBalance} days.`);
     }
 
     setIsSubmitting(true);
@@ -86,30 +99,49 @@ export default function LeavePage() {
         startDate,
         endDate,
         reason,
+        attachmentUrl, 
         status: "pending",
         createdAt: serverTimestamp()
       });
       
       toast.success("Leave request submitted!");
-      setStartDate("");
-      setEndDate("");
-      setReason("");
-      setType("pto");
-    } catch (error) {
-      console.error(error);
-      toast.error("Failed to submit request.");
+      setStartDate(""); setEndDate(""); setReason(""); setAttachmentUrl(""); // 🔥 Reset link
+    } catch (error: unknown) {
+      console.error("Submission error:", error);
+      toast.error("Failed to submit.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleUpdateStatus = async (id: string, newStatus: "approved" | "rejected") => {
+  const handleUpdateStatus = async (id: string, newStatus: "approved" | "rejected", request: LeaveRequest) => {
     try {
+      if (newStatus === "approved") {
+        const start = new Date(request.startDate);
+        const end = new Date(request.endDate);
+        const diffDays = Math.ceil(Math.abs(end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+
+        const userRef = doc(db, "users", request.userId);
+        const userSnap = await getDoc(userRef);
+
+        if (userSnap.exists()) {
+          const userData = userSnap.data();
+          const creditKey = `${request.type}Credits`; 
+          const currentCredits = userData[creditKey] || 0;
+
+          if (currentCredits < diffDays) {
+            return toast.error("Insufficient user balance to approve.");
+          }
+
+          await updateDoc(userRef, { [creditKey]: currentCredits - diffDays });
+        }
+      }
+
       await updateDoc(doc(db, "leaveRequests", id), { status: newStatus });
       toast.success(`Request ${newStatus}!`);
-    } catch (error) {
-      console.error("Error updating request status:", error);
-      toast.error("Failed to update status.");
+    } catch (error: unknown) {
+      console.error("Status update error:", error);
+      toast.error("Failed to process status update.");
     }
   };
 
@@ -128,173 +160,122 @@ export default function LeavePage() {
   return (
     <ProtectedRoute>
       <main className="min-h-screen w-full relative overflow-hidden pt-[73px] bg-slate-50 dark:bg-[#0a0a0a]">
-        {/* Dynamic Background Glows */}
-        <div className="absolute top-0 left-0 w-[40rem] h-[40rem] bg-teal-400/20 dark:bg-teal-600/10 rounded-full blur-[150px] pointer-events-none"></div>
-        <div className="absolute bottom-0 right-0 w-[30rem] h-[30rem] bg-emerald-400/20 dark:bg-emerald-600/10 rounded-full blur-[120px] pointer-events-none"></div>
-
         <Navbar />
-        
         <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
+          
           <div className="mb-10">
             <h1 className="text-4xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
               <CalendarIcon className="w-10 h-10 text-teal-500" />
               Leave Management
             </h1>
-            <p className="text-gray-500 dark:text-gray-400 mt-2 text-lg">
-              {isAdmin ? "Review and manage employee time-off requests." : "Request time off and monitor your leave history."}
-            </p>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
-            {/* Left Col: Request Form / Pending Requests */}
             <div className="lg:col-span-1 space-y-8">
-              
               {!isAdmin && (
-                <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl">
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Request Time Off</h3>
-                  <form onSubmit={handleSubmitRequest} className="space-y-4">
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Leave Type</label>
-                      <select value={type} onChange={(e) => setType(e.target.value as "pto" | "sick")} className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 focus:ring-2 focus:ring-teal-500 text-gray-900 dark:text-white">
-                        <option value="pto">Paid Time Off (PTO)</option>
-                        <option value="sick">Sick Leave</option>
-                      </select>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Start Date</label>
-                        <input type="date" required value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-3 sm:px-4 py-3 focus:ring-2 focus:ring-teal-500 text-gray-900 dark:text-white" />
+                <div className="flex flex-col gap-6">
+                  <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl">
+                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 text-center">My Balances</h3>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="p-3 text-center bg-teal-500/10 rounded-xl border border-teal-500/20">
+                        <div className="text-2xl font-bold text-teal-400">{balances.vl}</div>
+                        <div className="text-[9px] font-bold text-teal-300 uppercase">VL</div>
                       </div>
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">End Date</label>
-                        <input type="date" required value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-3 sm:px-4 py-3 focus:ring-2 focus:ring-teal-500 text-gray-900 dark:text-white" />
+                      <div className="p-3 text-center bg-rose-500/10 rounded-xl border border-rose-500/20">
+                        <div className="text-2xl font-bold text-rose-400">{balances.sl}</div>
+                        <div className="text-[9px] font-bold text-rose-300 uppercase">SL</div>
+                      </div>
+                      <div className="p-3 text-center bg-indigo-500/10 rounded-xl border border-indigo-500/20">
+                        <div className="text-2xl font-bold text-indigo-400">{balances.sil}</div>
+                        <div className="text-[9px] font-bold text-indigo-300 uppercase">SIL</div>
                       </div>
                     </div>
+                  </div>
 
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Reason / Note</label>
-                      <textarea required value={reason} onChange={(e) => setReason(e.target.value)} rows={3} placeholder="Briefly explain your reason..." className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 focus:ring-2 focus:ring-teal-500 text-gray-900 dark:text-white resize-none"></textarea>
-                    </div>
+                  <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl">
+                    <form onSubmit={handleSubmitRequest} className="space-y-4">
+                        <select value={type} onChange={(e) => setType(e.target.value as "vl" | "sl" | "sil")} className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-500">
+                          <option value="vl">Vacation Leave (VL)</option>
+                          <option value="sl">Sick Leave (SL)</option>
+                          <option value="sil">Incentive Leave (SIL)</option>
+                        </select>
+                        <input type="date" required value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-500" />
+                        <input type="date" required value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-500" />
+                        <textarea required value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Reason for leave..." className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white h-24 resize-none focus:outline-none focus:ring-2 focus:ring-teal-500"></textarea>
+                        
+                        {/* NEW ATTACHMENT LINK INPUT */}
+                        <input 
+                          type="url" 
+                          value={attachmentUrl} 
+                          onChange={(e) => setAttachmentUrl(e.target.value)} 
+                          placeholder="Doc Link (G-Drive, Dropbox) - Optional" 
+                          className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 placeholder-gray-500" 
+                        />
 
-                    <button 
-                      type="submit" 
-                      disabled={isSubmitting}
-                      className="w-full mt-2 bg-gradient-to-r from-teal-600 to-emerald-500 hover:from-teal-500 hover:to-emerald-400 text-white rounded-xl py-3 font-semibold transition-all shadow-lg shadow-teal-500/20 active:scale-95 flex items-center justify-center gap-2"
-                    >
-                      {isSubmitting ? "Submitting..." : <><Send className="w-4 h-4" /> Submit Request</>}
-                    </button>
-                  </form>
+                        <button type="submit" disabled={isSubmitting} className="w-full bg-teal-600 hover:bg-teal-500 py-3 rounded-xl font-bold text-white transition-all shadow-lg shadow-teal-500/20 active:scale-95">Submit Request</button>
+                    </form>
+                  </div>
                 </div>
               )}
 
               {isAdmin && (
-                 <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl">
-                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center justify-between">
-                      Action Required
-                      <span className="bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 text-sm px-3 py-1 rounded-full">{pendingRequests.length} pending</span>
-                    </h3>
-                    
-                    <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
-                      {pendingRequests.length > 0 ? (
-                        pendingRequests.map(req => (
-                          <div key={req.id} className="p-4 rounded-2xl bg-slate-50 dark:bg-black/20 border border-gray-100 dark:border-white/5 space-y-3">
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <div className="font-bold text-gray-900 dark:text-white">{req.userName}</div>
-                                <div className="text-xs font-semibold text-teal-600 dark:text-teal-400 uppercase tracking-wider">{req.type === 'pto' ? 'Paid Time Off' : 'Sick Leave'}</div>
-                              </div>
-                              <span className="text-xs text-gray-500 dark:text-gray-400">
-                                {new Date(req.startDate).toLocaleDateString()} - {new Date(req.endDate).toLocaleDateString()}
-                              </span>
-                            </div>
-                            <p className="text-sm text-gray-600 dark:text-gray-300 italic" >&quot;{req.reason}&quot;</p>
-                            <div className="flex gap-2 pt-2 border-t border-gray-200 dark:border-white/10">
-                              <button onClick={() => handleUpdateStatus(req.id, "approved")} className="flex-1 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 dark:bg-emerald-500/20 dark:hover:bg-emerald-500/30 dark:text-emerald-400 rounded-lg text-sm font-semibold transition-colors active:scale-95">
-                                Approve
-                              </button>
-                              <button onClick={() => handleUpdateStatus(req.id, "rejected")} className="flex-1 py-1.5 bg-rose-100 hover:bg-rose-200 text-rose-700 dark:bg-rose-500/20 dark:hover:bg-rose-500/30 dark:text-rose-400 rounded-lg text-sm font-semibold transition-colors active:scale-95">
-                                Reject
-                              </button>
-                            </div>
+                 <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl">
+                    <h3 className="text-xl font-bold text-white mb-6">Pending Approval</h3>
+                    <div className="space-y-4">
+                      {pendingRequests.map(req => (
+                        <div key={req.id} className="p-4 rounded-2xl bg-black/20 border border-white/5 space-y-3">
+                          <div className="font-bold text-white">{req.userName}</div>
+                          <div className="text-[10px] font-bold text-teal-400 uppercase">{req.type}</div>
+                          <p className="text-xs text-gray-400">&quot;{req.reason}&quot;</p>
+                          
+                          {/* NEW ADMIN ATTACHMENT VIEWER */}
+                          {req.attachmentUrl && (
+                            <a href={req.attachmentUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 font-semibold bg-indigo-500/10 px-2.5 py-1.5 rounded-lg w-fit transition-colors">
+                              <ExternalLink className="w-3.5 h-3.5" /> View Attached Document
+                            </a>
+                          )}
+
+                          <div className="flex gap-2 pt-2">
+                            <button onClick={() => handleUpdateStatus(req.id, "approved", req)} className="flex-1 py-2 bg-emerald-500/20 text-emerald-400 rounded-lg text-xs font-bold active:scale-95 transition-transform">Approve</button>
+                            <button onClick={() => handleUpdateStatus(req.id, "rejected", req)} className="flex-1 py-2 bg-rose-500/20 text-rose-400 rounded-lg text-xs font-bold active:scale-95 transition-transform">Reject</button>
                           </div>
-                        ))
-                      ) : (
-                        <div className="text-center py-10 text-gray-500 dark:text-gray-400 italic bg-slate-50 dark:bg-white/5 rounded-2xl border border-dashed border-gray-200 dark:border-white/10">
-                          No pending requests! You&apos;re all caught up.
                         </div>
-                      )}
+                      ))}
                     </div>
                  </div>
               )}
             </div>
 
-            {/* Right Col: History Table */}
             <div className="lg:col-span-2">
-              <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl h-full">
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6">
-                  {isAdmin ? "Recent Leave History" : "My Leave History"}
-                </h3>
-                
-                <div className="w-full">
-                  <table className="w-full text-left border-collapse block xl:table">
-                    <thead className="hidden xl:table-header-group">
-                      <tr className="border-b border-gray-200 dark:border-white/10">
-                        {isAdmin && <th className="pb-3 text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Employee</th>}
-                        <th className="pb-3 text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Type</th>
-                        <th className="pb-3 text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Dates</th>
-                        <th className="pb-3 text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Reason</th>
-                        <th className="pb-3 text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+               <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-white/5">
+                      <th className="pb-4">Employee</th>
+                      <th className="pb-4">Type</th>
+                      <th className="pb-4">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {(isAdmin ? pastRequests : requests).map(req => (
+                      <tr key={req.id} className="text-sm">
+                        <td className="py-4 text-white font-medium">
+                          {req.userName}
+                          {/* ATTACHMENT INDICATOR IN HISTORY */}
+                          {req.attachmentUrl && (
+                            <a href={req.attachmentUrl} target="_blank" rel="noopener noreferrer" title="View Document" className="ml-2 text-indigo-400 hover:text-indigo-300 inline-block align-middle">
+                              <ExternalLink className="w-3.5 h-3.5" />
+                            </a>
+                          )}
+                        </td>
+                        <td className="py-4 text-teal-400 font-bold uppercase text-xs">{req.type}</td>
+                        <td className="py-4">{getStatusBadge(req.status)}</td>
                       </tr>
-                    </thead>
-                    <tbody className="block xl:table-row-group divide-y xl:divide-y dark:divide-white/5 divide-transparent xl:divide-gray-100">
-                      {(isAdmin ? pastRequests : requests).length > 0 ? (
-                        (isAdmin ? pastRequests : requests).map(req => (
-                          <tr key={req.id} className="block xl:table-row group hover:bg-slate-50 dark:hover:bg-white/5 transition-colors mb-4 xl:mb-0 bg-slate-50 dark:bg-white/5 xl:bg-transparent rounded-2xl xl:rounded-none p-4 xl:p-0 border border-gray-100 dark:border-white/5 xl:border-none shadow-sm xl:shadow-none">
-                            {isAdmin && (
-                              <td className="flex justify-between items-center xl:table-cell py-2 xl:py-4 xl:pr-4 border-b border-gray-100 dark:border-white/5 xl:border-none">
-                                <span className="xl:hidden text-xs text-gray-500 uppercase font-semibold">Employee</span>
-                                <div className="font-medium text-gray-900 dark:text-white">{req.userName}</div>
-                              </td>
-                            )}
-                            <td className="flex justify-between items-center xl:table-cell py-2 xl:py-4 xl:pr-4 border-b border-gray-100 dark:border-white/5 xl:border-none">
-                               <span className="xl:hidden text-xs text-gray-500 uppercase font-semibold">Type</span>
-                              <span className="font-semibold text-teal-600 dark:text-teal-400 uppercase text-xs tracking-wider">
-                                {req.type}
-                              </span>
-                            </td>
-                            <td className="flex justify-between items-center xl:table-cell py-2 xl:py-4 xl:pr-4 border-b border-gray-100 dark:border-white/5 xl:border-none">
-                              <span className="xl:hidden text-xs text-gray-500 uppercase font-semibold">Dates</span>
-                              <div className="text-sm text-gray-900 dark:text-white text-right xl:text-left">
-                                {new Date(req.startDate).toLocaleDateString()} - <br className="hidden xl:block"/>{new Date(req.endDate).toLocaleDateString()}
-                              </div>
-                            </td>
-                            <td className="flex flex-col xl:table-cell py-2 xl:py-4 xl:pr-4 border-b border-gray-100 dark:border-white/5 xl:border-none">
-                              <span className="xl:hidden text-xs text-gray-500 uppercase font-semibold mb-1">Reason</span>
-                              <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-3 xl:line-clamp-2 xl:max-w-[200px]" title={req.reason}>
-                                {req.reason}
-                              </p>
-                            </td>
-                            <td className="flex justify-between items-center xl:table-cell py-3 xl:py-4">
-                              <span className="xl:hidden text-xs text-gray-500 uppercase font-semibold">Status</span>
-                              {getStatusBadge(req.status)}
-                            </td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr className="block xl:table-row">
-                          <td colSpan={5} className="block xl:table-cell py-8 text-center text-gray-500 dark:text-gray-400 italic">
-                            No leave history found.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+                    ))}
+                  </tbody>
+                </table>
+               </div>
             </div>
-
           </div>
         </div>
       </main>

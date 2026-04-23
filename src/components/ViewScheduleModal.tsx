@@ -96,7 +96,7 @@ export default function ViewScheduleModal({ employee, onClose }: ViewScheduleMod
       });
       toast.success("Schedule updated successfully!");
     } catch (error: unknown) {
-      console.error("Failed to update schedule", error);
+      console.error("Failed to update schedule", error);  
       toast.error("Failed to update schedule.");
     } finally {
       setIsSaving(false);
