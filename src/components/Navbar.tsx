@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { usePathname } from "next/navigation";
-import { Settings, LayoutDashboard, Users, Calendar, Clock, CalendarDays, Sparkles } from "lucide-react";
+import { Settings, LayoutDashboard, Users, Calendar, Clock, CalendarDays, Sparkles, Banknote, Gift } from "lucide-react";
 
 export default function Navbar() {
   const { user } = useAuth();
@@ -83,6 +83,20 @@ export default function Navbar() {
         {isAdmin && (
           <Link href="/admin/memo-generator" className={getLinkClass("/admin/memo-generator")} aria-label="AI Policy Lab" title="AI Policy Lab">
             <Sparkles className={`w-5 h-5 transition-transform duration-300 ${pathname.startsWith('/admin/memo-generator') ? 'scale-110 text-indigo-500' : 'group-hover:scale-110 text-indigo-500'}`} />
+          </Link>
+        )}
+
+        {/* Payroll Setup */}
+        {isAdmin && (
+          <Link href="/admin/payroll" className={getLinkClass("/admin/payroll")} aria-label="Payroll" title="Payroll & Compensation">
+            <Banknote className={`w-5 h-5 transition-transform duration-300 ${pathname.startsWith('/admin/payroll') ? 'scale-110 text-emerald-500' : 'group-hover:scale-110 text-emerald-500'}`} />
+          </Link>
+        )}
+
+        {/* Benefits & 13th Month */}
+        {isAdmin && (
+          <Link href="/admin/benefits" className={getLinkClass("/admin/benefits")} aria-label="Benefits" title="Benefits Administration">
+            <Gift className={`w-5 h-5 transition-transform duration-300 ${pathname.startsWith('/admin/benefits') ? 'scale-110 text-rose-500' : 'group-hover:scale-110 text-rose-500'}`} />
           </Link>
         )}
 
