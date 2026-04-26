@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { usePathname } from "next/navigation";
-import { Settings, LayoutDashboard, Users, Calendar, Clock, CalendarDays, Sparkles, Banknote, Gift } from "lucide-react";
+import { Settings, LayoutDashboard, Users, Calendar, Clock, CalendarDays, Sparkles, Banknote, Gift, Gavel, TrendingUp } from "lucide-react";
 
 export default function Navbar() {
   const { user } = useAuth();
@@ -81,7 +81,7 @@ export default function Navbar() {
 
         {/* AI Policy Lab (Only renders for the Admin) */}
         {isAdmin && (
-          <Link href="/admin/memo-generator" className={getLinkClass("/admin/memo-generator")} aria-label="AI Policy Lab" title="AI Policy Lab">
+          <Link href="/admin/memo-generator" className={getLinkClass("/admin/memo-generator")} aria-label="AI Policy Lab" title="Policy and Memo Lab">
             <Sparkles className={`w-5 h-5 transition-transform duration-300 ${pathname.startsWith('/admin/memo-generator') ? 'scale-110 text-indigo-500' : 'group-hover:scale-110 text-indigo-500'}`} />
           </Link>
         )}
@@ -100,6 +100,19 @@ export default function Navbar() {
           </Link>
         )}
 
+        {/* Disciplinary Advisor */}
+        {isAdmin && (
+          <Link href="/admin/disciplinary" className={getLinkClass("/admin/disciplinary")} aria-label="Disciplinary Advisor" title="Disciplinary Advisor">
+            <Gavel className={`w-5 h-5 transition-transform duration-300 ${pathname.startsWith('/admin/disciplinary') ? 'scale-110 text-rose-500' : 'group-hover:scale-110 text-rose-500'}`} />
+          </Link>
+        )}
+
+        {/* Performance Management */}
+        {isAdmin && (
+          <Link href="/admin/performance" className={getLinkClass("/admin/performance")} aria-label="Performance" title="Performance Management">
+            <TrendingUp className={`w-5 h-5 transition-transform duration-300 ${pathname.startsWith('/admin/performance') ? 'scale-110 text-indigo-500' : 'group-hover:scale-110 text-indigo-500'}`} />
+          </Link>
+        )}
         {/* Settings Link */}
         <Link href="/settings" className={getLinkClass("/settings")} aria-label="Settings" title="Settings">
           <Settings className={`w-5 h-5 transition-transform duration-300 ${pathname.startsWith('/settings') ? 'rotate-90' : 'group-hover:rotate-90'}`} />

@@ -11,7 +11,7 @@ import AdminLogsTable from "@/components/AdminLogsTable";
 import EmployeeHistoryTable from "@/components/EmployeeHistoryTable";
 import HRChatbot from "@/components/HRChatbot";
 import { verifyLocationPing, resolveDanglingShift } from "@/services/attendance";
-import { Users, Activity, FileText, PieChart, Clock, ShieldAlert, Sparkles, Gift } from "lucide-react"; 
+import { Users, Activity, FileText, PieChart, Clock, ShieldAlert, Sparkles, Gift, XCircle } from "lucide-react"; 
 import Link from "next/link";
 import toast from "react-hot-toast";
 
@@ -30,11 +30,22 @@ export default function DashboardPage() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [bonuses, setBonuses] = useState<Bonus[]>([]);
   const [danglingShift, setDanglingShift] = useState<AttendanceLog | null>(null);
+  const [selectedMemo, setSelectedMemo] = useState<{id: string, content: string, author: string, createdAt: { seconds: number } | null} | null>(null);
   const [exceptionTime, setExceptionTime] = useState("");
   const [exceptionReason, setExceptionReason] = useState("");
   const [isResolving, setIsResolving] = useState(false);
 
-  const handleResolveException = async (e: React.FormEvent) => {
+  const getMemoTitle = (content: string) => {
+    const lines = content.split('\n');
+    const subjectLine = lines.find(line => line.toUpperCase().includes('SUBJECT:'));
+    
+    if (subjectLine) {
+      return subjectLine.replace(/\*\*/g, '').replace(/SUBJECT:/i, '').trim();
+    }
+    return "Official Company Memorandum"; 
+  };
+
+  const handleResolveException = async (e: React.SubmitEvent) => {
     e.preventDefault(); 
     if (!user?.uid || !danglingShift) return; 
     setIsResolving(true);
@@ -93,10 +104,17 @@ export default function DashboardPage() {
     }
   }, [isClockedIn, user?.uid]);
 
-  useEffect(() => {
+ useEffect(() => {
     if (!user?.uid || isAdmin) return; 
+
+    const currentYear = new Date().getFullYear();
+    const q = query(
+      collection(db, "bonuses"), 
+      where("userId", "==", user.uid), 
+      where("year", "==", currentYear), 
+      orderBy("distributedAt", "desc")
+    );
     
-    const q = query(collection(db, "bonuses"), where("userId", "==", user.uid), orderBy("distributedAt", "desc"));
     const unsubscribe = onSnapshot(q, (snap) => {
       setBonuses(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Bonus)));
     });
@@ -193,24 +211,40 @@ export default function DashboardPage() {
           </div>
 
           {/* AI ANNOUNCEMENTS WIDGET */}
-          <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl">
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-indigo-500" />
-              Company Memos & Policies
-            </h3>
-            <div className="space-y-4">
-              {announcements.length > 0 ? (
-                announcements.map((announcement) => (
-                  <div key={announcement.id} className="p-4 bg-slate-50 dark:bg-black/20 rounded-2xl border border-gray-100 dark:border-white/5">
-                    <p className="text-xs font-bold text-indigo-500 uppercase tracking-widest mb-2">From: {announcement.author}</p>
-                    <div className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap line-clamp-4">{announcement.content}</div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center py-6 text-gray-500 text-sm italic">No recent announcements.</div>
-              )}
-            </div>
+          <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl col-span-1 lg:col-span-2">
+  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
+    <Sparkles className="w-5 h-5 text-indigo-500" />
+    Company Memos & Updates
+  </h3>
+  
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    {announcements.length > 0 ? (
+      announcements.map((memo) => (
+        <div 
+          key={memo.id} 
+          onClick={() => setSelectedMemo(memo)}
+          className="group cursor-pointer p-5 bg-slate-50 dark:bg-black/20 rounded-2xl border border-gray-100 dark:border-white/5 hover:border-indigo-500/50 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-all duration-300 flex flex-col justify-between min-h-[120px]"
+        >
+          <div>
+            <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider mb-2 block">
+              {memo.createdAt ? new Date(memo.createdAt.seconds * 1000).toLocaleDateString() : "New"} • From {memo.author}
+            </span>
+            <h4 className="text-sm font-bold text-gray-900 dark:text-white line-clamp-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+              {getMemoTitle(memo.content)}
+            </h4>
           </div>
+          <div className="mt-4 flex items-center text-xs font-bold text-gray-400 group-hover:text-indigo-500 transition-colors">
+            Click to read full memo &rarr;
+          </div>
+        </div>
+      ))
+    ) : (
+      <div className="col-span-full py-8 text-center text-gray-500 italic bg-slate-50 dark:bg-black/10 rounded-2xl border border-dashed border-gray-200 dark:border-white/10">
+        No new company announcements.
+      </div>
+    )}
+  </div>
+</div>
         </div>
 
         <HRChatbot logs={logs} />
@@ -229,6 +263,39 @@ export default function DashboardPage() {
             </div>
           </div>
         )}
+
+        {/* The Reading Modal */}
+{selectedMemo && (
+  <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div className="bg-white dark:bg-[#151515] w-full max-w-2xl rounded-3xl shadow-2xl border border-gray-200 dark:border-white/10 flex flex-col max-h-[85vh]">
+      
+      {/* Modal Header */}
+      <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-white/10 sticky top-0 bg-white dark:bg-[#151515] z-10 rounded-t-3xl">
+        <div>
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+            {getMemoTitle(selectedMemo.content)}
+          </h3>
+          <p className="text-xs text-gray-500 mt-1 uppercase tracking-wider font-bold">
+            Published by {selectedMemo.author} • {selectedMemo.createdAt ? new Date(selectedMemo.createdAt.seconds * 1000).toLocaleDateString() : ""}
+          </p>
+        </div>
+        <button 
+          onClick={() => setSelectedMemo(null)} 
+          className="text-gray-400 hover:text-rose-500 transition-colors bg-slate-100 dark:bg-white/5 p-2 rounded-full"
+        >
+          <XCircle className="w-6 h-6" />
+        </button>
+      </div>
+
+      {/* Modal Body (Scrollable) */}
+      <div className="p-8 overflow-y-auto custom-scrollbar flex-1 text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
+        {/* We use replace to clean up some of the heavy markdown asterisks for a cleaner reading experience */}
+        {selectedMemo.content.replace(/\*\*/g, '')}
+      </div>
+      
+    </div>
+  </div>
+)}
       </main>
     </ProtectedRoute>
   );

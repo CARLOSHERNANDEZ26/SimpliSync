@@ -102,7 +102,7 @@ export default function SettingsPage() {
                 Settings
               </h2>
               <p className="text-lg text-gray-500 dark:text-gray-400 transition-colors">
-                Manage your profile and application preferences.
+                Manage your application preferences.
               </p>
             </div>
 

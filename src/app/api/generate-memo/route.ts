@@ -1,37 +1,41 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const apiKey = process.env.GEMINI_API_KEY;
-const genAI = new GoogleGenerativeAI(apiKey || "");
-
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
   try {
-    if (!apiKey) {
-      return NextResponse.json({ error: "API key is missing from environment variables." }, { status: 500 });
-    }
-
     const body = await req.json();
-    const { prompt } = body as { prompt?: string };
+    const { prompt } = body;
 
     if (!prompt) {
-      return NextResponse.json({ error: "A prompt is required." }, { status: 400 });
+      return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
     }
 
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const apiKey = process.env.GOOGLE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
 
-    const systemInstruction = `
-      You are an expert HR Manager and Corporate Policy Writer for a company called SimpliV. 
-      Draft a professional, clear, and empathetic corporate memo based on the user's instructions.
-      Format the output in plain text with clear paragraph breaks. Do not use Markdown formatting like asterisks or hashtags.
-    `;
+    if (!apiKey) {
+      console.error("API KEY ERROR: Could not find GOOGLE_GEMINI_API_KEY in .env.local");
+      return NextResponse.json(
+        { error: "API key is missing from environment variables." },
+        { status: 500 }
+      );
+    }
 
-    const finalPrompt = `${systemInstruction}\n\nInstructions:\n${prompt}`;
-    const result = await model.generateContent(finalPrompt);
-    const text = result.response.text();
-    return NextResponse.json({ memo: text }, { status: 200 }); 
+    const genAI = new GoogleGenerativeAI(apiKey);
 
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+    const result = await model.generateContent(prompt);
+    const memo = result.response.text();
+
+    return NextResponse.json({ memo }, { status: 200 });
   } catch (error: unknown) {
-    console.error("AI Generation Error:", error);
-    return NextResponse.json({ error: "Failed to generate memo. Please try again." }, { status: 500 });
+    console.error("Gemini API Error:", error);
+    
+    const errorMessage = error instanceof Error ? error.message : "Failed to generate content";
+    
+    return NextResponse.json(
+      { error: errorMessage },
+      { status: 500 }
+    );
   }
 }

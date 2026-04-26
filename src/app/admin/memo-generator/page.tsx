@@ -4,10 +4,8 @@ import { useState, useEffect } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Navbar from "@/components/Navbar";
 import { useAuth } from "@/hooks/useAuth";
-// 🔥 Added Trash2 for the delete button
-import { Bot, FileText, Send, Copy, CheckCircle2, Sparkles, Trash2, List } from "lucide-react";
+import { Bot, FileText, Send, Sparkles, Trash2, List } from "lucide-react";
 import toast from "react-hot-toast";
-// 🔥 Added all necessary Firestore imports
 import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, deleteDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
@@ -22,7 +20,6 @@ export default function MemoGeneratorPage() {
   const { user } = useAuth();
   const isAdmin = user?.email === "admin@simplisync.local";
   
-
   const [isPublishing, setIsPublishing] = useState(false);
   const [prompt, setPrompt] = useState("");
   const [generatedMemo, setGeneratedMemo] = useState("");
@@ -45,7 +42,7 @@ export default function MemoGeneratorPage() {
       try {
         await deleteDoc(doc(db, "announcements", id));
         toast.success("Policy permanently removed.");
-      } catch (error) {
+      } catch (error: unknown) {
         console.error("Delete Error:", error);
         toast.error("Failed to delete policy.");
       }
@@ -58,7 +55,7 @@ export default function MemoGeneratorPage() {
 
     setIsGenerating(true);
     setGeneratedMemo(""); 
-    setActiveTab("draft"); // Automatically switch to draft tab when generating
+    setActiveTab("draft"); 
     
     try {
       const response = await fetch("/api/generate-memo", {
@@ -90,8 +87,8 @@ export default function MemoGeneratorPage() {
       setIsCopied(true);
       toast.success("Copied to clipboard!");
       setTimeout(() => setIsCopied(false), 2000);
-    } catch (error) {
-    console.error("Copy Error:", error);
+    } catch (error: unknown) {
+      console.error("Copy Error:", error);
       toast.error("Failed to copy text.");
     }
   };
@@ -184,21 +181,26 @@ export default function MemoGeneratorPage() {
               {activeTab === "draft" && (
                 <>
                   <div className="flex items-center justify-between mb-4">
-                    <span className="text-sm font-bold text-gray-500">Review before publishing</span>
-                    {generatedMemo && (
-                      <div className="flex gap-2">
-                        <button onClick={handleCopy} className="flex items-center gap-1 text-xs font-bold bg-white/5 px-3 py-1.5 rounded-lg hover:bg-white/10 text-white">
+                    <span className="text-sm font-bold text-gray-500">Draft your memo manually, or use AI above</span>
+                    <div className="flex gap-2">
+                      {generatedMemo && (
+                        <button onClick={handleCopy} className="flex items-center gap-1 text-xs font-bold bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 px-3 py-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-white/10 text-gray-700 dark:text-white transition-colors">
                           {isCopied ? "Copied!" : "Copy"}
                         </button>
-                        <button onClick={handlePublish} disabled={isPublishing} className="flex items-center gap-1 text-xs font-bold bg-indigo-600 px-3 py-1.5 rounded-lg hover:bg-indigo-500 text-white disabled:opacity-50">
-                          {isPublishing ? "Publishing..." : "Publish to Dashboard"}
-                        </button>
-                      </div>
-                    )}
+                      )}
+                      <button onClick={handlePublish} disabled={isPublishing || !generatedMemo.trim()} className="flex items-center gap-1 text-xs font-bold bg-indigo-600 px-3 py-1.5 rounded-lg hover:bg-indigo-500 text-white disabled:opacity-50 transition-colors">
+                        {isPublishing ? "Publishing..." : "Publish to Dashboard"}
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex-1 bg-black/20 rounded-2xl p-6 overflow-y-auto whitespace-pre-wrap text-sm text-gray-300">
-                    {generatedMemo ? generatedMemo : <div className="text-center text-gray-600 italic mt-20">Generate a draft to see it here.</div>}
-                  </div>
+                  
+                  {/* The Textarea is now ALWAYS visible so the Admin can manually type */}
+                  <textarea
+                    value={generatedMemo}
+                    onChange={(e) => setGeneratedMemo(e.target.value)}
+                    placeholder="Type your official announcement here, or use the AI Generator on the left to instantly draft a DOLE-compliant memo..."
+                    className="flex-1 w-full bg-white dark:bg-black/40 border border-gray-200 dark:border-white/10 rounded-2xl p-6 text-sm text-gray-700 dark:text-gray-300 resize-none outline-none focus:ring-2 focus:ring-indigo-500 custom-scrollbar"
+                  />
                 </>
               )}
 
@@ -209,12 +211,14 @@ export default function MemoGeneratorPage() {
                     publishedMemos.map(memo => (
                       <div key={memo.id} className="p-4 bg-slate-50 dark:bg-black/20 rounded-2xl border border-gray-100 dark:border-white/5 relative group">
                         <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => handleDeletePolicy(memo.id)} className="p-2 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white rounded-lg transition-colors" title="Delete Policy">
+                          <button onClick={() => handleDeletePolicy(memo.id)} className="p-2 bg-rose-50 dark:bg-rose-500/10 text-rose-500 hover:bg-rose-100 dark:hover:bg-rose-500 hover:text-rose-600 dark:hover:text-white rounded-lg transition-colors" title="Delete Policy">
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
-                        <p className="text-[10px] font-bold text-teal-500 uppercase mb-2">Published: {memo.createdAt ? new Date(memo.createdAt.seconds * 1000).toLocaleDateString() : "Just now"}</p>
-                        <div className="text-sm text-gray-300 whitespace-pre-wrap">{memo.content}</div>
+                        <p className="text-[10px] font-bold text-teal-600 dark:text-teal-500 uppercase mb-2">
+                          Published: {memo.createdAt ? new Date(memo.createdAt.seconds * 1000).toLocaleDateString() : "Just now"}
+                        </p>
+                        <div className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{memo.content}</div>
                       </div>
                     ))
                   ) : (
