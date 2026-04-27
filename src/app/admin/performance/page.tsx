@@ -8,7 +8,7 @@ import { collection, query, where, onSnapshot, addDoc, serverTimestamp, orderBy 
 import { db } from "@/lib/firebase";
 import { TrendingUp, Award, Star, CheckCircle2, Search, XCircle } from "lucide-react";
 import toast from "react-hot-toast";
-
+import { logAdminAction } from "@/lib/audit";
 interface Employee { 
   id: string; 
   fullName: string; 
@@ -81,6 +81,14 @@ export default function PerformancePage() {
       });
 
       toast.success("Performance evaluation saved successfully!");
+       
+      if (user?.email) {
+      await logAdminAction(
+        user.email, 
+        `Logged Quarterly Appraisal (Score: ${averageScore.toFixed(1)})`, 
+        `Employee ID: ${selectedEmp}`
+      );
+    }
       setIsModalOpen(false);
       setSelectedEmp("");
       setQuality(3);

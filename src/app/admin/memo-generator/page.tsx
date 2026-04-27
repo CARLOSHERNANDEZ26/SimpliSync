@@ -4,10 +4,11 @@ import { useState, useEffect } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Navbar from "@/components/Navbar";
 import { useAuth } from "@/hooks/useAuth";
-import { Bot, FileText, Send, Sparkles, Trash2, List } from "lucide-react";
+import { Bot, FileText, Send, Sparkles, Trash2, List, AlertTriangle } from "lucide-react";
 import toast from "react-hot-toast";
 import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, deleteDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { logAdminAction } from "@/lib/audit";
 
 interface Announcement {
   id: string;
@@ -37,16 +38,42 @@ export default function MemoGeneratorPage() {
     return () => unsubscribe();
   }, [isAdmin]);
 
-  const handleDeletePolicy = async (id: string) => {
-    if (confirm("Are you sure you want to completely remove this policy from the dashboard?")) {
-      try {
-        await deleteDoc(doc(db, "announcements", id));
-        toast.success("Policy permanently removed.");
-      } catch (error: unknown) {
-        console.error("Delete Error:", error);
-        toast.error("Failed to delete policy.");
-      }
+ const executeDeletePolicy = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, "announcements", id));
+      toast.success("Policy permanently removed.");
+    } catch (error: unknown) {
+      console.error("Delete Error:", error);
+      toast.error("Failed to delete policy.");
     }
+  };
+
+  const handleDeletePolicy = (id: string) => {
+    toast.custom((t) => (
+      <div className={`${t.visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'} transition-all duration-300 max-w-md w-full bg-white dark:bg-[#1a1a1a] shadow-2xl rounded-2xl pointer-events-auto flex flex-col p-5 border border-gray-200 dark:border-white/10`}>
+        <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 mb-2">
+          <AlertTriangle className="w-5 h-5" />
+          <p className="text-sm font-bold">Delete Live Policy?</p>
+        </div>
+        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+          This will remove the policy from the employee dashboard immediately. This cannot be undone.
+        </p>
+        <div className="flex gap-3">
+          <button 
+            onClick={() => toast.dismiss(t.id)} 
+            className="flex-1 px-4 py-2.5 text-sm font-bold bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-gray-700 dark:text-white rounded-xl transition-colors"
+          >
+            Cancel
+          </button>
+          <button 
+            onClick={() => { executeDeletePolicy(id); toast.dismiss(t.id); }} 
+            className="flex-1 px-4 py-2.5 text-sm font-bold bg-rose-600 hover:bg-rose-500 text-white rounded-xl shadow-md shadow-rose-500/20 transition-colors"
+          >
+            Delete Policy
+          </button>
+        </div>
+      </div>
+    ), { id: `confirm-policy-${id}`, duration: 5000 });
   };
 
   const handleGenerate = async (e: React.FormEvent) => {
@@ -94,8 +121,10 @@ export default function MemoGeneratorPage() {
   };
 
   const handlePublish = async () => {
-    if (!generatedMemo) return;
+    if (!generatedMemo.trim()) return;
+
     setIsPublishing(true);
+
     try {
       await addDoc(collection(db, "announcements"), {
         content: generatedMemo,
@@ -103,10 +132,19 @@ export default function MemoGeneratorPage() {
         createdAt: serverTimestamp(),
       });
       toast.success("Memo published to the company dashboard!");
+
+      if (user?.email) {
+        await logAdminAction(
+          user.email, 
+          "Published Company Memorandum", 
+          "Target: All Employees"
+        );
+      }
       setGeneratedMemo(""); 
       setActiveTab("live"); 
+
     } catch (error: unknown) {
-        console.error("Publish Error:", error);
+      console.error("Publish Error:", error);
       toast.error("Failed to publish announcement.");
     } finally {
       setIsPublishing(false);
@@ -134,7 +172,7 @@ export default function MemoGeneratorPage() {
           <div className="mb-10">
             <h1 className="text-4xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
               <Bot className="w-10 h-10 text-indigo-500" />
-              AI Policy Generator
+              Automated Policy Generator
             </h1>
           </div>
 

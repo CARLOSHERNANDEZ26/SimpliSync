@@ -8,6 +8,7 @@ import { collection, query, where, onSnapshot, addDoc, serverTimestamp, orderBy 
 import { db } from "@/lib/firebase";
 import { Gavel, AlertTriangle, Send, FileText, XCircle, UserX, ShieldAlert } from "lucide-react";
 import toast from "react-hot-toast";
+import { logAdminAction } from "@/lib/audit";
 
 interface Employee {
   id: string; 
@@ -37,6 +38,7 @@ export default function DisciplinaryPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [aiDraft, setAiDraft] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -93,11 +95,19 @@ export default function DisciplinaryPage() {
         employeeName: empName,
         offenseType,
         description,
-        aiRecommendation: aiDraft,
+        formalNotice: aiDraft,
         status: "Drafted - Pending HR Review",
         createdAt: serverTimestamp()
       });
       toast.success("Disciplinary record securely saved.");
+
+      if (user?.email) {
+      await logAdminAction(
+        user.email, 
+        `Issued Notice to Explain for ${offenseType}`, 
+        `Employee ID: ${selectedEmp}`
+      );
+    }
       setIsModalOpen(false);
       setAiDraft("");
       setOffenseType("");

@@ -8,6 +8,7 @@ import { collection, query, where, onSnapshot, doc, updateDoc } from "firebase/f
 import { db } from "@/lib/firebase";
 import { Banknote, Edit2, Save, XCircle, Search } from "lucide-react";
 import toast from "react-hot-toast";
+import { logAdminAction } from "@/lib/audit";
 
 interface EmployeePayroll {
   id: string;
@@ -52,7 +53,7 @@ export default function PayrollPage() {
     setEditSalary("");
   };
 
-  const handleSaveSalary = async (empId: string) => {
+ const handleSaveSalary = async (empId: string) => {
     if (editSalary === "") return toast.error("Please enter a valid salary amount.");
     
     setIsSaving(true);
@@ -61,7 +62,19 @@ export default function PayrollPage() {
         baseSalary: Number(editSalary),
         salaryType: editType
       });
+      
       toast.success("Compensation details updated!");
+      
+      if (user?.email) {
+        const empName = employees.find(e => e.id === empId)?.fullName || "Unknown Employee";
+        
+        await logAdminAction(
+          user.email,
+          `Updated Compensation: ${editType} @ ₱${Number(editSalary).toLocaleString()}`,
+          `Target: ${empName} (${empId})`
+        );
+      }
+
       setEditingId(null);
     } catch (error) {
         console.error("Error updating salary:", error);

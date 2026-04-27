@@ -15,8 +15,6 @@ import { MapPin, Crosshair, Save } from "lucide-react"; // 🔥 Added icons for 
 export default function SettingsPage() {
   const { user } = useAuth();
   const isAdmin = user?.email === "admin@simplisync.local";
-  
-  // 🔥 Geofence States
   const [officeLat, setOfficeLat] = useState<number | "">("");
   const [officeLng, setOfficeLng] = useState<number | "">("");
   const [radius, setRadius] = useState<number | "">(50);
@@ -41,7 +39,6 @@ export default function SettingsPage() {
     fetchSettings();
   }, []);
 
-  // 🔥 The Save Handler (Moved outside useEffect)
   const handleSaveGeofence = async () => {
     if (officeLat === "" || officeLng === "" || radius === "") {
       toast.error("Please fill in all geofence fields.");
@@ -106,7 +103,7 @@ export default function SettingsPage() {
               </p>
             </div>
 
-            <div className={`grid grid-cols-1 ${isAdmin ? "lg:grid-cols-2 lg:max-w-5xl xl:max-w-none xl:grid-cols-4 mx-auto" : "max-w-md mx-auto"} gap-6 items-start w-full`}>
+            <div className={`grid grid-cols-1 ${isAdmin ? "lg:grid-cols-2 max-w-5xl mx-auto" : "max-w-md mx-auto"} gap-6 items-stretch w-full`}>
                <div className="w-full flex h-full order-1 lg:order-last">
                  <PreferencesSettings />
                </div>

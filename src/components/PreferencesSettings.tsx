@@ -15,8 +15,9 @@ export default function PreferencesSettings() {
 
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
+useEffect(() => {
+    const frame = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(frame);
   }, []);
 
   const handleLogout = async () => {

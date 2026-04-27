@@ -3,7 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/hooks/useAuth";
 import { Toaster } from "react-hot-toast";
-
+import { ThemeProvider } from "@/components/ThemeProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -23,12 +23,9 @@ export const metadata: Metadata = {
   description: "SimpliSync HRMS Application",
 };
 
-import { ThemeProvider } from "@/components/ThemeProvider";
-
 export default function RootLayout({
   children,
-}:
-{
+}: {
   children: React.ReactNode;
 }) {
   return (
@@ -37,29 +34,31 @@ export default function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <AuthProvider>
             <Toaster 
-  position="top-center" 
-  reverseOrder={false}
-  toastOptions={{
-
-    duration: 4000,
-    
-    className: "bg-white text-gray-900 dark:bg-[#151515] dark:text-white border border-gray-100 dark:border-white/10 shadow-2xl rounded-2xl font-semibold px-5 py-3.5 tracking-wide",
-    
-    success: {
-      iconTheme: {
-        primary: '#10b981', 
-        secondary: '#ffffff',
-      },
-    },
-    
-    error: {
-      iconTheme: {
-        primary: '#f43f5e', 
-        secondary: '#ffffff',
-      },
-    },
-  }} 
-/>
+              position="top-center" 
+              reverseOrder={false}
+              gutter={8} 
+              toastOptions={{
+                duration: 3000, 
+                
+                className: "bg-white text-gray-900 dark:bg-[#151515] dark:text-white border border-gray-100 dark:border-white/10 shadow-2xl rounded-2xl font-semibold px-5 py-3.5 tracking-wide",
+                
+                success: {
+                  duration: 2000,
+                  iconTheme: {
+                    primary: '#10b981', 
+                    secondary: '#ffffff',
+                  },
+                },
+                
+                error: {
+                  duration: 4000,
+                  iconTheme: {
+                    primary: '#f43f5e', 
+                    secondary: '#ffffff',
+                  },
+                },
+              }} 
+            />
             {children}
           </AuthProvider>
         </ThemeProvider>

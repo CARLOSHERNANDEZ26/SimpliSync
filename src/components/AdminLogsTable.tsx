@@ -7,6 +7,7 @@ import { db } from "@/lib/firebase";
 import { adminForceClockOut } from "@/services/attendance";
 import toast from "react-hot-toast";
 import ConfirmModal from "@/components/ConfirmModal";
+import { Trash2, AlertTriangle, Search, Calendar } from "lucide-react";
 
 interface AttendanceLog {
   id: string;
@@ -112,8 +113,7 @@ export default function AdminLogsTable() {
     };
   }, [selectedMonth, user]); 
 
-  const handleDeleteLog = async (logId: string) => {
-    if (!window.confirm("Permanently delete this attendance record?")) return;
+  const executeDeleteLog = async (logId: string) => {
     try {
       await deleteDoc(doc(db, "attendanceLogs", logId)); 
       toast.success("Record deleted.");
@@ -121,6 +121,34 @@ export default function AdminLogsTable() {
       console.error("Error deleting log:", error);
       toast.error("Delete failed.");
     }
+  };
+
+  const confirmDeleteLog = (logId: string) => {
+    toast.custom((t) => (
+      <div className={`${t.visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'} transition-all duration-300 max-w-md w-full bg-white dark:bg-[#1a1a1a] shadow-2xl rounded-2xl pointer-events-auto flex flex-col p-5 border border-gray-200 dark:border-white/10`}>
+        <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 mb-2">
+          <AlertTriangle className="w-5 h-5" />
+          <p className="text-sm font-bold">Delete Record?</p>
+        </div>
+        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+          Are you sure you want to permanently remove this attendance log? This will affect payroll calculations.
+        </p>
+        <div className="flex gap-3">
+          <button 
+            onClick={() => toast.dismiss(t.id)} 
+            className="flex-1 px-4 py-2.5 text-sm font-bold bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-gray-700 dark:text-white rounded-xl transition-colors"
+          >
+            Cancel
+          </button>
+          <button 
+            onClick={() => { executeDeleteLog(logId); toast.dismiss(t.id); }} 
+            className="flex-1 px-4 py-2.5 text-sm font-bold bg-rose-600 hover:bg-rose-500 text-white rounded-xl shadow-md shadow-rose-500/20 transition-colors"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    ), { id: `confirm-att-${logId}`, duration: 5000 });
   };
 
   const executeForceClockOut = async () => {
@@ -157,8 +185,9 @@ export default function AdminLogsTable() {
   const totalHours = (filteredLogs.reduce((total, log) => { 
     return (log.timeIn && log.timeOut) ? total + (log.timeOut.getTime() - log.timeIn.getTime()) : total;
   }, 0) / 3600000).toFixed(1);
+
   if (isLoading) {
-    return <div className="text-center p-12 text-emerald-600 animate-pulse font-medium">Syncing live attendance data...</div>;
+    return <div className="text-center p-12 text-emerald-600 dark:text-emerald-400 animate-pulse font-medium">Syncing live attendance data...</div>;
   }
 
   if (error) {
@@ -166,29 +195,50 @@ export default function AdminLogsTable() {
   }
 
   return (
-    <div className="w-full mt-8 bg-white dark:bg-white/5 backdrop-blur-md rounded-2xl shadow-sm border border-gray-200 dark:border-white/10 overflow-hidden">
-      <div className="px-6 py-4 border-b border-gray-200 dark:border-white/10 flex justify-between items-center flex-wrap gap-4">
-        <h3 className="text-lg font-semibold dark:text-white">Live Company Attendance</h3>
+    <div className="w-full mt-8 bg-white dark:bg-white/[0.03] backdrop-blur-md rounded-2xl shadow-xl border border-gray-200 dark:border-white/10 overflow-hidden transition-colors duration-300">
+      
+      {/* Table Header Section */}
+      <div className="px-6 py-5 border-b border-gray-200 dark:border-white/10 flex justify-between items-center flex-wrap gap-4">
+        <h3 className="text-xl font-bold text-gray-900 dark:text-white">Live Company Attendance</h3>
         <div className="flex items-center gap-3"> 
-          <input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="bg-gray-50 dark:bg-gray-700 border-none rounded-lg text-sm p-2 dark:text-white" />
-          <input type="text" placeholder="Search employee..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-4 pr-4 py-2 bg-gray-50 dark:bg-gray-700 border-none rounded-lg text-sm outline-none dark:text-white" />
+          <div className="relative">
+            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input 
+              type="month" 
+              value={selectedMonth} 
+              onChange={(e) => setSelectedMonth(e.target.value)} 
+              className="bg-gray-100 dark:bg-black/40 border-none rounded-xl text-sm pl-10 pr-4 py-2 dark:text-white outline-none focus:ring-2 focus:ring-teal-500 transition-all" 
+            />
+          </div>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input 
+              type="text" 
+              placeholder="Search employee..." 
+              value={searchTerm} 
+              onChange={(e) => setSearchTerm(e.target.value)} 
+              className="pl-10 pr-4 py-2 bg-gray-100 dark:bg-black/40 border-none rounded-xl text-sm outline-none dark:text-white focus:ring-2 focus:ring-teal-500 transition-all" 
+            />
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 px-6 py-4 bg-gray-50/50 dark:bg-white/5 border-b dark:border-white/10">
-        <div className="p-4 bg-white dark:bg-white/10 rounded-xl border dark:border-white/5">
-          <p className="text-xs font-medium text-gray-500 uppercase">Total Logs</p>
-          <p className="text-2xl font-bold dark:text-white">{filteredLogs.length}</p>
+      {/* Metrics Row */}
+      <div className="grid grid-cols-2 gap-4 px-6 py-6 bg-slate-50/50 dark:bg-white/[0.02] border-b dark:border-white/10">
+        <div className="p-4 bg-white dark:bg-white/5 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm">
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Total Logs</p>
+          <p className="text-3xl font-black text-gray-900 dark:text-white mt-1">{filteredLogs.length}</p>
         </div>
-        <div className="p-4 bg-white dark:bg-white/10 rounded-xl border dark:border-white/5">
-          <p className="text-xs font-medium text-gray-500 uppercase">Total Hours</p>
-          <p className="text-2xl font-bold text-teal-500">{totalHours}h</p>
+        <div className="p-4 bg-white dark:bg-white/5 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm">
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Total Hours</p>
+          <p className="text-3xl font-black text-teal-600 dark:text-teal-400 mt-1">{totalHours}h</p>
         </div>
       </div>
       
+      {/* Table Section */}
       <div className="overflow-x-auto">
         <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-          <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-white/5 dark:text-gray-300">
+          <thead className="text-[10px] font-bold text-gray-400 uppercase tracking-widest bg-slate-50 dark:bg-white/5">
             <tr>
               <th className="px-6 py-4">Date</th>
               <th className="px-6 py-4">Employee</th>
@@ -197,45 +247,51 @@ export default function AdminLogsTable() {
               <th className="px-6 py-4 text-right">Actions</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-gray-100 dark:divide-white/5">
             {filteredLogs.map((log) => (
-              <tr key={log.id} className="border-b dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
-                <td className="px-6 py-4 dark:text-white">{formatDate(log.timeIn)}</td>
+              <tr key={log.id} className="hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-colors">
+                <td className="px-6 py-4 font-medium text-gray-900 dark:text-gray-300">{formatDate(log.timeIn)}</td>
                 <td className="px-6 py-4">
                   <div className="flex flex-col">
-                    <span className="font-semibold dark:text-white">{log.fullName}</span>
-                    <span className="text-xs opacity-60">{log.role}</span>
+                    <span className="font-bold text-gray-900 dark:text-white text-base">{log.fullName}</span>
+                    <span className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">{log.role}</span>
                   </div>
                 </td>
                 <td className="px-6 py-4">
-                  <div className="flex flex-col text-xs font-mono">
-                    <span className="text-emerald-500">IN: {formatTime(log.timeIn)}</span>
-                    <span className={log.timeOut ? "text-rose-500" : "text-gray-400"}>
+                  <div className="flex flex-col text-xs font-mono font-bold">
+                    <span className="text-emerald-600 dark:text-emerald-400">IN: {formatTime(log.timeIn)}</span>
+                    <span className={log.timeOut ? "text-rose-600 dark:text-rose-400" : "text-gray-400"}>
                       OUT: {log.timeOut ? formatTime(log.timeOut) : "---"}
                     </span>
                   </div>
                 </td>
-                <td className="px-6 py-4 dark:text-gray-300">{calculateDuration(log.timeIn, log.timeOut)}</td>
+                <td className="px-6 py-4 font-semibold text-gray-700 dark:text-gray-400">{calculateDuration(log.timeIn, log.timeOut)}</td>
                 <td className="px-6 py-4 text-right">
-                   {!log.timeOut && (
-                   <button onClick={async () => {
-                    setSelectedLog(log);
-                    setIsModalOpen(true);
-                     
-                               }}
-  className="text-[10px] bg-rose-500 text-white px-2 py-1 rounded mr-2 hover:bg-rose-600 transition-colors shadow-sm"
->
-  Force Out
-</button>
-                  )}
-                  <button onClick={() => handleDeleteLog(log.id)} className="text-gray-400 hover:text-rose-500 transition-colors">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                  </button>
+                  <div className="flex items-center justify-end gap-3">
+                    {!log.timeOut && (
+                      <button 
+                        onClick={() => { setSelectedLog(log); setIsModalOpen(true); }}
+                        className="text-[10px] font-bold bg-rose-600 hover:bg-rose-500 text-white px-3 py-1.5 rounded-lg transition-all shadow-md shadow-rose-500/20 active:scale-95"
+                      >
+                        Force Out
+                      </button>
+                    )}
+                    <button 
+                      onClick={() => confirmDeleteLog(log.id)} 
+                      className="p-2 text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg transition-all active:scale-90"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+        
+        {filteredLogs.length === 0 && (
+          <div className="text-center py-20 text-gray-500 italic">No attendance records found for this period.</div>
+        )}
       </div>
 
       <ConfirmModal 
