@@ -9,6 +9,7 @@ import { db } from "@/lib/firebase";
 import { TrendingUp, Award, Star, CheckCircle2, Search, XCircle } from "lucide-react";
 import toast from "react-hot-toast";
 import { logAdminAction } from "@/lib/audit";
+
 interface Employee { 
   id: string; 
   fullName: string; 
@@ -59,7 +60,7 @@ export default function PerformancePage() {
     return () => { unsubEmp(); unsubEval(); }; 
   }, [isAdmin]);
 
-  const handleSubmitEvaluation = async (e: React.SubmitEvent) => { 
+  const handleSubmitEvaluation = async (e: React.FormEvent) => { 
     e.preventDefault();
     if (!selectedEmp || !feedback.trim()) return toast.error("Please select an employee and provide feedback.");
 
@@ -83,12 +84,12 @@ export default function PerformancePage() {
       toast.success("Performance evaluation saved successfully!");
        
       if (user?.email) {
-      await logAdminAction(
-        user.email, 
-        `Logged Quarterly Appraisal (Score: ${averageScore.toFixed(1)})`, 
-        `Employee ID: ${selectedEmp}`
-      );
-    }
+        await logAdminAction(
+          user.email, 
+          `Logged Quarterly Appraisal (Score: ${averageScore.toFixed(1)})`, 
+          `Employee ID: ${selectedEmp}`
+        );
+      }
       setIsModalOpen(false);
       setSelectedEmp("");
       setQuality(3);
@@ -121,7 +122,6 @@ export default function PerformancePage() {
         
         <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
           
-          {/* Header */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10">
             <div>
               <h1 className="text-4xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
@@ -144,7 +144,6 @@ export default function PerformancePage() {
             </div>
           </div>
 
-          {/* Records Table */}
           <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl overflow-x-auto">
             <table className="w-full text-left min-w-[900px]">
               <thead>
@@ -178,65 +177,76 @@ export default function PerformancePage() {
             </table>
           </div>
 
-          {/* New Evaluation Modal */}
+          {/* New Bottom-Sheet / Centered Modal Architecture */}
           {isModalOpen && (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-              <div className="bg-white dark:bg-[#151515] w-full max-w-2xl rounded-3xl shadow-2xl border border-gray-200 dark:border-white/10 flex flex-col max-h-[90vh] overflow-y-auto custom-scrollbar">
+            <div className="fixed inset-0 z-[100] flex flex-col justify-end sm:justify-center items-center bg-black/60 backdrop-blur-sm p-0 sm:p-4 transition-all">
+              <div className="bg-white dark:bg-[#151515] w-full max-w-2xl flex flex-col max-h-[90dvh] sm:max-h-[90vh] rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden animate-fade-in-up">
                 
-                <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-white/10 sticky top-0 bg-white dark:bg-[#151515] z-10">
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2"><Award className="w-6 h-6 text-indigo-500" /> Log Quarterly Evaluation</h3>
-                  <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-rose-500 transition-colors"><XCircle className="w-6 h-6" /></button>
+                {/* 1. Fixed Header (Always visible) */}
+                <div className="flex justify-between items-center p-5 sm:p-6 border-b border-gray-200 dark:border-white/10 shrink-0 bg-white dark:bg-[#151515]">
+                  <div className="flex items-center gap-2">
+                    <Award className="w-6 h-6 text-indigo-500" />
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">New Evaluation</h3>
+                  </div>
+                  <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-rose-500 transition-colors p-1">
+                    <XCircle className="w-7 h-7" />
+                  </button>
                 </div>
 
-                <form onSubmit={handleSubmitEvaluation} className="p-6 space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* 2. Scrollable Body Content */}
+                <div className="overflow-y-auto custom-scrollbar flex-1 p-5 sm:p-6">
+                  <form id="evaluation-form" onSubmit={handleSubmitEvaluation} className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-gray-500 uppercase">Employee</label>
+                        <select required value={selectedEmp} onChange={(e) => setSelectedEmp(e.target.value)} className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 outline-none text-sm dark:text-white focus:ring-2 focus:ring-indigo-500 appearance-none">
+                          <option value="">-- Choose Employee --</option>
+                          {employees.map(emp => (<option key={emp.id} value={emp.id}>{emp.fullName} ({emp.department || "No Dept"})</option>))}
+                        </select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-gray-500 uppercase">Review Period</label>
+                        <select required value={quarter} onChange={(e) => setQuarter(e.target.value)} className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 outline-none text-sm dark:text-white focus:ring-2 focus:ring-indigo-500 appearance-none">
+                          <option value="Q1">Q1 (Jan - Mar)</option>
+                          <option value="Q2">Q2 (Apr - Jun)</option>
+                          <option value="Q3">Q3 (Jul - Sep)</option>
+                          <option value="Q4">Q4 (Oct - Dec)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="bg-slate-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl p-5 space-y-5">
+                      <h4 className="text-sm font-bold text-gray-900 dark:text-white border-b border-gray-200 dark:border-white/10 pb-2">KPI Ratings (1 = Poor, 5 = Excellent)</h4>
+                      
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm"><span className="font-medium text-gray-700 dark:text-gray-300">Quality of Work</span><span className="font-bold text-indigo-500">{quality} / 5</span></div>
+                        <input type="range" min="1" max="5" step="1" value={quality} onChange={(e) => setQuality(Number(e.target.value))} className="w-full accent-indigo-500" />
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm"><span className="font-medium text-gray-700 dark:text-gray-300">Punctuality & Attendance</span><span className="font-bold text-indigo-500">{punctuality} / 5</span></div>
+                        <input type="range" min="1" max="5" step="1" value={punctuality} onChange={(e) => setPunctuality(Number(e.target.value))} className="w-full accent-indigo-500" />
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm"><span className="font-medium text-gray-700 dark:text-gray-300">Teamwork & Collaboration</span><span className="font-bold text-indigo-500">{teamwork} / 5</span></div>
+                        <input type="range" min="1" max="5" step="1" value={teamwork} onChange={(e) => setTeamwork(Number(e.target.value))} className="w-full accent-indigo-500" />
+                      </div>
+                    </div>
+
                     <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-gray-500 uppercase">Employee</label>
-                      <select required value={selectedEmp} onChange={(e) => setSelectedEmp(e.target.value)} className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 outline-none text-sm dark:text-white focus:ring-2 focus:ring-indigo-500">
-                        <option value="">-- Choose Employee --</option>
-                        {employees.map(emp => (<option key={emp.id} value={emp.id}>{emp.fullName} ({emp.department || "No Dept"})</option>))}
-                      </select>
+                      <label className="text-xs font-bold text-gray-500 uppercase">Manager&apos;s Feedback & OKR Notes</label>
+                      <textarea required value={feedback} onChange={(e) => setFeedback(e.target.value)} placeholder="Provide actionable feedback, accomplishments, or areas for improvement..." className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 min-h-[120px] resize-none outline-none text-sm dark:text-white focus:ring-2 focus:ring-indigo-500"></textarea>
                     </div>
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-gray-500 uppercase">Review Period</label>
-                      <select required value={quarter} onChange={(e) => setQuarter(e.target.value)} className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 outline-none text-sm dark:text-white focus:ring-2 focus:ring-indigo-500">
-                        <option value="Q1">Q1 (Jan - Mar)</option>
-                        <option value="Q2">Q2 (Apr - Jun)</option>
-                        <option value="Q3">Q3 (Jul - Sep)</option>
-                        <option value="Q4">Q4 (Oct - Dec)</option>
-                      </select>
-                    </div>
-                  </div>
+                  </form>
+                </div>
 
-                  {/* Rating Sliders */}
-                  <div className="bg-slate-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl p-5 space-y-5">
-                    <h4 className="text-sm font-bold text-gray-900 dark:text-white border-b border-gray-200 dark:border-white/10 pb-2">KPI Ratings (1 = Poor, 5 = Excellent)</h4>
-                    
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm"><span className="font-medium text-gray-700 dark:text-gray-300">Quality of Work</span><span className="font-bold text-indigo-500">{quality} / 5</span></div>
-                      <input type="range" min="1" max="5" step="1" value={quality} onChange={(e) => setQuality(Number(e.target.value))} className="w-full accent-indigo-500" />
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm"><span className="font-medium text-gray-700 dark:text-gray-300">Punctuality & Attendance</span><span className="font-bold text-indigo-500">{punctuality} / 5</span></div>
-                      <input type="range" min="1" max="5" step="1" value={punctuality} onChange={(e) => setPunctuality(Number(e.target.value))} className="w-full accent-indigo-500" />
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm"><span className="font-medium text-gray-700 dark:text-gray-300">Teamwork & Collaboration</span><span className="font-bold text-indigo-500">{teamwork} / 5</span></div>
-                      <input type="range" min="1" max="5" step="1" value={teamwork} onChange={(e) => setTeamwork(Number(e.target.value))} className="w-full accent-indigo-500" />
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-gray-500 uppercase">Manager&apos;s Feedback & OKR Notes</label>
-                    <textarea required value={feedback} onChange={(e) => setFeedback(e.target.value)} placeholder="Provide actionable feedback, accomplishments, or areas for improvement..." className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 min-h-[120px] resize-none outline-none text-sm dark:text-white focus:ring-2 focus:ring-indigo-500"></textarea>
-                  </div>
-
-                  <button type="submit" disabled={isSaving} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-3.5 rounded-xl font-bold transition-all shadow-lg flex justify-center items-center gap-2 disabled:opacity-50 mt-4">
+                {/* 3. Fixed Footer (Always visible) */}
+                <div className="p-4 sm:p-6 border-t border-gray-200 dark:border-white/10 shrink-0 bg-white dark:bg-[#151515]">
+                  <button form="evaluation-form" type="submit" disabled={isSaving} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-3.5 rounded-xl font-bold transition-all shadow-lg flex justify-center items-center gap-2 disabled:opacity-50">
                     {isSaving ? "Saving Record..." : <><CheckCircle2 className="w-5 h-5" /> Save Evaluation</>}
                   </button>
-                </form>
+                </div>
 
               </div>
             </div>

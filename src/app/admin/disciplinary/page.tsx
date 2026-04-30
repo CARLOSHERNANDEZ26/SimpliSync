@@ -38,7 +38,6 @@ export default function DisciplinaryPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [aiDraft, setAiDraft] = useState("");
   const [isSaving, setIsSaving] = useState(false);
-  
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -187,23 +186,28 @@ export default function DisciplinaryPage() {
             </table>
           </div>
 
-          {/* Incident Logging Modal */}
+          {/* Incident Logging Modal - UPDATED MOBILE BOTTOM-SHEET LAYOUT */}
           {isModalOpen && (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-              <div className="bg-white dark:bg-[#151515] w-full max-w-4xl rounded-3xl shadow-2xl border border-gray-200 dark:border-white/10 flex flex-col max-h-[90vh]">
+            <div className="fixed inset-0 z-[100] flex flex-col justify-end sm:justify-center items-center bg-black/60 backdrop-blur-sm p-0 sm:p-4 transition-all">
+              <div className="bg-white dark:bg-[#151515] w-full max-w-4xl h-full sm:h-auto max-h-[95dvh] sm:max-h-[90vh] rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col animate-fade-in-up">
                 
-                <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-white/10">
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2"><AlertTriangle className="w-6 h-6 text-rose-500" /> Log New Incident</h3>
-                  <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-rose-500 transition-colors"><XCircle className="w-6 h-6" /></button>
+                {/* Fixed Sticky Header */}
+                <div className="flex justify-between items-center p-5 sm:p-6 border-b border-gray-200 dark:border-white/10 shrink-0 bg-white dark:bg-[#151515] z-[110] sticky top-0">
+                  <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2"><AlertTriangle className="w-6 h-6 text-rose-500" /> Log New Incident</h3>
+                  <button onClick={() => setIsModalOpen(false)} className="p-2 -mr-2 text-gray-400 hover:text-rose-500 transition-colors rounded-full hover:bg-rose-50 dark:hover:bg-rose-500/10">
+                    <XCircle className="w-7 h-7" />
+                  </button>
                 </div>
 
-                <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
+                {/* Content Body: Scrollable on mobile, flex row on desktop */}
+                <div className="flex flex-col lg:flex-row flex-1 overflow-y-auto lg:overflow-hidden">
+                  
                   {/* Left Column: Input Form */}
-                  <div className="w-full lg:w-1/2 p-6 border-r border-gray-200 dark:border-white/10 overflow-y-auto custom-scrollbar">
+                  <div className="w-full lg:w-1/2 p-5 sm:p-6 border-b lg:border-b-0 lg:border-r border-gray-200 dark:border-white/10 lg:overflow-y-auto custom-scrollbar shrink-0 sm:shrink">
                     <form onSubmit={handleGenerateAdvisor} className="space-y-4">
                       <div className="space-y-1.5">
                         <label className="text-xs font-bold text-gray-500 uppercase">Select Employee</label>
-                        <select required value={selectedEmp} onChange={(e) => setSelectedEmp(e.target.value)} className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 outline-none text-sm dark:text-white">
+                        <select required value={selectedEmp} onChange={(e) => setSelectedEmp(e.target.value)} className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 outline-none text-sm dark:text-white appearance-none focus:ring-2 focus:ring-rose-500">
                           <option value="">-- Choose Employee --</option>
                           {employees.map(emp => (<option key={emp.id} value={emp.id}>{emp.fullName} ({emp.department || "No Dept"})</option>))}
                         </select>
@@ -211,7 +215,7 @@ export default function DisciplinaryPage() {
                       
                       <div className="space-y-1.5">
                         <label className="text-xs font-bold text-gray-500 uppercase">Offense Type</label>
-                        <select required value={offenseType} onChange={(e) => setOffenseType(e.target.value)} className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 outline-none text-sm dark:text-white">
+                        <select required value={offenseType} onChange={(e) => setOffenseType(e.target.value)} className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 outline-none text-sm dark:text-white appearance-none focus:ring-2 focus:ring-rose-500">
                           <option value="">-- Select Offense Category --</option>
                           <option value="Chronic Tardiness">Chronic Tardiness</option>
                           <option value="Absenteeism / AWOL">Absenteeism / AWOL</option>
@@ -223,17 +227,17 @@ export default function DisciplinaryPage() {
 
                       <div className="space-y-1.5">
                         <label className="text-xs font-bold text-gray-500 uppercase">Incident Details & Context</label>
-                        <textarea required value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Provide specific dates, facts, and previous verbal warnings if applicable..." className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 min-h-[120px] resize-none outline-none text-sm dark:text-white"></textarea>
+                        <textarea required value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Provide specific dates, facts, and previous verbal warnings if applicable..." className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 min-h-[120px] resize-none outline-none text-sm dark:text-white focus:ring-2 focus:ring-rose-500"></textarea>
                       </div>
 
-                      <button type="submit" disabled={isGenerating} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-3 rounded-xl font-bold transition-all shadow-lg flex justify-center items-center gap-2 disabled:opacity-50">
+                      <button type="submit" disabled={isGenerating} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-3 rounded-xl font-bold transition-all shadow-lg flex justify-center items-center gap-2 disabled:opacity-50 mt-2">
                         {isGenerating ? "Consulting AI Advisor..." : <><Send className="w-4 h-4" /> Ask AI Advisor</>}
                       </button>
                     </form>
                   </div>
 
                   {/* Right Column: AI Output & Manual Entry */}
-                  <div className="w-full lg:w-1/2 p-6 flex flex-col bg-slate-50 dark:bg-black/10 overflow-y-auto custom-scrollbar">
+                  <div className="w-full lg:w-1/2 p-5 sm:p-6 flex flex-col bg-slate-50 dark:bg-black/10 lg:overflow-y-auto custom-scrollbar shrink-0 sm:shrink">
                     <div className="mb-4">
                       <h4 className="text-sm font-bold text-gray-500 uppercase flex items-center gap-2">
                         <FileText className="w-4 h-4" /> AI Draft & Manual Entry
@@ -246,23 +250,20 @@ export default function DisciplinaryPage() {
                       value={aiDraft}
                       onChange={(e) => setAiDraft(e.target.value)}
                       placeholder="Type the formal Notice to Explain here..."
-                      className="flex-1 w-full bg-white dark:bg-black/40 border border-gray-200 dark:border-white/10 rounded-xl p-4 text-sm text-gray-700 dark:text-gray-300 overflow-y-auto custom-scrollbar resize-none outline-none focus:ring-2 focus:ring-teal-500"
+                      className="flex-1 w-full min-h-[200px] bg-white dark:bg-black/40 border border-gray-200 dark:border-white/10 rounded-xl p-4 text-sm text-gray-700 dark:text-gray-300 overflow-y-auto custom-scrollbar resize-none outline-none focus:ring-2 focus:ring-teal-500"
                     />
                     
-                    {/* Save button activates as soon as they type something and select an employee */}
-                    <button 
-                      onClick={handleSaveRecord} 
-                      disabled={isSaving || !aiDraft.trim() || !selectedEmp || !offenseType} 
-                      className="mt-4 w-full bg-teal-600 hover:bg-teal-500 text-white py-3 rounded-xl font-bold transition-all shadow-lg disabled:opacity-50"
-                    >
-                      {isSaving ? "Saving..." : "Save Official Record"}
-                    </button>
-                  
-                    {aiDraft && (
-                      <button onClick={handleSaveRecord} disabled={isSaving} className="mt-4 w-full bg-teal-600 hover:bg-teal-500 text-white py-3 rounded-xl font-bold transition-all shadow-lg disabled:opacity-50">
-                        {isSaving ? "Saving..." : "Save Record & Draft"}
+                    {/* Save buttons */}
+                    <div className="mt-4 space-y-3">
+                      <button 
+                        onClick={handleSaveRecord} 
+                        disabled={isSaving || !aiDraft.trim() || !selectedEmp || !offenseType} 
+                        className="w-full bg-teal-600 hover:bg-teal-500 text-white py-3 rounded-xl font-bold transition-all shadow-lg disabled:opacity-50"
+                      >
+                        {isSaving ? "Saving..." : "Save Official Record"}
                       </button>
-                    )}
+                    </div>
+
                   </div>
                 </div>
 

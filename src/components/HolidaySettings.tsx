@@ -4,11 +4,13 @@ import { db } from "@/lib/firebase";
 import { Calendar, Plus, Trash2, AlertTriangle } from "lucide-react";
 import toast from "react-hot-toast";
 
+// Added description to your interface
 interface Holiday {
   id: string;
   holidayName: string;
   date: string;
   type: string;
+  description?: string; 
 }
 
 export default function HolidaySettings() {
@@ -16,6 +18,7 @@ export default function HolidaySettings() {
   const [holidayName, setName] = useState("");
   const [date, setDate] = useState("");
   const [type, setType] = useState("Company-Wide");
+  const [description, setDescription] = useState(""); 
   const [isAdding, setIsAdding] = useState(false);
 
   useEffect(() => {
@@ -26,16 +29,18 @@ export default function HolidaySettings() {
     return () => unsubscribe();
   }, []);
 
-  const handleAdd = async (e: React.FormEvent) => {
+  const handleAdd = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!holidayName || !date) return;
     
     setIsAdding(true);
     try {
-      await addDoc(collection(db, "holidays"), { holidayName, date, type });
+
+      await addDoc(collection(db, "holidays"), { holidayName, date, type, description });
       toast.success("Holiday added!");
       setName("");
       setDate("");
+      setDescription(""); 
     } catch (error) {
       console.error("Error adding holiday:", error);
       toast.error("Failed to add holiday.");
@@ -44,7 +49,6 @@ export default function HolidaySettings() {
     }
   };
 
-  // 🔥 1. The Execution Function
   const executeDelete = async (id: string) => {
     try {
       await deleteDoc(doc(db, "holidays", id));
@@ -55,7 +59,6 @@ export default function HolidaySettings() {
     }
   };
 
-  // 🔥 2. The Fully Themed Custom Confirm Toast
   const confirmDelete = (id: string) => {
     toast.custom((t) => (
       <div className={`${t.visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'} transition-all duration-300 max-w-md w-full bg-white dark:bg-[#1a1a1a] shadow-2xl rounded-2xl pointer-events-auto flex flex-col p-5 border border-gray-200 dark:border-white/10`}>
@@ -114,6 +117,15 @@ export default function HolidaySettings() {
             required
           />
         </div>
+        
+        {/* 🔥 NEW: Textarea for Description */}
+        <textarea
+          placeholder="Short description (e.g., Regular non-working holiday)"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          className="bg-slate-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 focus:ring-2 focus:ring-teal-500 focus:outline-none transition-all dark:text-white text-sm resize-none h-20"
+        />
+
         <div className="flex gap-4">
           <select
             value={type}
