@@ -4,9 +4,10 @@ import { useState, useEffect } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Navbar from "@/components/Navbar";
 import { useAuth } from "@/hooks/useAuth";
-import { Bot, FileText, Send, Sparkles, Trash2, List, AlertTriangle } from "lucide-react";
+import { Bot, FileText, Send, Sparkles, Trash2, List, AlertTriangle, Search, Eye, X } from "lucide-react";
 import toast from "react-hot-toast";
-import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, deleteDoc, doc } from "firebase/firestore";
+// 🔥 Added 'limit' to the imports
+import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, deleteDoc, doc, limit } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { logAdminAction } from "@/lib/audit";
 
@@ -28,10 +29,15 @@ export default function MemoGeneratorPage() {
   const [isCopied, setIsCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<"draft" | "live">("draft");
   const [publishedMemos, setPublishedMemos] = useState<Announcement[]>([]);
+  
+  // 🔥 NEW STATES: Search and Modal
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedMemo, setSelectedMemo] = useState<Announcement | null>(null);
 
   useEffect(() => {
     if (!isAdmin) return;
-    const q = query(collection(db, "announcements"), orderBy("createdAt", "desc"));
+    // 🔥 OPTIMIZATION: Added limit(50) to prevent massive database reads
+    const q = query(collection(db, "announcements"), orderBy("createdAt", "desc"), limit(50));
     const unsubscribe = onSnapshot(q, (snap) => {
       setPublishedMemos(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Announcement)));
     });
@@ -42,6 +48,7 @@ export default function MemoGeneratorPage() {
     try {
       await deleteDoc(doc(db, "announcements", id));
       toast.success("Policy permanently removed.");
+      if(selectedMemo?.id === id) setSelectedMemo(null); // Close modal if deleting from modal
     } catch (error: unknown) {
       console.error("Delete Error:", error);
       toast.error("Failed to delete policy.");
@@ -77,6 +84,7 @@ export default function MemoGeneratorPage() {
   };
 
   const handleGenerate = async (e: React.FormEvent) => {
+    // ... (Keep existing handleGenerate code exactly the same)
     e.preventDefault();
     if (!prompt.trim()) return toast.error("Please enter a prompt first.");
 
@@ -108,7 +116,8 @@ export default function MemoGeneratorPage() {
   };
 
   const handleCopy = async () => {
-    if (!generatedMemo) return;
+      // ... (Keep existing handleCopy exactly the same)
+      if (!generatedMemo) return;
     try {
       await navigator.clipboard.writeText(generatedMemo);
       setIsCopied(true);
@@ -121,6 +130,7 @@ export default function MemoGeneratorPage() {
   };
 
   const handlePublish = async () => {
+    // ... (Keep existing handlePublish exactly the same)
     if (!generatedMemo.trim()) return;
 
     setIsPublishing(true);
@@ -151,6 +161,10 @@ export default function MemoGeneratorPage() {
     }
   };
 
+  const filteredMemos = publishedMemos.filter(memo => 
+    memo.content.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   if (!isAdmin && user) {
     return (
       <ProtectedRoute>
@@ -178,7 +192,7 @@ export default function MemoGeneratorPage() {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             
-            {/* Left Column: Input */}
+            {/* Left Column: Input (UNCHANGED) */}
             <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl h-fit">
               <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-indigo-500" />
@@ -197,7 +211,7 @@ export default function MemoGeneratorPage() {
             </div>
 
             {/* Right Column: Dual-Tabs (Draft vs Live) */}
-            <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl flex flex-col min-h-[500px]">
+            <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl flex flex-col min-h-[500px] relative">
               
               {/* Tab Navigation */}
               <div className="flex items-center gap-4 mb-6 border-b border-gray-200 dark:border-white/10 pb-2">
@@ -215,9 +229,9 @@ export default function MemoGeneratorPage() {
                 </button>
               </div>
 
-              {/* Tab Content: DRAFT */}
+              {/* Tab Content: DRAFT (UNCHANGED) */}
               {activeTab === "draft" && (
-                <>
+                <div className="flex flex-col h-full">
                   <div className="flex items-center justify-between mb-4">
                     <span className="text-sm font-bold text-gray-500">Draft your memo manually, or use AI above</span>
                     <div className="flex gap-2">
@@ -232,42 +246,101 @@ export default function MemoGeneratorPage() {
                     </div>
                   </div>
                   
-                  {/* The Textarea is now ALWAYS visible so the Admin can manually type */}
                   <textarea
                     value={generatedMemo}
                     onChange={(e) => setGeneratedMemo(e.target.value)}
                     placeholder="Type your official announcement here, or use the AI Generator on the left to instantly draft a DOLE-compliant memo..."
-                    className="flex-1 w-full bg-white dark:bg-black/40 border border-gray-200 dark:border-white/10 rounded-2xl p-6 text-sm text-gray-700 dark:text-gray-300 resize-none outline-none focus:ring-2 focus:ring-indigo-500 custom-scrollbar"
+                    className="flex-1 min-h-[300px] w-full bg-white dark:bg-black/40 border border-gray-200 dark:border-white/10 rounded-2xl p-6 text-sm text-gray-700 dark:text-gray-300 resize-none outline-none focus:ring-2 focus:ring-indigo-500 custom-scrollbar"
                   />
-                </>
-              )}
-
-              {/* Tab Content: LIVE POLICIES */}
-              {activeTab === "live" && (
-                <div className="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar">
-                  {publishedMemos.length > 0 ? (
-                    publishedMemos.map(memo => (
-                      <div key={memo.id} className="p-4 bg-slate-50 dark:bg-black/20 rounded-2xl border border-gray-100 dark:border-white/5 relative group">
-                        <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => handleDeletePolicy(memo.id)} className="p-2 bg-rose-50 dark:bg-rose-500/10 text-rose-500 hover:bg-rose-100 dark:hover:bg-rose-500 hover:text-rose-600 dark:hover:text-white rounded-lg transition-colors" title="Delete Policy">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                        <p className="text-[10px] font-bold text-teal-600 dark:text-teal-500 uppercase mb-2">
-                          Published: {memo.createdAt ? new Date(memo.createdAt.seconds * 1000).toLocaleDateString() : "Just now"}
-                        </p>
-                        <div className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{memo.content}</div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-center text-gray-600 italic mt-20">No active policies on the dashboard.</div>
-                  )}
                 </div>
               )}
 
+              {/* LIVE POLICIES (Search & Cards) */}
+              {activeTab === "live" && (
+                <div className="flex flex-col h-full">
+                  
+                  {/* Search Bar */}
+                  <div className="relative mb-4">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input 
+                      type="text" 
+                      placeholder="Search live policies..." 
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    />
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar min-h-[300px]">
+                    {filteredMemos.length > 0 ? (
+                      filteredMemos.map(memo => (
+                        <div key={memo.id} className="p-4 bg-slate-50 dark:bg-black/20 rounded-2xl border border-gray-100 dark:border-white/5 relative group flex flex-col gap-2">
+                          
+                          <div className="flex justify-between items-start">
+                            <p className="text-[10px] font-bold text-teal-600 dark:text-teal-500 uppercase">
+                              Published: {memo.createdAt ? new Date(memo.createdAt.seconds * 1000).toLocaleDateString() : "Just now"}
+                            </p>
+                            
+                            {/* Card Actions */}
+                            <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                              <button onClick={() => setSelectedMemo(memo)} className="p-1.5 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-500 hover:bg-indigo-100 dark:hover:bg-indigo-500 hover:text-indigo-600 dark:hover:text-white rounded-lg transition-colors" title="Read Full Memo">
+                                <Eye className="w-4 h-4" />
+                              </button>
+                              <button onClick={() => handleDeletePolicy(memo.id)} className="p-1.5 bg-rose-50 dark:bg-rose-500/10 text-rose-500 hover:bg-rose-100 dark:hover:bg-rose-500 hover:text-rose-600 dark:hover:text-white rounded-lg transition-colors" title="Delete Policy">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* CSS Line Clamp for Truncation */}
+                          <div className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2">
+                            {memo.content}
+                          </div>
+                          
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center text-gray-500 dark:text-gray-400 italic mt-10 text-sm">
+                        {searchTerm ? "No policies match your search." : "No active policies on the dashboard."}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
+
+        {/* View Memo Modal Overlay */}
+        {selectedMemo && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white dark:bg-[#151515] w-full max-w-2xl max-h-[80vh] rounded-3xl shadow-2xl flex flex-col border border-gray-200 dark:border-white/10 animate-in zoom-in-95 duration-200">
+              
+              {/* Modal Header */}
+              <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-white/5">
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">Official Memorandum</h3>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Published {selectedMemo.createdAt ? new Date(selectedMemo.createdAt.seconds * 1000).toLocaleDateString() : "Just now"} by {selectedMemo.author}
+                  </p>
+                </div>
+                <button 
+                  onClick={() => setSelectedMemo(null)}
+                  className="p-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-6 overflow-y-auto custom-scrollbar whitespace-pre-wrap text-sm text-gray-800 dark:text-gray-200 leading-relaxed">
+                {selectedMemo.content}
+              </div>
+
+            </div>
+          </div>
+        )}
+
       </main>
     </ProtectedRoute>
   );

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { MessageSquare, X, Send, Bot } from "lucide-react";
+// 🔥 Added Sparkles icon for the RAG search state
+import { MessageSquare, X, Send, Bot, Sparkles } from "lucide-react";
 
 interface AttendanceLog {
   id: string;
@@ -13,11 +14,17 @@ interface AttendanceLog {
   role?: string;
 }
 
+interface ChatMessage {
+  role: "user" | "model" | "function";
+  content: string;
+}
+
 export default function HRChatbot({ logs }: { logs: AttendanceLog[] }) { 
   const [isOpen, setIsOpen] = useState(false); 
   const [input, setInput] = useState("");
-  const [messages, setMessages] = useState([
-    { role: "model", content: "Hi! I'm your SimpliSync Assistant. Ask me about your attendance, hours, or company rules!" }
+  
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    { role: "model", content: "Hello! Kumusta? I'm your SimpliSync Assistant. Ask me about your attendance, hours, or company rules before I run out of coffee." }
   ]);
   const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -28,12 +35,12 @@ export default function HRChatbot({ logs }: { logs: AttendanceLog[] }) {
     }
   }, [messages, isTyping]);
 
-  const handleSendMessage = async (e: React.SubmitEvent) => {
+  const handleSendMessage = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault(); 
     if (!input.trim()) return;
 
     const userMessage = input;
-    const newMessages = [...messages, { role: "user", content: userMessage }];
+    const newMessages: ChatMessage[] = [...messages, { role: "user", content: userMessage }];
     
     setMessages(newMessages);
     setInput("");
@@ -66,7 +73,7 @@ export default function HRChatbot({ logs }: { logs: AttendanceLog[] }) {
       setMessages(prev => [...prev, { role: "model", content: data.text }]);
     } catch (error) {
       console.error("Chat Error:", error);
-      setMessages(prev => [...prev, { role: "model", content: "Sorry, I'm having trouble connecting right now." }]);
+      setMessages(prev => [...prev, { role: "model", content: "Sorry, I'm having trouble connecting to the database right now." }]);
     } finally {
       setIsTyping(false);
     }
@@ -107,7 +114,16 @@ export default function HRChatbot({ logs }: { logs: AttendanceLog[] }) {
                 </div>
               </div>
             ))}
-            {isTyping && <div className="text-xs text-gray-400 animate-pulse">Assistant is thinking...</div>}
+            
+            {/* Typing Indicator for RAG delays */}
+            {isTyping && (
+              <div className="flex justify-start">
+                <div className="bg-white dark:bg-white/10 p-3 rounded-2xl rounded-tl-none border border-gray-100 dark:border-white/5 text-xs text-gray-400 animate-pulse flex items-center gap-2">
+                  <Sparkles className="w-3 h-3 text-teal-500" />
+                  Searching company policies...
+                </div>
+              </div>
+            )}
           </div>
 
           <form onSubmit={handleSendMessage} className="p-4 bg-white dark:bg-[#1a1a1a] border-t border-gray-100 dark:border-white/5 flex gap-2">
@@ -115,7 +131,7 @@ export default function HRChatbot({ logs }: { logs: AttendanceLog[] }) {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask about your hours..."
+              placeholder="Ask about your hours or policies..."
               className="flex-1 bg-gray-100 dark:bg-white/5 border-none rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none text-gray-900 dark:text-white"
             />
             <button type="submit" className="p-2 bg-teal-600 text-white rounded-xl hover:bg-teal-500 transition-colors">

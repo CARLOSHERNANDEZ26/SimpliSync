@@ -14,7 +14,6 @@ export async function POST(req: NextRequest) {
     const buffer = Buffer.from(arrayBuffer);
     const base64Data = buffer.toString("base64");
 
-    // 🔥 FIX 1: Make sure this exactly matches the env variable used in your chatbot!
     const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
     if (!apiKey) {
       console.warn("GOOGLE_GEMINI_API_KEY not found. Using simulated data for testing.");
@@ -31,7 +30,6 @@ export async function POST(req: NextRequest) {
 
     const genAI = new GoogleGenerativeAI(apiKey);
     
-    // 🔥 FIX 2: Force the model to output strict JSON using generationConfig
     const model = genAI.getGenerativeModel({ 
       model: "gemini-2.5-flash",
       generationConfig: {
@@ -71,7 +69,6 @@ export async function POST(req: NextRequest) {
     
     const response = await result.response;
     
-   0  
     const parsedData = JSON.parse(response.text());
 
     return NextResponse.json(parsedData);

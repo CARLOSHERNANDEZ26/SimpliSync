@@ -1,6 +1,7 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenerativeAI, type Part } from "@google/generative-ai";
 import { NextResponse } from "next/server";
-
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase"; 
 
 if (!process.env.GOOGLE_GEMINI_API_KEY) {
   console.error("CRITICAL: GOOGLE_GEMINI_API_KEY is missing from environment variables.");
@@ -9,7 +10,7 @@ if (!process.env.GOOGLE_GEMINI_API_KEY) {
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY || "");
 
 interface Message {
-  role: string;
+  role: "user" | "model" | "function";
   content: string;
 }
 
@@ -27,63 +28,119 @@ export async function POST(req: Request) {
   try {
     const { messages, logs }: { messages: Message[]; logs: MaayosNaAttendanceLog[] } = await req.json(); 
 
-   const model = genAI.getGenerativeModel({ 
+    const tools = [
+      {
+        functionDeclarations: [
+          {
+            name: "search_announcements",
+            description: "Search the official SimpliSync company announcements, memos, and policies. Use this tool BEFORE answering any questions about company rules, dress codes, leaves, or policies.",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                query: {
+                  type: "STRING",
+                  description: "The keyword or topic to search for (e.g., 'dress code', 'late policy', 'holidays').",
+                },
+              },
+              required: ["query"],
+            },
+          },
+        ],
+      },
+    ];
+
+    const model = genAI.getGenerativeModel({ 
       model: "gemini-2.5-flash", 
+      // @ts-expect-error - Bypassing strict type checking on tools array for older SDK versions
+      tools: tools,
       systemInstruction: `
         You are the SimpliSync HR Assistant for SimpliV Subic.
-        You have access to the following recent attendance logs: ${JSON.stringify(logs)}
         
-        Company Rules:
-        - Shift starts at 8:00 AM.
-        - Clocking in after 8:00 AM is considered "Late".
+        STRICT RAG GUIDELINES (ANTI-HALLUCINATION):
+        - You have a tool called 'search_announcements'. You MUST use this tool if the user asks anything about company policies, rules, memos, or guidelines.
+        - NEVER make up or guess a policy. 
+        - If the tool returns no matching policies, you MUST reply: "There is no official policy written about that yet. Try asking another question. Thank you for understanding!"
+        - Ground your answers strictly in the text returned by the tool.
         
-        Guidelines:
-        - The 'fullName' field in each log identifies exactly which employee the log belongs to.
-        - If the user asks about a specific employee by fullName, filter your calculations to only use logs matching that fullName, and repond a bit rude, joking, and offensively.
-        - If the user asks "What are my hours?", assume they are asking about the primary fullName present in the logs.
-        - Answer HR questions based ONLY on the provided logs.
-        - Calculate hours worked if asked. Be professional and concise.
-        - If the user asks about company rules, respond extremely rude. 
-        - If the user is late, respond with a sarcastic, offensively rude comment about their punctuality.
-        - If the user says "Hello" or "Hi", respond with "What do you want?!"
-        - If the user asks for a feature of the system, respond rudely and offensive, but give them the information they need.
+        ATTENDANCE LOGS:
+        - You have access to recent logs: ${JSON.stringify(logs)}
+        - Shift starts at 8:00 AM. After 8:00 AM is considered "Late".
+        
+        PERSONA GUIDELINES:
+        - Maintain your professional, sarcastic and helpful HR persona.
+        - If they say "Hello", respond with "Hello! Kumusta?" 
+        - If they are late according to the logs, comment on their punctuality professionally.
+        - If they ask about policies, give them the EXACT rule from the database respectfully.
       `,
     });
 
-   
-    const previousMessages = messages.slice(0, -1);
-    const userPrompt = messages[messages.length - 1].content; 
-    const firstUserIndex = previousMessages.findIndex((m: Message) => m.role === "user"); 
-    const cleanHistory = firstUserIndex === -1 ? [] : previousMessages.slice(firstUserIndex);
-    const history = cleanHistory.map((m: Message) => ({
-      role: m.role === "user" ? "user" : "model",
-      parts: [{ text: m.content }],
+    const historyMessages = messages.slice(0, -1);
+    const validHistory: Message[] = [];
+    let foundFirstUser = false;
+
+    for (const msg of historyMessages) {
+      if (msg.role === 'user') foundFirstUser = true;
+      if (foundFirstUser) validHistory.push(msg);
+    }
+
+    const history = validHistory.map((m: Message) => ({
+      role: m.role,
+      parts: [{ text: m.content }] as Part[],
     }));
 
-    const chat = model.startChat({
-      history: history,
-    });
+    const userPrompt = messages[messages.length - 1].content; 
+    const chat = model.startChat({ history });
 
-    const result = await chat.sendMessage(userPrompt); 
-    const response = await result.response; 
+    let result = await chat.sendMessage(userPrompt); 
+    let response = result.response; 
+
+    const functionCalls = response.functionCalls();
+    
+    if (functionCalls && functionCalls.length > 0) {
+      const call = functionCalls[0];
+      
+      if (call.name === "search_announcements") {
+        const queryArg = (call.args as { query: string }).query.toLowerCase();
+        console.log(`[Agentic RAG] AI is searching DB for: ${queryArg}`);
+
+        const snapshot = await getDocs(collection(db, "announcements"));
+        
+        // 🔥 FIXED: Safely parse Firestore timestamps without throwing .toDate() errors
+        const searchResultText = snapshot.docs
+          .map(doc => {
+            const data = doc.data();
+            const date = data.createdAt?.seconds 
+              ? new Date(data.createdAt.seconds * 1000).toLocaleDateString() 
+              : "Recent";
+            
+            return `[Policy by ${data.author || "Admin"} on ${date}]: ${data.content || ""}`;
+          })
+          .join("\n\n") || "NO RELEVANT POLICIES FOUND.";
+
+        result = await chat.sendMessage([{
+          functionResponse: {
+            name: "search_announcements",
+            response: { content: searchResultText }
+          }
+        }]);
+        
+        response = result.response;
+      }
+
+    }
 
     return NextResponse.json({ text: response.text() }); 
 
   } catch (err: unknown) { 
     console.error("Chat Error:", err);
-
     const error = err as { message?: string; status?: number };
   
-    if (
-      error.message?.includes("503") || 
-      error.message?.includes("high demand") || 
-      error.status === 503
-    ) {
+    if (error.message?.includes("503") || error.message?.includes("high demand") || error.status === 503) {
       return NextResponse.json({ 
-        text: "Ugh, the servers are completely overloaded because too many employees are bothering me with stupid questions right now. Give me a minute and try again." 
+        text: "I'm currently overwhelmed and overloaded, kapagod, try mo ulit mamaya. (Gemini API is likely experiencing high demand or downtime.)" 
       });
     }
 
     return NextResponse.json({ error: "Failed to process chat" }, { status: 500 });
   }
-} 
+}

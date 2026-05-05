@@ -4,9 +4,10 @@ import { useState, useEffect } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Navbar from "@/components/Navbar";
 import { useAuth } from "@/hooks/useAuth";
-import { collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
+import { collection, query, where, onSnapshot, orderBy, doc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { FolderOpen, Star, User, Calendar, Award, ShieldCheck, AlertTriangle, XCircle } from "lucide-react";
+import { FolderOpen, Star, User, Calendar, Award, ShieldCheck, AlertTriangle, XCircle, Send, Clock, CheckCircle } from "lucide-react";
+import toast from "react-hot-toast";
 
 interface Evaluation {
   id: string;
@@ -27,6 +28,10 @@ interface DisciplinaryRecord {
   employeeId: string;
   offenseType: string;
   formalNotice: string; 
+  status: string;
+  employeeExplanation?: string;
+  adminResolution?: string;
+  verdict?: string;
   createdAt: { seconds: number } | null;
 }
 
@@ -36,6 +41,10 @@ export default function Employee201FilePage() {
   const [disciplinaryActions, setDisciplinaryActions] = useState<DisciplinaryRecord[]>([]);
   const [selectedNotice, setSelectedNotice] = useState<DisciplinaryRecord | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // 🔥 New states for the explanation submission
+  const [explanationText, setExplanationText] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (!user?.uid) return;
@@ -54,6 +63,10 @@ export default function Employee201FilePage() {
           employeeId: data.employeeId,
           offenseType: data.offenseType,
           formalNotice: data.formalNotice || data.aiDraft || data.content || "Formal notice content unavailable.",
+          status: data.status || "Issued", 
+          employeeExplanation: data.employeeExplanation || "",
+          adminResolution: data.adminResolution || "",
+          verdict: data.verdict || "",
           createdAt: data.createdAt 
         };
       }));
@@ -64,19 +77,11 @@ export default function Employee201FilePage() {
   
   useEffect(() => {
     if (!user?.uid) return;
-
-    const q = query(
-      collection(db, "evaluations"),
-      where("employeeId", "==", user.uid),
-      orderBy("year", "desc"),
-      orderBy("quarter", "desc")
-    );
-
+    const q = query(collection(db, "evaluations"), where("employeeId", "==", user.uid), orderBy("year", "desc"), orderBy("quarter", "desc"));
     const unsubscribe = onSnapshot(q, (snap) => {
       setEvaluations(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Evaluation)));
       setIsLoading(false);
     });
-
     return () => unsubscribe();
   }, [user?.uid]);
 
@@ -86,6 +91,41 @@ export default function Employee201FilePage() {
     return "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400 border-rose-200 dark:border-rose-500/30";
   };
 
+  const handleSubmitExplanation = async () => {
+    if (!selectedNotice || !explanationText.trim()) return;
+    setIsSubmitting(true);
+    
+    try {
+      const recordRef = doc(db, "disciplinaryRecords", selectedNotice.id);
+      
+      await updateDoc(recordRef, {
+        employeeExplanation: explanationText,
+        status: "Explanation Submitted",
+        explanationDate: serverTimestamp()
+      });
+
+      toast.success("Official explanation submitted to HR.");
+
+      setSelectedNotice({
+        ...selectedNotice,
+        status: "Explanation Submitted",
+        employeeExplanation: explanationText
+      });
+      setExplanationText("");
+
+    } catch (error) {
+      console.error("Submit Error:", error);
+      toast.error("Failed to submit explanation.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCloseModal = () => {
+    setSelectedNotice(null);
+    setExplanationText("");
+  };
+
   return (
     <ProtectedRoute>
       <main className="min-h-screen w-full relative overflow-hidden pt-[73px] bg-slate-50 dark:bg-[#0a0a0a]">
@@ -93,8 +133,7 @@ export default function Employee201FilePage() {
         <Navbar />
         
         <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
-          
-          {/* Header */}
+
           <div className="mb-10">
             <h1 className="text-4xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
               <FolderOpen className="w-10 h-10 text-teal-500" />
@@ -106,8 +145,7 @@ export default function Employee201FilePage() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
-            {/* Left Column: Profile Card */}
+
             <div className="lg:col-span-1 space-y-6">
               <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl text-center">
                 <div className="w-24 h-24 bg-teal-100 dark:bg-teal-500/20 text-teal-600 dark:text-teal-400 rounded-full flex items-center justify-center mx-auto mb-4 border border-teal-200 dark:border-teal-500/30">
@@ -135,11 +173,9 @@ export default function Employee201FilePage() {
               </div>
             </div>
 
-            {/* Right Column: Performance Evaluations */}
             <div className="lg:col-span-2">
               <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl min-h-[500px]">
                 
-                {/* Section 1: Appraisals */}
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
                   <Award className="w-5 h-5 text-teal-500" />
                   Quarterly Appraisals
@@ -191,7 +227,6 @@ export default function Employee201FilePage() {
                   </div>
                 )}
                 
-                {/* Section 2: Official HR Notices (Card View) */}
                 <div className="mt-8 pt-8 border-t border-gray-200 dark:border-white/10">
                   <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
                     <AlertTriangle className="w-5 h-5 text-rose-500" />
@@ -200,15 +235,27 @@ export default function Employee201FilePage() {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {disciplinaryActions.length > 0 ? (
-                      disciplinaryActions.map((record) => (
+                      disciplinaryActions.map((record) => {
+                        const isPendingAction = record.status.includes("Drafted") || record.status === "Issued";
+                        const isResolved = record.status.includes("Resolved");
+                        
+                        return (
                         <div 
                           key={record.id} 
                           onClick={() => setSelectedNotice(record)}
-                          className="group cursor-pointer p-5 bg-rose-50 dark:bg-rose-500/10 rounded-2xl border border-rose-100 dark:border-rose-500/20 hover:border-rose-500/50 hover:bg-rose-100 dark:hover:bg-rose-500/20 transition-all duration-300 flex flex-col justify-between"
+                          className={`group cursor-pointer p-5 rounded-2xl border transition-all duration-300 flex flex-col justify-between ${
+                            isPendingAction 
+                              ? "bg-rose-50 dark:bg-rose-500/10 border-rose-200 dark:border-rose-500/30 hover:border-rose-500" 
+                              : isResolved
+                              ? "bg-slate-50 dark:bg-white/5 border-gray-200 dark:border-white/10 hover:border-gray-400"
+                              : "bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/30 hover:border-amber-500" // Under review
+                          }`}
                         >
                           <div>
                             <div className="flex justify-between items-start mb-2">
-                              <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400 uppercase tracking-widest px-2 py-0.5 rounded-md bg-white dark:bg-black/20 border border-rose-100 dark:border-rose-500/10">
+                              <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-md bg-white dark:bg-black/20 border ${
+                                isPendingAction ? "text-rose-600 border-rose-100" : isResolved ? "text-gray-500 border-gray-200" : "text-amber-600 border-amber-100"
+                              }`}>
                                 {record.offenseType}
                               </span>
                               <span className="text-[10px] font-bold text-gray-400 uppercase">
@@ -216,20 +263,24 @@ export default function Employee201FilePage() {
                               </span>
                             </div>
                             
-                            <h4 className="text-sm font-bold text-gray-900 dark:text-white mt-2 group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors">
+                            <h4 className="text-sm font-bold text-gray-900 dark:text-white mt-2">
                               Notice to Explain
                             </h4>
                             
                             <p className="text-xs text-gray-500 mt-1 line-clamp-2">
-                              {record.formalNotice}
+                              {record.formalNotice.replace(/\*\*/g, '')}
                             </p>
                           </div>
-                          
-                          <div className="mt-4 flex items-center text-[10px] font-bold text-rose-500/70 group-hover:text-rose-500 transition-colors">
-                            Click to review formal document &rarr;
+
+                          <div className={`mt-4 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider ${
+                            isPendingAction ? "text-rose-600 dark:text-rose-400" : isResolved ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"
+                          }`}>
+                            {isPendingAction && <><AlertTriangle className="w-3.5 h-3.5" /> Action Required (Reply Needed)</>}
+                            {!isPendingAction && !isResolved && <><Clock className="w-3.5 h-3.5" /> Under HR Review</>}
+                            {isResolved && <><CheckCircle className="w-3.5 h-3.5" /> Case Resolved</>}
                           </div>
                         </div>
-                      ))
+                      )})
                     ) : (
                       <div className="col-span-full text-center text-gray-500 italic py-12 bg-slate-50 dark:bg-black/10 rounded-3xl border border-dashed border-gray-200 dark:border-white/10">
                         No disciplinary records on file. Excellent work!
@@ -242,40 +293,91 @@ export default function Employee201FilePage() {
 
           </div>
         </div>
-
-        {/* The Notice Reading Modal */}
+        {/* The Interactive Notice & Resolution Modal */}
         {selectedNotice && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-            <div className="bg-white dark:bg-[#121212] w-full max-w-2xl rounded-3xl shadow-2xl border border-rose-200 dark:border-rose-500/20 flex flex-col max-h-[85vh]">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+            <div className="bg-slate-50 dark:bg-[#121212] w-full max-w-3xl rounded-3xl shadow-2xl border border-gray-200 dark:border-white/10 flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200">
               
               {/* Modal Header */}
-              <div className="flex justify-between items-center p-6 border-b border-rose-100 dark:border-rose-500/10 sticky top-0 bg-white dark:bg-[#121212] z-10 rounded-t-3xl">
+              <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-white/10 bg-white dark:bg-[#151515] shrink-0">
                 <div>
                   <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
                     <AlertTriangle className="w-5 h-5 text-rose-500" />
-                    {selectedNotice.offenseType}
+                    {selectedNotice.offenseType} Case File
                   </h3>
                   <p className="text-xs text-gray-500 mt-1 uppercase tracking-wider font-bold">
                     Official Notice issued on {selectedNotice.createdAt ? new Date(selectedNotice.createdAt.seconds * 1000).toLocaleDateString() : ""}
                   </p>
                 </div>
                 <button 
-                  onClick={() => setSelectedNotice(null)} 
-                  className="text-gray-400 hover:text-rose-500 transition-colors bg-slate-100 dark:bg-white/5 p-2 rounded-full"
+                  onClick={handleCloseModal} 
+                  className="text-gray-400 hover:text-rose-500 transition-colors bg-gray-100 dark:bg-white/5 hover:bg-rose-50 dark:hover:bg-rose-500/10 p-2 rounded-full"
                 >
                   <XCircle className="w-6 h-6" />
                 </button>
               </div>
 
-              {/* Modal Body */}
-              <div className="p-8 overflow-y-auto custom-scrollbar flex-1 text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
-                {selectedNotice.formalNotice.replace(/\*\*/g, '')}
+              <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+
+                <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl p-6 border border-rose-100 dark:border-rose-500/20 shadow-sm">
+                  <h4 className="text-xs font-bold text-rose-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4" /> Official Notice to Explain
+                  </h4>
+                  <div className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
+                    {selectedNotice.formalNotice.replace(/\*\*/g, '')}
+                  </div>
+                </div>
+
+                {selectedNotice.employeeExplanation ? (
+                  <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl p-6 border border-teal-100 dark:border-teal-500/20 shadow-sm">
+                    <h4 className="text-xs font-bold text-teal-600 dark:text-teal-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                      <User className="w-4 h-4" /> Your Submitted Explanation
+                    </h4>
+                    <div className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed italic bg-slate-50 dark:bg-black/20 p-4 rounded-xl border border-gray-100 dark:border-white/5">
+                      &quot;{selectedNotice.employeeExplanation}&quot;
+                    </div>
+                  </div>
+                ) : (
+
+                  <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl p-6 border border-amber-200 dark:border-amber-500/30 shadow-sm">
+                    <h4 className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-widest mb-2">
+                      Action Required: Submit Your Explanation
+                    </h4>
+                    <p className="text-xs text-gray-500 mb-4">
+                      As per DOLE due process guidelines, you have the right to be heard. Please provide your written explanation regarding the incidents detailed above.
+                    </p>
+                    <textarea
+                      value={explanationText}
+                     onChange={(e) => setExplanationText(e.target.value)}
+                     placeholder="Type your formal explanation and defense here..."
+                     className="w-full min-h-[150px] p-4 bg-slate-50 dark:bg-black/40 rounded-xl border border-gray-200 dark:border-white/10 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 resize-none focus:ring-2 focus:ring-teal-500 outline-none mb-4 custom-scrollbar"
+                     />
+                    <button
+                      onClick={handleSubmitExplanation}
+                      disabled={isSubmitting || !explanationText.trim()}
+                      className="w-full bg-teal-600 hover:bg-teal-500 text-white font-bold py-3 rounded-xl transition-all shadow-md disabled:opacity-50 flex justify-center items-center gap-2"
+                    >
+                      {isSubmitting ? "Submitting to HR..." : <><Send className="w-4 h-4" /> Submit Official Explanation</>}
+                    </button>
+                  </div>
+                )}
+
+                {selectedNotice.status.includes("Resolved") && (
+                  <div className="bg-emerald-50 dark:bg-emerald-500/10 rounded-2xl p-6 border border-emerald-200 dark:border-emerald-500/20 shadow-sm">
+                    <h4 className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4" /> HR Resolution: {selectedNotice.verdict}
+                    </h4>
+                    <div className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
+                      {selectedNotice.adminResolution || "Case closed by HR Administration."}
+                    </div>
+                  </div>
+                )}
+
               </div>
 
-              {/* Modal Footer */}
-              <div className="p-4 bg-slate-50 dark:bg-black/20 border-t border-gray-100 dark:border-white/5 rounded-b-3xl">
-                <p className="text-[10px] text-gray-500 text-center uppercase font-bold tracking-widest">
-                  Confidential HR Document • SimpliSync Compliance Engine
+              <div className="p-4 bg-white dark:bg-[#151515] border-t border-gray-200 dark:border-white/10 shrink-0">
+                <p className="text-[10px] text-gray-400 text-center uppercase font-bold tracking-widest">
+                  Confidential Document • SimpliSync Compliance Engine
                 </p>
               </div>
               
