@@ -19,6 +19,7 @@ interface AttendanceLog {
   status: string;
   lat?: number;
   lng?: number;
+  earlyOutReason?: string;
 }
 
 export default function AdminLogsTable() {
@@ -84,6 +85,7 @@ export default function AdminLogsTable() {
               status: data.status,
               lat: data.lat,
               lng: data.lng,
+              earlyOutReason: data.earlyOutReason,
             });
           });
           
@@ -258,13 +260,20 @@ export default function AdminLogsTable() {
                   </div>
                 </td>
                 <td className="px-6 py-4">
-                  <div className="flex flex-col text-xs font-mono font-bold">
-                    <span className="text-emerald-600 dark:text-emerald-400">IN: {formatTime(log.timeIn)}</span>
-                    <span className={log.timeOut ? "text-rose-600 dark:text-rose-400" : "text-gray-400"}>
-                      OUT: {log.timeOut ? formatTime(log.timeOut) : "---"}
-                    </span>
-                  </div>
-                </td>
+  <div className="flex flex-col text-xs font-mono font-bold">
+    <span className="text-emerald-600 dark:text-emerald-400">IN: {formatTime(log.timeIn)}</span>
+    <div className="flex items-center gap-2">
+      <span className={log.timeOut ? "text-rose-600 dark:text-rose-400" : "text-gray-400"}>
+        OUT: {log.timeOut ? formatTime(log.timeOut) : "---"}
+      </span>
+      {log.earlyOutReason && (
+        <span className="text-[9px] text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-200 dark:border-amber-500/20 uppercase tracking-widest" title="Early Departure Reason">
+          {log.earlyOutReason}
+        </span>
+      )}
+    </div>
+  </div>
+</td>
                 <td className="px-6 py-4 font-semibold text-gray-700 dark:text-gray-400">{calculateDuration(log.timeIn, log.timeOut)}</td>
                 <td className="px-6 py-4 text-right">
                   <div className="flex items-center justify-end gap-3">

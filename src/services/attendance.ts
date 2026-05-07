@@ -67,7 +67,13 @@ export const clockInEmployee = async (userId: string, latitude: number, longitud
     throw new Error("Failed to clock in. Please try again.");       
   }
 };
-export const clockOutEmployee = async (userId: string, latitude: number, longitude: number) => {
+export const clockOutEmployee = async (
+  userId: string, 
+  latitude: number, 
+  longitude: number,
+  earlyOutReason?: string,
+  earlyOutDetails?: string
+) => {
   try {
     const settingsSnap = await getDoc(doc(db, "settings", "company"));
     const settingsData = settingsSnap.exists() ? settingsSnap.data() : null;
@@ -88,11 +94,11 @@ export const clockOutEmployee = async (userId: string, latitude: number, longitu
     const position = userData?.position || "N/A";
 
     const attendanceRef = collection(db, "attendanceLogs");
-    const q =  query(attendanceRef, where("userId", "==", userId), where("timeOut", "==", null)); 
+    const q = query(attendanceRef, where("userId", "==", userId), where("timeOut", "==", null)); 
     
     const querySnapshot = await getDocs(q);
     
-    let activeShiftId = null;
+    let activeShiftId: string | null = null;
 
     querySnapshot.forEach((document) => {
       const data = document.data();
@@ -107,13 +113,20 @@ export const clockOutEmployee = async (userId: string, latitude: number, longitu
 
     const shiftDocRef = doc(db, "attendanceLogs", activeShiftId); 
     
-    await updateDoc(shiftDocRef, { 
+    const updatePayload: Record<string, unknown> = { 
       timeOut: serverTimestamp(),
       lat: latitude,
       lng: longitude,
       fullName, 
       position,     
-    });
+    };
+
+    if (earlyOutReason) {
+      updatePayload.earlyOutReason = earlyOutReason;
+      updatePayload.earlyOutDetails = earlyOutDetails || "";
+    }
+
+    await updateDoc(shiftDocRef, updatePayload);
 
     await updateDoc(doc(db, "users", userId), {
       workStatus: "Offline" 

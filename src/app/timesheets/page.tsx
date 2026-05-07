@@ -6,7 +6,7 @@ import Navbar from "@/components/Navbar";
 import { collection, query, where, orderBy, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/hooks/useAuth";
-import { Clock, Calendar, CheckCircle, ShieldAlert, ArrowLeft, Download } from "lucide-react";
+import { Clock, ArrowLeft, Download } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
@@ -17,6 +17,7 @@ interface AttendanceLog {
   timeOut: Date | null;
   status: string;
   fullName?: string;
+  earlyOutReason?: string; 
 }
 
 export default function TimesheetsPage() {
@@ -43,11 +44,9 @@ function TimesheetsContent() {
 
     let baseQuery;
     
-    // If admin is viewing a specific employee's timesheet from the directory
     if (isAdmin && filterEmployeeId) {
       baseQuery = query(collection(db, "attendanceLogs"), where("userId", "==", filterEmployeeId), orderBy("timeIn", "desc"));
     } else {
-      // Fetch logs for everyone if admin, or just the user if employee
       baseQuery = isAdmin 
         ? query(collection(db, "attendanceLogs"), orderBy("timeIn", "desc")) 
         : query(collection(db, "attendanceLogs"), where("userId", "==", user.uid), orderBy("timeIn", "desc"));
@@ -63,6 +62,7 @@ function TimesheetsContent() {
           timeOut: data.timeOut?.toDate ? data.timeOut.toDate() : null,
           status: data.status || "N/A",
           fullName: data.fullName || "Unknown",
+          earlyOutReason: data.earlyOutReason, 
         } as AttendanceLog;
       });
       setLogs(fetchedLogs);
@@ -71,65 +71,16 @@ function TimesheetsContent() {
     return () => unsubscribe();
   }, [user?.uid, isAdmin, filterEmployeeId]);
 
-  // Filter logs by selected month/year
   const filteredLogs = logs.filter(log => {
       if (!log.timeIn) return false;
       return log.timeIn.getMonth() === targetMonth && log.timeIn.getFullYear() === targetYear;
   });
 
-  // Calculate duration
-  const getDurationString = (timeIn: Date | null, timeOut: Date | null) => {
-    if (!timeIn || !timeOut) return "—";
-    const diffMs = timeOut.getTime() - timeIn.getTime();
-    if (diffMs < 0) return "Error";
-    const hrs = Math.floor(diffMs / (1000 * 60 * 60));
-    const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-    return `${hrs}h ${mins}m`;
-  };
-
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const getDurationMs = (timeIn: Date | null, timeOut: Date | null) => {
     if (!timeIn || !timeOut) return 0;
     const diffMs = timeOut.getTime() - timeIn.getTime();
     return diffMs > 0 ? diffMs : 0;
-  };
-
-  // Group logs by user if admin (and viewing all), otherwise group by day
-  const employeeStats = filteredLogs.reduce((acc, log) => {
-    const key = (isAdmin && !filterEmployeeId) ? log.userId : log.timeIn!.toLocaleDateString();
-    const name = (isAdmin && !filterEmployeeId) ? log.fullName : log.timeIn!.toLocaleDateString();
-    
-    if (!acc[key]) {
-      acc[key] = { name, totalMs: 0, logCount: 0, overtimeMs: 0, logs: [] };
-    }
-    
-    const ms = getDurationMs(log.timeIn, log.timeOut);
-    acc[key].totalMs += ms;
-    acc[key].logCount += 1;
-    acc[key].logs.push(log);
-    
-    // Naive overtime calculation: > 8 hours a day
-    if (!isAdmin || filterEmployeeId) {
-        if (ms > 8 * 60 * 60 * 1000) {
-            acc[key].overtimeMs += (ms - (8 * 60 * 60 * 1000));
-        }
-    }
-    
-    return acc;
-  }, {} as Record<string, any>);
-
-  // If Admin (and not filtering), calculate overtime globally per user by summing daily overtime first
-  if (isAdmin && !filterEmployeeId) {
-      filteredLogs.forEach(log => {
-         const ms = getDurationMs(log.timeIn, log.timeOut);
-         if (ms > 8 * 60 * 60 * 1000) {
-             employeeStats[log.userId].overtimeMs += (ms - (8 * 60 * 60 * 1000));
-         }
-      });
-  }
-
-  const formatMsToHrs = (ms: number) => {
-      const hrs = (ms / (1000 * 60 * 60)).toFixed(1);
-      return hrs;
   };
 
   const exportToCSV = () => {
@@ -138,11 +89,11 @@ function TimesheetsContent() {
     
     let csvContent = `${titleString}\n\n`;
     
-    // Headers
+    // 'Early Out Reason' to CSV Headers
     if (isAdmin && !filterEmployeeId) {
-        csvContent += `Name,Date,Time In,Time Out,Late (mins),Status\n`;
+        csvContent += `Name,Date,Time In,Time Out,Late (mins),Status,Early Out Reason\n`;
     } else {
-        csvContent += `Date,Time In,Time Out,Late (mins),Status\n`;
+        csvContent += `Date,Time In,Time Out,Late (mins),Status,Early Out Reason\n`;
     }
     
     filteredLogs.forEach(log => {
@@ -151,11 +102,13 @@ function TimesheetsContent() {
       const dateStr = log.timeIn ? log.timeIn.toLocaleDateString() : "—";
       const timeInStr = log.timeIn ? log.timeIn.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "—";
       const timeOutStr = log.timeOut ? log.timeOut.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "—";
+      const earlyOutStr = log.earlyOutReason || "—"; 
       
+      // Pushing earlyOutStr to the CSV columns
       if (isAdmin && !filterEmployeeId) {
-        csvContent += `"${log.fullName || "Unknown"}","${dateStr}","${timeInStr}","${timeOutStr}",${lateMins},"${status}"\n`;
+        csvContent += `"${log.fullName || "Unknown"}","${dateStr}","${timeInStr}","${timeOutStr}",${lateMins},"${status}","${earlyOutStr}"\n`;
       } else {
-        csvContent += `"${dateStr}","${timeInStr}","${timeOutStr}",${lateMins},"${status}"\n`;
+        csvContent += `"${dateStr}","${timeInStr}","${timeOutStr}",${lateMins},"${status}","${earlyOutStr}"\n`;
       }
     });
 
@@ -172,7 +125,6 @@ function TimesheetsContent() {
   return (
     <ProtectedRoute>
       <main className="min-h-screen w-full relative overflow-hidden pt-[73px] bg-slate-50 dark:bg-[#0a0a0a]">
-        {/* Dynamic Background Glows */}
         <div className="absolute top-0 left-0 w-[40rem] h-[40rem] bg-teal-400/20 dark:bg-teal-600/10 rounded-full blur-[150px] pointer-events-none"></div>
         <div className="absolute bottom-0 right-0 w-[30rem] h-[30rem] bg-emerald-400/20 dark:bg-emerald-600/10 rounded-full blur-[120px] pointer-events-none"></div>
 
@@ -229,8 +181,6 @@ function TimesheetsContent() {
           </div>
 
           <div className="grid grid-cols-1 gap-6">
-            
-            {/* Main Stats / Timesheet Table */}
             <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl">
                <div className="flex justify-between items-center mb-6">
                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">
@@ -283,8 +233,16 @@ function TimesheetsContent() {
                                     </td>
                                     <td className="flex justify-between items-center lg:table-cell py-2 lg:py-4 lg:pr-4 border-b border-gray-100 dark:border-white/5 lg:border-none">
                                         <span className="lg:hidden text-xs text-gray-500 uppercase font-semibold">Time Out</span>
-                                        <div className="text-gray-700 dark:text-gray-300">
-                                          {log.timeOut ? log.timeOut.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "—"}
+                                        <div className="flex flex-col items-end lg:items-start">
+                                          <span className="text-gray-700 dark:text-gray-300">
+                                            {log.timeOut ? log.timeOut.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "—"}
+                                          </span>
+                                          {/*  UI badge for Early Out */}
+                                          {log.earlyOutReason && (
+                                            <span className="text-[10px] text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-200 dark:border-amber-500/20 mt-1 uppercase tracking-wider">
+                                              {log.earlyOutReason}
+                                            </span>
+                                          )}
                                         </div>
                                     </td>
                                     <td className="flex justify-between items-center lg:table-cell py-2 lg:py-4 lg:pr-4 border-b border-gray-100 dark:border-white/5 lg:border-none">
@@ -315,7 +273,6 @@ function TimesheetsContent() {
                   </table>
                </div>
             </div>
-            
           </div>
         </div>
       </main>

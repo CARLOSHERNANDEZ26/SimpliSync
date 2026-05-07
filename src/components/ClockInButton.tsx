@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { clockInEmployee } from "@/services/attendance"; 
 import toast from "react-hot-toast";
@@ -9,6 +9,12 @@ export default function ClockInButton() {
   const { user, isClockedIn } = useAuth();
   const [statusMsg, setStatusMsg] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => { // Reset status message when clock-in state changes
+    if (!isClockedIn) {
+      setStatusMsg("");
+    }
+  }, [isClockedIn]);
 
   const handleClockIn = () => {
     if (!user || isClockedIn) return; 
