@@ -36,7 +36,6 @@ export const calculatePagIBIG = (baseSalary: number): number => {
   }
   return applicableSalary * 0.02; // 2% otherwise
 };
-
 export interface DeductionBreakdown {
   sss: number;
   philhealth: number;
@@ -45,37 +44,48 @@ export interface DeductionBreakdown {
   taxableIncome: number;
 }
 
-export const calculateMandatoryDeductions = (baseSalary: number): DeductionBreakdown => {
+// cutoffPeriod parameter (1 = 1st-15th, 2 = 16th-End)
+export const calculateMandatoryDeductions = (
+  baseSalary: number, 
+  cutoffPeriod: 1 | 2 | "monthly" = "monthly"
+): DeductionBreakdown => {
   if (!baseSalary || baseSalary <= 0) {
     return { sss: 0, philhealth: 0, pagibig: 0, totalMandatory: 0, taxableIncome: 0 };
   }
 
-  // 🔥 THE "NEGATIVE PAY SHIELD" (Based on AI Feedback)
-  // If an employee earns practically nothing (e.g., severe absences like Maria Clara's ₱250), 
-  // standard monthly deductions are typically waived or capped to avoid negative debt.
   if (baseSalary < 1500) {
-    return {
-      sss: 0,
-      philhealth: 0,
-      pagibig: 0,
-      totalMandatory: 0,
-      taxableIncome: baseSalary
-    };
+    return { sss: 0, philhealth: 0, pagibig: 0, totalMandatory: 0, taxableIncome: baseSalary };
   }
 
-  const sss = calculateSSS(baseSalary);
-  const philhealth = calculatePhilHealth(baseSalary);
-  const pagibig = calculatePagIBIG(baseSalary);
+  // Calculate the FULL monthly amounts
+  const monthlySSS = calculateSSS(baseSalary);
+  const monthlyPhilhealth = calculatePhilHealth(baseSalary);
+  const monthlyPagibig = calculatePagIBIG(baseSalary);
+
+  let sss = 0, philhealth = 0, pagibig = 0;
+
+  // DOLE Standard Semi-Monthly Split
+  if (cutoffPeriod === 1) {
+    // 1st Cutoff: SSS & Pag-IBIG
+    sss = monthlySSS;
+    pagibig = monthlyPagibig;
+    philhealth = 0; 
+  } else if (cutoffPeriod === 2) {
+    // 2nd Cutoff: PhilHealth
+    sss = 0;
+    pagibig = 0;
+    philhealth = monthlyPhilhealth;
+  } else {
+    // Full Monthly (if needed)
+    sss = monthlySSS;
+    pagibig = monthlyPagibig;
+    philhealth = monthlyPhilhealth;
+  }
+
   const totalMandatory = sss + philhealth + pagibig;
+  
+  const semiMonthlyBasic = baseSalary / 2;
+  const taxableIncome = Math.max(0, semiMonthlyBasic - totalMandatory);
 
-  // Final safety check: Deductions should never exceed the gross salary
-  const actualDeductions = Math.min(totalMandatory, baseSalary);
-
-  return {
-    sss,
-    philhealth,
-    pagibig,
-    totalMandatory: actualDeductions,
-    taxableIncome: Math.max(0, baseSalary - actualDeductions)
-  };
+  return { sss, philhealth, pagibig, totalMandatory, taxableIncome };
 };

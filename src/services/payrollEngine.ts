@@ -1,4 +1,4 @@
-import { collection, query, where, getDocs, Timestamp } from "firebase/firestore";
+import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 export interface DeductionSuggestion {
@@ -81,4 +81,49 @@ export const getSuggestedDeduction = async (
     unpaidAbsences,
     suggestedDeduction
   };
+};
+// DOLE Hourly Rate Calculation
+export const calculateHourlyRate = (monthlySalary: number) => {
+  if (!monthlySalary) return 0;
+  // Standard Formula: (Monthly / 22 working days) / 8 hours
+  return (monthlySalary / 22) / 8;
+};
+
+// SimpliV 15-Minute Lateness Ceiling Rule
+export const calculateLatePenaltyMinutes = (timeIn: Date | null, shiftStartTime: string = "08:00") => {
+  if (!timeIn) return 0;
+
+  const [startHour, startMin] = shiftStartTime.split(":").map(Number);
+  const targetTime = new Date(timeIn);
+  targetTime.setHours(startHour, startMin, 0, 0);
+
+  const diffMs = timeIn.getTime() - targetTime.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+
+  if (diffMins <= 0) return 0; // On time or early
+
+  // The SimpliV Step Function: Every 1-15 min block = 30 mins deducted
+  const penaltyBlocks = Math.ceil(diffMins / 15);
+  return penaltyBlocks * 30;
+};
+
+// Early Clock Out Penalty
+export const calculateUndertimeMinutes = (timeOut: Date | null, shiftEndTime: string = "17:00") => {
+  if (!timeOut) return 0;
+
+  const [endHour, endMin] = shiftEndTime.split(":").map(Number);
+  const targetTime = new Date(timeOut);
+  targetTime.setHours(endHour, endMin, 0, 0);
+
+  const diffMs = targetTime.getTime() - timeOut.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+
+  // If they left early, return the exact minutes lost
+  return diffMins > 0 ? diffMins : 0;
+};
+
+// Translates penalty minutes into a direct peso deduction
+export const calculateTimeDeductionPeso = (penaltyMinutes: number, hourlyRate: number) => {
+  const minuteRate = hourlyRate / 60;
+  return penaltyMinutes * minuteRate;
 };
