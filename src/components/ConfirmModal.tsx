@@ -9,6 +9,7 @@ interface ConfirmModalProps {
   message: string;
   confirmText?: string;
   isLoading?: boolean;
+  isDanger?: boolean; 
 }
 
 export default function ConfirmModal({

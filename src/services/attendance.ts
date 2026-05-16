@@ -2,7 +2,7 @@ import { db } from "../lib/firebase";
 import { collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc, doc, orderBy, getDoc } from "firebase/firestore";
 import { isWithinSmartZone } from "@/utils/geo";    
 
-export const clockInEmployee = async (userId: string, latitude: number, longitude: number) => {
+export const clockInEmployee = async (userId: string, lat: number, lng: number, lateReason?: string) => {
   try {
     // 1. Fetch Company Settings FIRST
     const settingsSnap = await getDoc(doc(db, "settings", "company"));
@@ -15,7 +15,7 @@ export const clockInEmployee = async (userId: string, latitude: number, longitud
     const shiftStartTime = settingsData?.shiftStartTime || "08:00";
 
     // 3. Perform the dynamic location check with ALL 5 arguments
-    const isValidLocation = isWithinSmartZone(latitude, longitude, officeLat, officeLng, allowedRadius);
+    const isValidLocation = isWithinSmartZone(lat, lng, officeLat, officeLng, allowedRadius);
     
     if (!isValidLocation) {
       throw new Error("Out_Of_Smart_Zone.");
@@ -47,9 +47,10 @@ export const clockInEmployee = async (userId: string, latitude: number, longitud
       position,    
       timeIn: serverTimestamp(),
       timeOut: null,
-      lat: latitude,
-      lng: longitude,
+      lat,
+      lng,
       status: finalStatus, 
+      lateReason: lateReason || null,
     });
 
      await updateDoc(doc(db, "users", userId), {
@@ -285,3 +286,4 @@ export const adminForceClockOut = async (userId: string, shiftId: string) => {
     throw new Error("Failed to execute Admin Override.");
   }
 };
+

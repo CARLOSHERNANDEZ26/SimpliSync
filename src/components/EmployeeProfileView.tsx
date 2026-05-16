@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/hooks/useAuth";
-import { User, Building2, Calendar, Phone, ShieldAlert, Save, Activity, UploadCloud, Loader2 } from "lucide-react";
+import { Building2, Calendar, Phone, ShieldAlert, Save, Activity, UploadCloud, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 
 interface EmployeeProfile {
@@ -143,9 +143,9 @@ export default function EmployeeProfileView({ userId }: { userId: string }) {
       }));
 
       toast.success("Resume scanned successfully! Review fields before saving.");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(error);
-      toast.error(error?.message || "Resume scanning failed. Check API configuration.");
+      toast.error((error as Error)?.message || "Resume scanning failed. Check API configuration.");
     } finally {
       setIsScanning(false);
       if (fileInputRef.current) fileInputRef.current.value = "";

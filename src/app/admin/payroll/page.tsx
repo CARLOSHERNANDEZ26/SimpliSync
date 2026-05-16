@@ -137,7 +137,11 @@ export default function PayrollPage() {
           if (data.timeIn) {
             const dateStr = data.timeIn.toDate().toISOString().split('T')[0];
             uniqueDaysPresent.add(dateStr);
-            totalLateMins += calculateLatePenaltyMinutes(data.timeIn.toDate(), "08:00");
+            
+            // Only calculate penalty if the Admin HAS NOT excused it!
+            if (!data.isLateExcused) {
+              totalLateMins += calculateLatePenaltyMinutes(data.timeIn.toDate(), "08:00");
+            }
           }
           if (data.timeOut) {
             totalUndertimeMins += calculateUndertimeMinutes(data.timeOut.toDate(), "17:00");
