@@ -3,6 +3,7 @@
 import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import GlobalIdleMonitor from "@/components/GlobalIdleMonitor";
 
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -32,6 +33,12 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
     return null;
   }
 
-  // STRICT GATE 3: If they pass the checks, ONLY render the Dashboard (the 'children')
-  return <>{children}</>;
+  // STRICT GATE 3: If they pass the checks, render the Idle Monitor in the background alongside the page children
+  return (
+    <>
+      <GlobalIdleMonitor />
+      
+      {children}
+    </>
+  );
 }
