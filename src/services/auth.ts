@@ -1,8 +1,9 @@
-import { auth } from "../lib/firebase";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { initializeApp } from "firebase/app";
+import { getAuth, createUserWithEmailAndPassword, updateProfile, signInWithEmailAndPassword } from "firebase/auth";
 import { serverTimestamp, doc, setDoc } from "firebase/firestore";
+import { firebaseConfig, db, auth } from "../lib/firebase";
 
-// ✅ THE FIX: Throwing the error back to the UI
+// ✅ Login Employee Function
 export const loginEmployee = async (email: string, password: string) => {
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
@@ -12,12 +13,19 @@ export const loginEmployee = async (email: string, password: string) => {
     throw error; 
   }
 };
-import { initializeApp } from "firebase/app";
-import { getAuth, createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
-import { firebaseConfig, db } from "../lib/firebase";
 
-
-export const addEmployee = async (fullName: string, position: string, department: string, joinDate: string, birthDate: string, password: string, role: string, scheduleDays: string[] = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"], scheduleHours: { start: string, end: string } = { start: "09:00", end: "17:00" }) => {
+// ✅ Add Employee Function (With Leave Credits Initialized)
+export const addEmployee = async (
+  fullName: string, 
+  position: string, 
+  department: string, 
+  joinDate: string, 
+  birthDate: string, 
+  password: string, 
+  role: string, 
+  scheduleDays: string[] = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"], 
+  scheduleHours: { start: string; end: string } = { start: "09:00", end: "17:00" }
+) => {
   const email = `${fullName.replace(/\s+/g, '').toLowerCase()}@simplisync.local`;
   
   const secondaryApp = initializeApp(firebaseConfig, `SecondaryApp-${Date.now()}`);
@@ -39,6 +47,10 @@ export const addEmployee = async (fullName: string, position: string, department
       role: role, 
       scheduleDays,
       scheduleHours,
+      vlCredits: 15,  
+      slCredits: 15,  
+      silCredits: 5,  
+      
       createdAt: serverTimestamp()
     });
     
@@ -48,5 +60,3 @@ export const addEmployee = async (fullName: string, position: string, department
     throw new Error("Failed to create employee.");
   }
 };
-
-

@@ -6,7 +6,7 @@ import Navbar from "@/components/Navbar";
 import { collection, query, where, onSnapshot, addDoc, updateDoc, doc, serverTimestamp, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/hooks/useAuth";
-import { Calendar as CalendarIcon, Clock, CheckCircle, XCircle, ExternalLink } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, CheckCircle, XCircle, ExternalLink, AlertCircle } from "lucide-react";
 import toast from "react-hot-toast";
 
 interface LeaveRequest {
@@ -29,6 +29,7 @@ export default function LeavePage() {
   const [requests, setRequests] = useState<LeaveRequest[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [balances, setBalances] = useState({ vl: 0, sl: 0, sil: 0 });
+  
   const [type, setType] = useState<"vl" | "sl" | "sil">("vl");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -75,6 +76,28 @@ export default function LeavePage() {
     return () => unsubscribeUser();
   }, [user?.uid, isAdmin]);
 
+  // Dynamic "True Balance" Calculator
+  const getTrueBalance = (leaveType: "vl" | "sl" | "sil") => {
+    const rawBalance = balances[leaveType];
+    
+    // Find all pending requests for THIS user and THIS leave type
+    const pendingReqs = requests.filter(r => r.userId === user?.uid && r.type === leaveType && r.status === "pending");
+    
+    // Add up all the days they are trying to request
+    const lockedDays = pendingReqs.reduce((total, req) => {
+      const start = new Date(req.startDate);
+      const end = new Date(req.endDate);
+      const days = Math.ceil(Math.abs(end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+      return total + days;
+    }, 0);
+
+    return {
+      raw: rawBalance,
+      locked: lockedDays,
+      available: rawBalance - lockedDays
+    };
+  };
+
   const handleSubmitRequest = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!startDate || !endDate || !reason) return toast.error("Fill all fields.");
@@ -84,10 +107,15 @@ export default function LeavePage() {
     if (start > end) return toast.error("Check your dates.");
 
     const diffDays = Math.ceil(Math.abs(end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-    const currentBalance = balances[type];
+    
+    // Check against their TRUE balance, not their raw balance
+    const { available, locked } = getTrueBalance(type);
 
-    if (currentBalance < diffDays) {
-      return toast.error(`Insufficient balance. You only have ${currentBalance} days.`);
+    if (available < diffDays) {
+      if (locked > 0) {
+        return toast.error(`Insufficient true balance. You have ${locked} day(s) currently locked in pending requests.`);
+      }
+      return toast.error(`Insufficient balance. You only have ${available} days available.`);
     }
 
     setIsSubmitting(true);
@@ -164,7 +192,6 @@ export default function LeavePage() {
         
         <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
           
-          {/* 1. Page Header Section */}
           <div className="mb-10">
             <h1 className="text-4xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
               <CalendarIcon className="w-10 h-10 text-teal-500" />
@@ -175,29 +202,33 @@ export default function LeavePage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-1 space-y-8">
               
-              {/* 2. Employee Personal Controls (Balances & Form) */}
               {!isAdmin && (
                 <div className="flex flex-col gap-6">
-                  {/* Leave Balances Visualization */}
+                  {/* True Balance Visualization */}
                   <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl">
-                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 text-center">My Balances</h3>
+                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 text-center flex justify-center items-center gap-1.5">
+                      Available Balances
+                    </h3>
                     <div className="grid grid-cols-3 gap-3">
-                      <div className="p-3 text-center bg-teal-50 dark:bg-teal-500/10 rounded-xl border border-teal-100 dark:border-teal-500/20">
-                        <div className="text-2xl font-bold text-teal-600 dark:text-teal-400">{balances.vl}</div>
-                        <div className="text-[9px] font-bold text-teal-500 dark:text-teal-300 uppercase">VL</div>
-                      </div>
-                      <div className="p-3 text-center bg-rose-50 dark:bg-rose-500/10 rounded-xl border border-rose-100 dark:border-rose-500/20">
-                        <div className="text-2xl font-bold text-rose-600 dark:text-rose-400">{balances.sl}</div>
-                        <div className="text-[9px] font-bold text-rose-500 dark:text-rose-300 uppercase">SL</div>
-                      </div>
-                      <div className="p-3 text-center bg-indigo-50 dark:bg-indigo-500/10 rounded-xl border border-indigo-100 dark:border-indigo-500/20">
-                        <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{balances.sil}</div>
-                        <div className="text-[9px] font-bold text-indigo-500 dark:text-indigo-300 uppercase">SIL</div>
-                      </div>
+                      {(["vl", "sl", "sil"] as const).map((lType) => {
+                        const { available, locked } = getTrueBalance(lType);
+                        return (
+                          <div key={lType} className="p-3 text-center bg-slate-50 dark:bg-black/20 rounded-xl border border-gray-100 dark:border-white/5 relative">
+                            {locked > 0 && (
+                              <div className="absolute -top-2 -right-2 bg-amber-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm" title={`${locked} days pending approval`}>
+                                -{locked}
+                              </div>
+                            )}
+                            <div className={`text-2xl font-bold ${available > 0 ? "text-teal-600 dark:text-teal-400" : "text-gray-400"}`}>
+                              {available}
+                            </div>
+                            <div className="text-[9px] font-bold text-gray-500 uppercase">{lType}</div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
 
-                  {/* Leave Request Submission Form */}
                   <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl">
                     <form onSubmit={handleSubmitRequest} className="space-y-4">
                         <select value={type} onChange={(e) => setType(e.target.value as "vl" | "sl" | "sil")} className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500">
@@ -205,8 +236,10 @@ export default function LeavePage() {
                           <option value="sl">Sick Leave (SL)</option>
                           <option value="sil">Incentive Leave (SIL)</option>
                         </select>
-                        <input type="date" required value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500" />
-                        <input type="date" required value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500" />
+                        <div className="grid grid-cols-2 gap-3">
+                          <input type="date" required value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
+                          <input type="date" required value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
+                        </div>
                         <textarea required value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Reason for leave..." className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white h-24 resize-none focus:outline-none focus:ring-2 focus:ring-teal-500"></textarea>
                         
                         <input 
@@ -217,32 +250,36 @@ export default function LeavePage() {
                           className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 placeholder-gray-500" 
                         />
 
-                        <button type="submit" disabled={isSubmitting} className="w-full bg-teal-600 hover:bg-teal-500 py-3 rounded-xl font-bold text-white transition-all shadow-lg shadow-teal-500/20 active:scale-95">Submit Request</button>
+                        <button type="submit" disabled={isSubmitting} className="w-full bg-teal-600 hover:bg-teal-500 py-3 rounded-xl font-bold text-white transition-all shadow-lg shadow-teal-500/20 active:scale-95 disabled:opacity-50 flex justify-center items-center gap-2">
+                          {isSubmitting ? "Submitting..." : "Submit Request"}
+                        </button>
                     </form>
                   </div>
                 </div>
               )}
 
-              {/* 3. Administrator Approval Queue Section */}
               {isAdmin && (
                  <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl">
                     <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Pending Approval</h3>
                     <div className="space-y-4">
                       {pendingRequests.map(req => (
-                        <div key={req.id} className="p-4 rounded-2xl bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/5 space-y-3">
-                          <div className="font-bold text-gray-900 dark:text-white">{req.userName}</div>
-                          <div className="text-[10px] font-bold text-teal-600 dark:text-teal-400 uppercase">{req.type}</div>
-                          <p className="text-xs text-gray-600 dark:text-gray-400">&quot;{req.reason}&quot;</p>
-                          
-                          {req.attachmentUrl && (
-                            <a href={req.attachmentUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300 font-semibold bg-indigo-50 dark:bg-indigo-500/10 px-2.5 py-1.5 rounded-lg w-fit transition-colors">
-                              <ExternalLink className="w-3.5 h-3.5" /> View Attached Document
-                            </a>
-                          )}
+                        <div key={req.id} className="p-4 rounded-2xl bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/5 space-y-3 relative overflow-hidden">
+                          <div className="absolute top-0 left-0 w-1 h-full bg-amber-400"></div>
+                          <div className="pl-2">
+                            <div className="font-bold text-gray-900 dark:text-white">{req.userName}</div>
+                            <div className="text-[10px] font-bold text-teal-600 dark:text-teal-400 uppercase">{req.type} • {req.startDate} to {req.endDate}</div>
+                            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">&quot;{req.reason}&quot;</p>
+                            
+                            {req.attachmentUrl && (
+                              <a href={req.attachmentUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300 font-semibold bg-indigo-50 dark:bg-indigo-500/10 px-2.5 py-1.5 rounded-lg w-fit mt-2 transition-colors">
+                                <ExternalLink className="w-3.5 h-3.5" /> View Attached Document
+                              </a>
+                            )}
+                          </div>
 
                           <div className="flex gap-2 pt-2">
-                            <button onClick={() => handleUpdateStatus(req.id, "approved", req)} className="flex-1 py-2 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 rounded-lg text-xs font-bold active:scale-95 transition-transform">Approve</button>
-                            <button onClick={() => handleUpdateStatus(req.id, "rejected", req)} className="flex-1 py-2 bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-400 rounded-lg text-xs font-bold active:scale-95 transition-transform">Reject</button>
+                            <button onClick={() => handleUpdateStatus(req.id, "approved", req)} className="flex-1 py-2 bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-500/20 dark:hover:bg-emerald-500/30 text-emerald-700 dark:text-emerald-400 rounded-lg text-xs font-bold active:scale-95 transition-all">Approve</button>
+                            <button onClick={() => handleUpdateStatus(req.id, "rejected", req)} className="flex-1 py-2 bg-rose-100 hover:bg-rose-200 dark:bg-rose-500/20 dark:hover:bg-rose-500/30 text-rose-700 dark:text-rose-400 rounded-lg text-xs font-bold active:scale-95 transition-all">Reject</button>
                           </div>
                         </div>
                       ))}
@@ -254,7 +291,6 @@ export default function LeavePage() {
               )}
             </div>
 
-            {/* 4. Leave History & Status Table Section */}
             <div className="lg:col-span-2">
                <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl overflow-hidden">
                 <table className="w-full text-left">
@@ -262,6 +298,7 @@ export default function LeavePage() {
                     <tr className="text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-200 dark:border-white/5">
                       <th className="pb-4 pl-2">Employee</th>
                       <th className="pb-4">Type</th>
+                      <th className="pb-4 hidden sm:table-cell">Dates</th>
                       <th className="pb-4">Status</th>
                     </tr>
                   </thead>
@@ -277,12 +314,13 @@ export default function LeavePage() {
                           )}
                         </td>
                         <td className="py-4 text-teal-600 dark:text-teal-400 font-bold uppercase text-xs">{req.type}</td>
+                        <td className="py-4 hidden sm:table-cell text-xs text-gray-500">{req.startDate} to {req.endDate}</td>
                         <td className="py-4">{getStatusBadge(req.status)}</td>
                       </tr>
                     ))}
                     {(isAdmin ? pastRequests : requests).length === 0 && (
                       <tr>
-                        <td colSpan={3} className="py-12 text-center text-gray-500 italic">No leave history available.</td>
+                        <td colSpan={4} className="py-12 text-center text-gray-500 italic">No leave history available.</td>
                       </tr>
                     )}
                   </tbody>

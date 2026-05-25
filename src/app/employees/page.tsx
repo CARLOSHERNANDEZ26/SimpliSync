@@ -1,15 +1,17 @@
 "use client";
+
 import { useState, useEffect } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Navbar from "@/components/Navbar";
 import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/hooks/useAuth";
-import { Search, Users as UsersIcon, Building2, Calendar, UserPlus, Clock, CalendarDays } from "lucide-react";
+import { Search, Users as UsersIcon, Building2, Calendar, UserPlus, Clock, CalendarDays, UserMinus } from "lucide-react";
 import Link from "next/link";
 import AddEmployeeModal from "@/components/AddEmployeeModal";
 import EmployeeProfileView from "@/components/EmployeeProfileView";
 import ViewScheduleModal from "@/components/ViewScheduleModal";
+import OffboardEmployeeModal from "@/components/OffboardEmployeeModal"; 
 
 interface Employee {
   id: string;
@@ -32,6 +34,9 @@ export default function EmployeesPage() {
   const [departmentFilter, setDepartmentFilter] = useState("All");
   const [showAddEmployee, setShowAddEmployee] = useState(false);
   const [selectedScheduleEmployee, setSelectedScheduleEmployee] = useState<Employee | null>(null);
+  
+  // 🔥 NEW: State to trigger the offboarding modal
+  const [selectedOffboardEmployee, setSelectedOffboardEmployee] = useState<Employee | null>(null);
 
   const isAdmin = user?.email === "admin@simplisync.local";
 
@@ -66,14 +71,12 @@ export default function EmployeesPage() {
     return matchesSearch && matchesDept;
   });
 
-  // View for non-admin users: Shows only their own profile
   if (!isAdmin && user?.uid) {
     return (
       <ProtectedRoute>
         <main className="min-h-screen w-full relative overflow-hidden pt-[73px] bg-slate-50 dark:bg-[#0a0a0a]">
           <div className="absolute top-0 left-0 w-[40rem] h-[40rem] bg-teal-400/20 dark:bg-teal-600/10 rounded-full blur-[150px] pointer-events-none"></div>
           <div className="absolute bottom-0 right-0 w-[30rem] h-[30rem] bg-emerald-400/20 dark:bg-emerald-600/10 rounded-full blur-[120px] pointer-events-none"></div>
-
           <Navbar />
           <EmployeeProfileView userId={user.uid} />
         </main>
@@ -81,11 +84,9 @@ export default function EmployeesPage() {
     );
   }
 
-
   return (
     <ProtectedRoute>
       <main className="min-h-screen w-full relative overflow-hidden pt-[73px] bg-slate-50 dark:bg-[#0a0a0a]">
-        {/* Dynamic Background Glows */}
         <div className="absolute top-0 left-0 w-[40rem] h-[40rem] bg-teal-400/20 dark:bg-teal-600/10 rounded-full blur-[150px] pointer-events-none"></div>
         <div className="absolute bottom-0 right-0 w-[30rem] h-[30rem] bg-emerald-400/20 dark:bg-emerald-600/10 rounded-full blur-[120px] pointer-events-none"></div>
 
@@ -115,7 +116,6 @@ export default function EmployeesPage() {
             )}
           </div>
 
-          {/* Filters & Search */}
           <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 p-4 rounded-2xl flex flex-col sm:flex-row gap-4 mb-8 shadow-sm">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -141,7 +141,6 @@ export default function EmployeesPage() {
             </div>
           </div>
 
-          {/* Employee Directory Table */}
           <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl overflow-hidden">
              <div className="overflow-x-auto">
                <table className="w-full text-left border-collapse">
@@ -157,15 +156,19 @@ export default function EmployeesPage() {
                  </thead>
                  <tbody className="divide-y divide-gray-100 dark:divide-white/5">
                     {filteredEmployees.length > 0 ? (
-                      filteredEmployees.map(employee => (
-                        <tr key={employee.id} className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group">
+                      filteredEmployees.map(employee => {
+                        // We check this upfront so we can disable the buttons if they are offboarded
+                        const isOffboarded = ["inactive", "Resigned", "Terminated", "End of Contract"].includes(employee.status || "");
+
+                        return (
+                        <tr key={employee.id} className={`hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group ${isOffboarded ? 'opacity-60' : ''}`}>
                            <td className="py-4 px-4 whitespace-nowrap">
                              <div className="flex items-center gap-3">
-                               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center text-white font-bold uppercase shadow-sm">
+                               <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold uppercase shadow-sm ${isOffboarded ? 'bg-gray-400' : 'bg-gradient-to-br from-teal-500 to-emerald-600'}`}>
                                  {(employee.fullName || employee.name || "U").charAt(0)}
                                </div>
                                <div>
-                                 <div className="font-semibold text-gray-900 dark:text-white">
+                                 <div className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                                     {employee.fullName || employee.name || "Unknown Employee"}
                                  </div>
                                  <div className="text-xs text-gray-500 dark:text-gray-400">{employee.email}</div>
@@ -187,27 +190,39 @@ export default function EmployeesPage() {
                                {employee.joinDate && !isNaN(Date.parse(employee.joinDate)) ? new Date(employee.joinDate).toLocaleDateString() : "N/A"}
                              </div>
                            </td>
+                           
+                           {/* 🔥 NEW: Clean, abstracted status logic */}
                            <td className="py-4 px-4 whitespace-nowrap">
-                              {employee.status === "inactive" ? (
-                                <span className="inline-flex px-2.5 py-1 rounded-full bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-semibold">
-                                  Offboarded
-                                </span>
-                              ) : employee.status === "Out of Bounds" ? (
-                                <span className="px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 text-xs font-semibold flex items-center gap-1.5 border border-amber-200 dark:border-amber-500/30 shadow-sm animate-pulse">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-                                     Out of Bounds
-                                     </span>
-                              ) : employee.workStatus === "Working" ? (
-                                <span className="inline-flex px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs font-semibold items-center gap-1.5 border border-emerald-200 dark:border-emerald-500/30">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                                  Working
-                                </span>
-                              ) : (
-                                <span className="inline-flex px-2.5 py-1 rounded-full bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 text-xs font-semibold border border-gray-200 dark:border-white/10">
-                                  Offline
-                                </span>
-                              )}
+                              {(() => {
+                                if (isOffboarded) {
+                                  return (
+                                    <span className="inline-flex px-2.5 py-1 rounded-full bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-semibold border border-rose-200 dark:border-rose-500/30">
+                                      {employee.status === "inactive" ? "Offboarded" : employee.status}
+                                    </span>
+                                  );
+                                }
+                                if (employee.status === "Out of Bounds") {
+                                  return (
+                                    <span className="px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 text-xs font-semibold flex items-center gap-1.5 border border-amber-200 dark:border-amber-500/30 shadow-sm animate-pulse w-fit">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Out of Bounds
+                                    </span>
+                                  );
+                                }
+                                if (employee.workStatus === "Working") {
+                                  return (
+                                    <span className="inline-flex px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs font-semibold items-center gap-1.5 border border-emerald-200 dark:border-emerald-500/30 w-fit">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Working
+                                    </span>
+                                  );
+                                }
+                                return (
+                                  <span className="inline-flex px-2.5 py-1 rounded-full bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 text-xs font-semibold border border-gray-200 dark:border-white/10 w-fit">
+                                    Offline
+                                  </span>
+                                );
+                              })()}
                            </td>
+                           
                            <td className="py-4 px-4 whitespace-nowrap flex justify-end gap-2">
                              <Link 
                                 href={`/timesheets?employeeId=${employee.id}&employeeName=${encodeURIComponent(employee.fullName || employee.name || "Employee")}`}
@@ -217,23 +232,37 @@ export default function EmployeesPage() {
                                 <Clock className="w-4 h-4 sm:mr-1.5" />
                                 <span className="hidden sm:inline">Timesheet</span>
                              </Link>
+                             
                              <button
                                 onClick={() => setSelectedScheduleEmployee(employee)}
-                                className="inline-flex items-center justify-center py-2 px-3 bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 dark:hover:bg-amber-500/20 border border-amber-200 dark:border-amber-500/30 rounded-lg text-amber-700 dark:text-amber-400 font-medium text-sm transition-all shadow-sm active:scale-95"
+                                disabled={isOffboarded}
+                                className="inline-flex items-center justify-center py-2 px-3 bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 dark:hover:bg-amber-500/20 border border-amber-200 dark:border-amber-500/30 rounded-lg text-amber-700 dark:text-amber-400 font-medium text-sm transition-all shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                                 title="View Schedule"
                              >
                                 <CalendarDays className="w-4 h-4 sm:mr-1.5" />
                                 <span className="hidden sm:inline">Schedule</span>
                              </button>
+
                              <Link 
                                 href={`/employees/${employee.id}`}
                                 className="inline-flex items-center justify-center py-2 px-3 bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 border border-gray-200 dark:border-white/10 rounded-lg text-teal-600 dark:text-teal-400 font-medium text-sm transition-all shadow-sm active:scale-95"
                              >
-                                View Profile
+                                Profile
                              </Link>
+
+                             {/* Offboard Button */}
+                             {!isOffboarded && (
+                               <button
+                                 onClick={() => setSelectedOffboardEmployee(employee)}
+                                 className="inline-flex items-center justify-center p-2 bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 border border-rose-200 dark:border-rose-500/30 rounded-lg text-rose-600 dark:text-rose-400 transition-all shadow-sm active:scale-95"
+                                 title="Offboard Employee"
+                               >
+                                 <UserMinus className="w-4 h-4" />
+                               </button>
+                             )}
                            </td>
                         </tr>
-                      ))
+                      )})
                     ) : (
                       <tr>
                         <td colSpan={6} className="py-16 text-center text-gray-500 dark:text-gray-400">
@@ -247,7 +276,6 @@ export default function EmployeesPage() {
                </table>
              </div>
           </div>
-
         </div>
 
         {showAddEmployee && (
@@ -257,6 +285,15 @@ export default function EmployeesPage() {
         {selectedScheduleEmployee && (
           <ViewScheduleModal employee={selectedScheduleEmployee} onClose={() => setSelectedScheduleEmployee(null)} />
         )}
+
+        {/* Offboarding Modal */}
+        {selectedOffboardEmployee && (
+          <OffboardEmployeeModal 
+            employee={selectedOffboardEmployee} 
+            onClose={() => setSelectedOffboardEmployee(null)} 
+          />
+        )}
+
       </main>
     </ProtectedRoute>
   );

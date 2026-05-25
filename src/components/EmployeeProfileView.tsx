@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/hooks/useAuth";
-import { Building2, Calendar, Phone, ShieldAlert, Save, Activity, UploadCloud, Loader2 } from "lucide-react";
+import { Building2, Calendar, Phone, ShieldAlert, Save, Activity, UploadCloud, Loader2, Key, Lock } from "lucide-react";
 import toast from "react-hot-toast";
 
 interface EmployeeProfile {
@@ -33,10 +33,12 @@ export default function EmployeeProfileView({ userId }: { userId: string }) {
   const [isSaving, setIsSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [isResetting, setIsResetting] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Form State
   const [formData, setFormData] = useState<EmployeeProfile>({
     fullName: "", email: "", personalEmail: "", contactNumber: "", position: "", department: "", joinDate: "", birthDate: "", status: "active",
     emergencyContactName: "", emergencyContactRelation: "", emergencyContactPhone: ""
@@ -83,14 +85,18 @@ export default function EmployeeProfileView({ userId }: { userId: string }) {
     fetchProfile();
   }, [userId, router, isAdmin]);
 
-  const handleSave = async () => {
+ const handleSave = async () => {
     if (!userId || typeof userId !== "string" || !canEdit) return;
     setIsSaving(true);
     
-    try {
+   try {
       const docRef = doc(db, "users", userId);
-      await updateDoc(docRef, { ...formData });
-      setProfile({ ...formData });
+      
+      const updateData = { ...formData };
+      delete updateData.status; 
+      
+      await updateDoc(docRef, updateData);
+      setProfile(prev => ({ ...prev, ...updateData }) as EmployeeProfile);
       setIsEditing(false);
       toast.success("Profile updated successfully!");
     } catch (error) {
@@ -152,6 +158,39 @@ export default function EmployeeProfileView({ userId }: { userId: string }) {
     }
   };
 
+  // 🔥 NEW: API Call to force the password reset
+  const handleForcePasswordReset = async (e: React.SyntheticEvent) => {
+    e.preventDefault();
+    if (newPassword.length < 6) {
+      toast.error("Password must be at least 6 characters.");
+      return;
+    }
+
+    setIsResetting(true);
+    try {
+      const res = await fetch('/api/admin/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uid: userId, newPassword }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to reset password.");
+      }
+
+      toast.success(`Password successfully changed to: ${newPassword}`);
+      setIsResetModalOpen(false);
+      setNewPassword("");
+    } catch (error: unknown) {
+      console.error(error);
+      toast.error((error as Error).message || "System Error: Could not reset password.");
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
 
   if (isLoading) {
     return (
@@ -201,7 +240,7 @@ export default function EmployeeProfileView({ userId }: { userId: string }) {
                 <button 
                   onClick={() => {
                     setIsEditing(false);
-                    setFormData({ ...profile } as EmployeeProfile); // Reset
+                    setFormData({ ...profile } as EmployeeProfile); 
                   }}
                   disabled={isScanning}
                   className="px-5 py-2.5 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/10 transition-colors font-medium border border-gray-200 dark:border-white/10"
@@ -234,7 +273,6 @@ export default function EmployeeProfileView({ userId }: { userId: string }) {
         {/* Left Col: Main Details */}
         <div className="lg:col-span-2 xl:col-span-3 space-y-6">
           
-          {/* Work Information */}
           <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl sm:rounded-3xl p-5 sm:p-8 shadow-xl">
             <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
               <Building2 className="w-5 h-5 text-teal-500" />
@@ -294,7 +332,6 @@ export default function EmployeeProfileView({ userId }: { userId: string }) {
             </div>
           </div>
 
-          {/* Emergency Contact */}
           <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl sm:rounded-3xl p-5 sm:p-8 shadow-xl">
             <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
               <Phone className="w-5 h-5 text-rose-500" />
@@ -371,38 +408,95 @@ export default function EmployeeProfileView({ userId }: { userId: string }) {
             </div>
           </div>
 
-          {isAdmin && (
-            <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-5 flex items-center gap-2">
-                <Activity className="w-5 h-5 text-amber-500" />
-                Account Status
-              </h3>
+          <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-5 flex items-center gap-2">
+              <Activity className="w-5 h-5 text-amber-500" />
+              Account Status
+            </h3>
+            
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 block">Current Status</label>
               
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 block">Current Status</label>
-                {isEditing ? (
-                  <select name="status" value={formData.status} onChange={handleChange} className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2 focus:ring-2 focus:ring-amber-500 text-gray-900 dark:text-white">
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive (Offboarded)</option>
-                  </select>
-                ) : (
-                  <div className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${profile?.status === 'inactive' ? 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400'}`}>
-                    {profile?.status === 'inactive' ? 'Inactive' : 'Active'}
-                  </div>
-                )}
-                
-                {isEditing && (
-                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-3 flex items-start gap-1">
-                    <ShieldAlert className="w-4 h-4 shrink-0" />
-                    Changing status to inactive will visually flag the user, but does not auto-disable Firebase Auth.
-                  </p>
-                )}
+              {/* 🔥 FIX: Rendered status as read-only. We force Admins to use the DOLE-compliant directory offboard tool. */}
+              <div className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${["inactive", "Resigned", "Terminated", "End of Contract"].includes(profile?.status || "") ? 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400'}`}>
+                {profile?.status === 'active' ? 'Active' : profile?.status || 'Active'}
               </div>
+              
+              {isAdmin && profile?.status === 'active' && (
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-4 flex items-start gap-1.5 leading-relaxed border-t border-gray-100 dark:border-white/10 pt-4">
+                  <ShieldAlert className="w-4 h-4 shrink-0 text-amber-500" />
+                  To mark this employee as inactive or offboarded, please use the Separation Tool in the main Employee Directory.
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* 🔥 NEW: Admin Security Override Card */}
+          {isAdmin && (
+            <div className="bg-rose-50 dark:bg-rose-500/5 border border-rose-200 dark:border-rose-500/20 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl">
+              <h3 className="text-lg font-bold text-rose-700 dark:text-rose-400 mb-2 flex items-center gap-2">
+                <Lock className="w-5 h-5" />
+                Security Access
+              </h3>
+              <p className="text-xs text-rose-600/80 dark:text-rose-400/80 mb-5 leading-relaxed">
+                As an administrator, you have the authority to forcibly override this user&apos;s password if they have lost access to their account.
+              </p>
+              
+              <button 
+                onClick={() => setIsResetModalOpen(true)}
+                className="w-full py-2.5 bg-white dark:bg-[#1a1a1a] border border-rose-200 dark:border-rose-500/30 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-500/20 rounded-xl text-sm font-bold transition-colors shadow-sm flex items-center justify-center gap-2"
+              >
+                <Key className="w-4 h-4" /> Reset Password
+              </button>
             </div>
           )}
 
         </div>
       </div>
+
+      {/* 🔥 NEW: Password Reset Modal */}
+      {isResetModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in-up">
+          <form onSubmit={handleForcePasswordReset} className="bg-white dark:bg-[#1a1a1a] rounded-3xl shadow-2xl max-w-sm w-full border border-gray-200 dark:border-white/10 overflow-hidden">
+            <div className="p-6 text-center">
+              <div className="w-16 h-16 bg-rose-100 dark:bg-rose-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Key className="w-8 h-8 text-rose-600 dark:text-rose-400" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Force Password Reset</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-6">
+                Enter a temporary password for <strong>{profile?.fullName || 'this user'}</strong>. They should change this immediately upon logging in.
+              </p>
+
+              <input 
+                type="text" 
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="e.g. SimpliSync2026"
+                required
+                minLength={6}
+                className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 outline-none text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-rose-500 text-center font-mono font-bold tracking-wide mb-6"
+              />
+
+              <div className="flex gap-3">
+                <button 
+                  type="button" 
+                  onClick={() => setIsResetModalOpen(false)}
+                  className="flex-1 py-3 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 rounded-xl text-sm font-bold transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={isResetting || newPassword.length < 6}
+                  className="flex-1 py-3 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-sm font-bold transition-colors shadow-md disabled:opacity-50 flex items-center justify-center"
+                >
+                  {isResetting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Set Password"}
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      )}
 
     </div>
   );
