@@ -231,8 +231,13 @@ export default function DashboardPage() {
                             <div key={log.id} className="relative pl-5">
                               <div className={`absolute -left-[5px] top-1.5 w-2.5 h-2.5 rounded-full ring-4 ring-white dark:ring-[#1a1a1a] ${log.status.toLowerCase().includes('late') ? 'bg-amber-500' : 'bg-emerald-500'}`}></div>
                               <div>
+                                {/* Dynamically show timeOut if it exists, otherwise show timeIn */}
                                 <div className="text-[10px] font-bold text-gray-400 mb-0.5 uppercase tracking-wider">
-                                  {log.timeIn ? log.timeIn.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Just now"}
+                                  {log.timeOut 
+                                    ? log.timeOut.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
+                                    : log.timeIn 
+                                      ? log.timeIn.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
+                                      : "Just now"}
                                 </div>
                                 <div className="text-sm text-gray-900 dark:text-white font-medium">
                                   <span className="font-bold">{log.fullName}</span> {log.timeOut ? "clocked out." : "clocked in."}
