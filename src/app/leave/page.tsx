@@ -6,14 +6,13 @@ import Navbar from "@/components/Navbar";
 import { collection, query, where, onSnapshot, addDoc, updateDoc, doc, serverTimestamp, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/hooks/useAuth";
-import { Calendar as CalendarIcon, Clock, CheckCircle, XCircle, ExternalLink, AlertCircle } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, CheckCircle, XCircle, ExternalLink } from "lucide-react";
 import toast from "react-hot-toast";
-
 interface LeaveRequest {
   id: string;
   userId: string;
   userName: string;
-  type: "vl" | "sl" | "sil";
+  type: "vl" | "sl" | "sil" | "lwop";
   startDate: string;
   endDate: string;
   reason: string;
@@ -29,8 +28,7 @@ export default function LeavePage() {
   const [requests, setRequests] = useState<LeaveRequest[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [balances, setBalances] = useState({ vl: 0, sl: 0, sil: 0 });
-  
-  const [type, setType] = useState<"vl" | "sl" | "sil">("vl");
+  const [type, setType] = useState<"vl" | "sl" | "sil" | "lwop">("vl");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [reason, setReason] = useState("");
@@ -76,14 +74,11 @@ export default function LeavePage() {
     return () => unsubscribeUser();
   }, [user?.uid, isAdmin]);
 
-  // Dynamic "True Balance" Calculator
   const getTrueBalance = (leaveType: "vl" | "sl" | "sil") => {
     const rawBalance = balances[leaveType];
     
-    // Find all pending requests for THIS user and THIS leave type
     const pendingReqs = requests.filter(r => r.userId === user?.uid && r.type === leaveType && r.status === "pending");
     
-    // Add up all the days they are trying to request
     const lockedDays = pendingReqs.reduce((total, req) => {
       const start = new Date(req.startDate);
       const end = new Date(req.endDate);
@@ -108,14 +103,16 @@ export default function LeavePage() {
 
     const diffDays = Math.ceil(Math.abs(end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
     
-    // Check against their TRUE balance, not their raw balance
-    const { available, locked } = getTrueBalance(type);
+    //  FIX: Bypass balance checking if they are requesting Leave Without Pay
+    if (type !== "lwop") {
+      const { available, locked } = getTrueBalance(type);
 
-    if (available < diffDays) {
-      if (locked > 0) {
-        return toast.error(`Insufficient true balance. You have ${locked} day(s) currently locked in pending requests.`);
+      if (available < diffDays) {
+        if (locked > 0) {
+          return toast.error(`Insufficient true balance. You have ${locked} day(s) currently locked in pending requests.`);
+        }
+        return toast.error(`Insufficient balance. You only have ${available} days available.`);
       }
-      return toast.error(`Insufficient balance. You only have ${available} days available.`);
     }
 
     setIsSubmitting(true);
@@ -152,7 +149,7 @@ export default function LeavePage() {
         const userRef = doc(db, "users", request.userId);
         const userSnap = await getDoc(userRef);
 
-        if (userSnap.exists()) {
+        if (userSnap.exists() && request.type !== "lwop") {
           const userData = userSnap.data();
           const creditKey = `${request.type}Credits`; 
           const currentCredits = userData[creditKey] || 0;
@@ -207,7 +204,7 @@ export default function LeavePage() {
                   {/* True Balance Visualization */}
                   <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl">
                     <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 text-center flex justify-center items-center gap-1.5">
-                      Available Balances
+                      Available Paid Balances
                     </h3>
                     <div className="grid grid-cols-3 gap-3">
                       {(["vl", "sl", "sil"] as const).map((lType) => {
@@ -231,10 +228,11 @@ export default function LeavePage() {
 
                   <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl">
                     <form onSubmit={handleSubmitRequest} className="space-y-4">
-                        <select value={type} onChange={(e) => setType(e.target.value as "vl" | "sl" | "sil")} className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500">
+                        <select value={type} onChange={(e) => setType(e.target.value as "vl" | "sl" | "sil" | "lwop")} className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500">
                           <option value="vl">Vacation Leave (VL)</option>
                           <option value="sl">Sick Leave (SL)</option>
                           <option value="sil">Incentive Leave (SIL)</option>
+                          <option value="lwop">Leave Without Pay (LWOP)</option>
                         </select>
                         <div className="grid grid-cols-2 gap-3">
                           <input type="date" required value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
@@ -267,7 +265,9 @@ export default function LeavePage() {
                           <div className="absolute top-0 left-0 w-1 h-full bg-amber-400"></div>
                           <div className="pl-2">
                             <div className="font-bold text-gray-900 dark:text-white">{req.userName}</div>
-                            <div className="text-[10px] font-bold text-teal-600 dark:text-teal-400 uppercase">{req.type} • {req.startDate} to {req.endDate}</div>
+                            <div className={`text-[10px] font-bold uppercase ${req.type === 'lwop' ? 'text-amber-600 dark:text-amber-400' : 'text-teal-600 dark:text-teal-400'}`}>
+                              {req.type} • {req.startDate} to {req.endDate}
+                            </div>
                             <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">&quot;{req.reason}&quot;</p>
                             
                             {req.attachmentUrl && (
@@ -313,7 +313,9 @@ export default function LeavePage() {
                             </a>
                           )}
                         </td>
-                        <td className="py-4 text-teal-600 dark:text-teal-400 font-bold uppercase text-xs">{req.type}</td>
+                        <td className={`py-4 font-bold uppercase text-xs ${req.type === 'lwop' ? 'text-amber-600 dark:text-amber-400' : 'text-teal-600 dark:text-teal-400'}`}>
+                          {req.type}
+                        </td>
                         <td className="py-4 hidden sm:table-cell text-xs text-gray-500">{req.startDate} to {req.endDate}</td>
                         <td className="py-4">{getStatusBadge(req.status)}</td>
                       </tr>

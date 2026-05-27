@@ -11,24 +11,26 @@ import AdminLogsTable from "@/components/AdminLogsTable";
 import EmployeeHistoryTable from "@/components/EmployeeHistoryTable";
 import HRChatbot from "@/components/HRChatbot";
 import { verifyLocationPing, resolveDanglingShift } from "@/services/attendance";
-import { Users, Activity, FileText, PieChart, Clock, ShieldAlert, Sparkles, Gift, XCircle } from "lucide-react"; 
+import { Users, Activity, FileText, Clock, ShieldAlert, Sparkles, Gift, XCircle, TrendingUp, CalendarCheck, AlertCircle, ArrowRight } from "lucide-react"; 
 import Link from "next/link";
 import toast from "react-hot-toast";
 
 interface Bonus { id: string; type: string; year: number; amount: number; distributedAt: { seconds: number } | null; }
 interface AttendanceLog { id: string; userId: string; timeIn: Date | null; timeOut: Date | null; status: string; fullName?: string; role?: string; }
 interface EmployeeData { id: string; fullName: string; department?: string; status?: string; [key: string]: unknown; }
-interface PendingLeave { id: string; userName: string; type: string; reason: string; status: string; }
+interface PendingLeave { id: string; userName: string; type: string; reason: string; status: string; startDate?: string; }
 interface Announcement { id: string; content: string; author: string; createdAt: { seconds: number } | null; }
 
 export default function DashboardPage() {
   const { user, isClockedIn } = useAuth(); 
   const isAdmin = user?.email === "admin@simplisync.local";
+  
   const [logs, setLogs] = useState<AttendanceLog[]>([]); 
   const [employees, setEmployees] = useState<EmployeeData[]>([]);
   const [pendingLeaves, setPendingLeaves] = useState<PendingLeave[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [bonuses, setBonuses] = useState<Bonus[]>([]);
+  
   const [danglingShift, setDanglingShift] = useState<AttendanceLog | null>(null);
   const [selectedMemo, setSelectedMemo] = useState<{id: string, content: string, author: string, createdAt: { seconds: number } | null} | null>(null);
   const [exceptionTime, setExceptionTime] = useState("");
@@ -38,14 +40,11 @@ export default function DashboardPage() {
   const getMemoTitle = (content: string) => {
     const lines = content.split('\n');
     const subjectLine = lines.find(line => line.toUpperCase().includes('SUBJECT:'));
-    
-    if (subjectLine) {
-      return subjectLine.replace(/\*\*/g, '').replace(/SUBJECT:/i, '').trim();
-    }
+    if (subjectLine) return subjectLine.replace(/\*\*/g, '').replace(/SUBJECT:/i, '').trim();
     return "Official Company Memorandum"; 
   };
 
-  const handleResolveException = async (e: React.SubmitEvent) => {
+  const handleResolveException = async (e: React.FormEvent) => {
     e.preventDefault(); 
     if (!user?.uid || !danglingShift) return; 
     setIsResolving(true);
@@ -69,17 +68,21 @@ export default function DashboardPage() {
     let unsubscribeUsers = () => {}; let unsubscribeLeaves = () => {};
 
     if (isAdmin) { 
-      unsubscribeUsers = onSnapshot(query(collection(db, "users"), where("role", "==", "employee")), (snap) => setEmployees(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as EmployeeData)).filter(emp => emp.status !== "inactive")));
+      unsubscribeUsers = onSnapshot(query(collection(db, "users"), where("role", "==", "employee")), (snap) => setEmployees(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as EmployeeData)).filter(emp => emp.status !== "inactive" && emp.status !== "Offboarded")));
       unsubscribeLeaves = onSnapshot(query(collection(db, "leaveRequests"), where("status", "==", "pending")), (snap) => setPendingLeaves(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as PendingLeave))));
     }
 
-    const baseQuery = isAdmin ? query(collection(db, "attendanceLogs"), orderBy("timeIn", "desc"), limit(50)) : query(collection(db, "attendanceLogs"), where("userId", "==", user.uid), orderBy("timeIn", "desc"), limit(30)); 
+    const baseQuery = isAdmin 
+      ? query(collection(db, "attendanceLogs"), orderBy("timeIn", "desc"), limit(50)) 
+      : query(collection(db, "attendanceLogs"), where("userId", "==", user.uid), orderBy("timeIn", "desc"), limit(30)); 
+      
     const unsubscribeLogs = onSnapshot(baseQuery, (snap) => { 
       const fetchedLogs = snap.docs.map(doc => {
         const data = doc.data();
         return { id: doc.id, userId: data.userId, timeIn: data.timeIn?.toDate(), timeOut: data.timeOut?.toDate(), status: data.status || "N/A", fullName: data.fullName, role: data.role } as AttendanceLog;
       });
       setLogs(fetchedLogs);
+      
       const dangling = fetchedLogs.find(log => { 
         if (!log.timeIn || log.timeOut || log.userId !== user.uid) return false;
         const today = new Date(); today.setHours(0, 0, 0, 0); 
@@ -104,27 +107,16 @@ export default function DashboardPage() {
     }
   }, [isClockedIn, user?.uid]);
 
- useEffect(() => {
+  useEffect(() => {
     if (!user?.uid || isAdmin) return; 
-
     const currentYear = new Date().getFullYear();
-    const q = query(
-      collection(db, "bonuses"), 
-      where("userId", "==", user.uid), 
-      where("year", "==", currentYear), 
-      orderBy("distributedAt", "desc")
-    );
-    
-    const unsubscribe = onSnapshot(q, (snap) => {
-      setBonuses(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Bonus)));
-    });
-    
+    const q = query(collection(db, "bonuses"), where("userId", "==", user.uid), where("year", "==", currentYear), orderBy("distributedAt", "desc"));
+    const unsubscribe = onSnapshot(q, (snap) => setBonuses(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Bonus))));
     return () => unsubscribe();
   }, [user?.uid, isAdmin]);
 
   const todaysLogsCount = logs.filter(log => log.timeIn && new Date(log.timeIn).toDateString() === new Date().toDateString()).length;
-  const deptBreakdown = employees.reduce((acc, emp) => { acc[emp.department || "Unassigned"] = (acc[emp.department || "Unassigned"] || 0) + 1; return acc; }, {} as Record<string, number>);
-
+  
   return (
     <ProtectedRoute>
       <main className="min-h-screen w-full relative overflow-x-hidden pt-[73px] bg-slate-50 dark:bg-[#0a0a0a] flex flex-col">
@@ -134,122 +126,219 @@ export default function DashboardPage() {
         <Navbar />
         
         <div className="relative z-10 w-full flex-grow flex flex-col max-w-7xl mx-auto px-4 sm:px-6 py-6 pb-24 lg:pb-8">
-          <div className="flex flex-col lg:flex-row gap-8 mb-8">
-            
-            <div className="w-full lg:w-1/3 flex flex-col space-y-6">
-              <h2 className="text-4xl font-bold text-gray-900 dark:text-white shrink-0">
-                Welcome, {user?.displayName || (user?.email?.split('@')[0] ? user.email.split('@')[0].charAt(0).toUpperCase() + user.email.split('@')[0].slice(1) : "User")}
-              </h2>
+          
+          <div className="mb-8">
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white shrink-0">
+              Welcome back, {user?.displayName || (user?.email?.split('@')[0] ? user.email.split('@')[0].charAt(0).toUpperCase() + user.email.split('@')[0].slice(1) : "User")}
+            </h2>
+            <p className="text-gray-500 dark:text-gray-400 mt-2 text-sm sm:text-base">
+              {isAdmin ? "Here is what is happening across your organization today." : "Here is your workspace overview."}
+            </p>
+          </div>
+          
+          {isAdmin ? (
+            <div className="flex flex-col gap-8 mb-8 w-full">
               
-              {isAdmin ? (
-                <div className="flex flex-col space-y-6">
-                  {/* Key Metrics Card */}
-                  <div className="p-4 sm:p-6 rounded-3xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 shadow-xl flex flex-col">
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2 pb-2"><Activity className="w-5 h-5 text-teal-500" /> Key Metrics</h3>
-                    <div className="grid grid-cols-2 gap-4 mb-5">
-                      <div className="p-4 rounded-2xl bg-slate-50 dark:bg-black/20 border border-gray-100 dark:border-white/5"><Users className="w-6 h-6 text-teal-500 mb-2" /><div className="text-2xl font-bold text-gray-900 dark:text-white">{employees.length}</div><div className="text-sm text-gray-500">Active Staff</div></div>
-                      <div className="p-4 rounded-2xl bg-slate-50 dark:bg-black/20 border border-gray-100 dark:border-white/5"><FileText className="w-6 h-6 text-emerald-500 mb-2" /><div className="text-2xl font-bold text-gray-900 dark:text-white">{todaysLogsCount}</div><div className="text-sm text-gray-500">Logs Today</div></div>
+              {/* KPI Widget Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 p-6 rounded-3xl shadow-lg hover:shadow-xl transition-shadow relative overflow-hidden group">
+                  <div className="absolute -right-6 -top-6 w-24 h-24 bg-blue-50 dark:bg-blue-500/10 rounded-full group-hover:scale-150 transition-transform duration-500 ease-out"></div>
+                  <div className="relative z-10 flex justify-between items-start">
+                    <div>
+                      <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Total Workforce</p>
+                      <h3 className="text-3xl font-black text-gray-900 dark:text-white">{employees.length}</h3>
                     </div>
-                    <div className="pt-2 border-t border-gray-100 dark:border-white/10">
-                      <h4 className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-3 flex items-center gap-2"><PieChart className="w-4 h-4" /> Department Breakdown</h4> 
-                      <div className="space-y-2">{Object.entries(deptBreakdown).map(([dept, count]) => (<div key={dept} className="flex justify-between items-center text-sm"><span className="text-gray-600">{dept}</span><span className="font-medium bg-slate-100 dark:bg-white/10 px-2 py-0.5 rounded-full">{count}</span></div>))}</div>
-                    </div>
-                  </div>
-
-                  {/* Pending Actions Card */}
-                  <div className="p-4 sm:p-6 rounded-3xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 shadow-xl flex flex-col">
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2 pb-2"><Clock className="w-5 h-5 text-amber-500" /> Pending Actions</h3>
-                    {pendingLeaves.length > 0 ? (
-                      <div className="space-y-2">{pendingLeaves.slice(0, 3).map(leave => (<Link href="/leave" key={leave.id} className="block p-3 rounded-xl bg-amber-50/50 dark:bg-amber-500/5 hover:bg-amber-50 border border-amber-100/50 transition-colors"><div className="flex justify-between items-center mb-1"><span className="text-sm font-semibold truncate">{leave.userName}</span><span className="text-[10px] font-bold text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded">{leave.type.toUpperCase()}</span></div></Link>))}</div>
-                    ) : (
-                      <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-100 text-sm text-amber-800">No pending requests.</div>
-                    )}
+                    <div className="p-3 bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-2xl"><Users className="w-5 h-5" /></div>
                   </div>
                 </div>
-              ) : (
-                <div className="flex flex-col gap-6">
-                  {/* Existing Clock-in Card */}
-                  <div className="p-5 sm:p-8 rounded-3xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 shadow-xl">
-                    <ClockInButton />
-                    <div className="my-6 h-px bg-gray-200 dark:bg-white/10"></div>
-                    <ClockOutButton />
+
+                <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 p-6 rounded-3xl shadow-lg hover:shadow-xl transition-shadow relative overflow-hidden group">
+                  <div className="absolute -right-6 -top-6 w-24 h-24 bg-emerald-50 dark:bg-emerald-500/10 rounded-full group-hover:scale-150 transition-transform duration-500 ease-out"></div>
+                  <div className="relative z-10 flex justify-between items-start">
+                    <div>
+                      <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Present Today</p>
+                      <h3 className="text-3xl font-black text-gray-900 dark:text-white">{todaysLogsCount}</h3>
+                    </div>
+                    <div className="p-3 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-2xl"><FileText className="w-5 h-5" /></div>
+                  </div>
+                </div>
+
+                <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 p-6 rounded-3xl shadow-lg hover:shadow-xl transition-shadow relative overflow-hidden group">
+                  <div className="absolute -right-6 -top-6 w-24 h-24 bg-amber-50 dark:bg-amber-500/10 rounded-full group-hover:scale-150 transition-transform duration-500 ease-out"></div>
+                  <div className="relative z-10 flex justify-between items-start">
+                    <div>
+                      <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Pending Leaves</p>
+                      <h3 className="text-3xl font-black text-gray-900 dark:text-white">{pendingLeaves.length}</h3>
+                    </div>
+                    <div className="p-3 bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 rounded-2xl"><CalendarCheck className="w-5 h-5" /></div>
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-br from-teal-600 to-emerald-500 p-6 rounded-3xl shadow-lg hover:shadow-xl transition-shadow relative overflow-hidden group">
+                   <div className="absolute -right-6 -top-6 w-24 h-24 bg-white/10 rounded-full group-hover:scale-150 transition-transform duration-500 ease-out"></div>
+                   <div className="relative z-10 flex justify-between items-start">
+                    <div>
+                      <p className="text-[10px] font-bold text-teal-100 uppercase tracking-widest mb-1">Company Status</p>
+                      <h3 className="text-xl font-black text-white mt-1 leading-tight">Operations<br/>Nominal</h3>
+                    </div>
+                    <div className="p-3 bg-white/20 text-white rounded-2xl"><TrendingUp className="w-5 h-5" /></div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Lower Section Split */}
+              <div className="flex flex-col lg:flex-row gap-8">
+                
+                {/* Left Column: Action Center & Activity */}
+                <div className="w-full lg:w-1/3 flex flex-col gap-6">
+                  
+                  {/* Action Center */}
+                  <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl">
+                    <div className="flex justify-between items-center mb-6">
+                      <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2"><AlertCircle className="w-4 h-4 text-amber-500" /> Action Required</h3>
+                      <Link href="/leave" className="text-xs font-bold text-teal-600 dark:text-teal-400 hover:text-teal-700 transition-colors flex items-center gap-1">View All <ArrowRight className="w-3 h-3" /></Link>
+                    </div>
+                    <div className="flex flex-col gap-3">
+                      {pendingLeaves.length > 0 ? (
+                        pendingLeaves.slice(0, 3).map(leave => (
+                          <div key={leave.id} className="p-3.5 rounded-2xl bg-slate-50 dark:bg-black/20 border border-gray-100 dark:border-white/5 flex justify-between items-center group hover:border-amber-200 dark:hover:border-amber-500/30 transition-colors">
+                            <div>
+                              <div className="font-bold text-sm text-gray-900 dark:text-white truncate max-w-[120px]">{leave.userName}</div>
+                              <div className="text-[10px] font-semibold text-gray-500 mt-0.5 uppercase tracking-wide text-teal-600 dark:text-teal-400">{leave.type} Leave</div>
+                            </div>
+                            <Link href="/leave" className="px-3 py-1.5 bg-white dark:bg-white/10 border border-gray-200 dark:border-white/10 text-[10px] font-bold text-gray-700 dark:text-gray-300 rounded-lg shadow-sm group-hover:bg-amber-500 group-hover:text-white group-hover:border-amber-500 transition-all uppercase tracking-wider">Review</Link>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="py-6 text-center bg-slate-50 dark:bg-white/[0.02] rounded-2xl border border-dashed border-gray-200 dark:border-white/10">
+                          <CalendarCheck className="w-6 h-6 text-emerald-400 mb-2 opacity-50 mx-auto" />
+                          <p className="text-xs font-bold text-gray-600 dark:text-gray-400">All caught up!</p>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
-                  {/* Employee Benefits Card */}
-                  <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-rose-500/10 to-orange-500/10 border border-rose-200 dark:border-rose-500/20 shadow-xl">
-                    <h3 className="text-lg font-bold text-rose-900 dark:text-rose-400 mb-4 flex items-center gap-2">
-                      <Gift className="w-5 h-5" /> My Benefits & Bonuses
-                    </h3>
-                    
-                    {bonuses.length > 0 ? (
-                      <div className="space-y-3">
-                        {bonuses.map(bonus => (
-                          <div key={bonus.id} className="bg-white dark:bg-black/40 p-4 rounded-2xl border border-rose-100 dark:border-rose-500/10 flex items-center justify-between">
-                            <div>
-                              <div className="text-sm font-bold text-gray-900 dark:text-white">{bonus.type}</div>
-                              <div className="text-[10px] text-gray-500 uppercase tracking-wider">{bonus.year} • Distributed</div>
+                  {/* Live Activity Feed */}
+                  <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl flex-1">
+                     <div className="flex justify-between items-center mb-6">
+                      <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2"><Activity className="w-4 h-4 text-blue-500" /> Live Feed</h3>
+                      <Link href="/timesheets" className="text-xs font-bold text-teal-600 dark:text-teal-400 hover:text-teal-700 transition-colors flex items-center gap-1">Logs <ArrowRight className="w-3 h-3" /></Link>
+                    </div>
+                    <div>
+                      {logs.length > 0 ? (
+                        <div className="relative border-l border-gray-200 dark:border-white/10 ml-2 space-y-5 pb-2">
+                          {logs.slice(0, 4).map(log => (
+                            <div key={log.id} className="relative pl-5">
+                              <div className={`absolute -left-[5px] top-1.5 w-2.5 h-2.5 rounded-full ring-4 ring-white dark:ring-[#1a1a1a] ${log.status.toLowerCase().includes('late') ? 'bg-amber-500' : 'bg-emerald-500'}`}></div>
+                              <div>
+                                <div className="text-[10px] font-bold text-gray-400 mb-0.5 uppercase tracking-wider">
+                                  {log.timeIn ? log.timeIn.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Just now"}
+                                </div>
+                                <div className="text-sm text-gray-900 dark:text-white font-medium">
+                                  <span className="font-bold">{log.fullName}</span> {log.timeOut ? "clocked out." : "clocked in."}
+                                </div>
+                              </div>
                             </div>
-                            <div className="text-lg font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                              +₱{bonus.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-4 bg-white/50 dark:bg-black/20 rounded-2xl border border-white/20 dark:border-white/5">
-                        <p className="text-sm text-gray-500 dark:text-gray-400 italic">No bonuses distributed yet.</p>
-                      </div>
-                    )}
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="py-8 text-center bg-slate-50 dark:bg-white/[0.02] rounded-2xl border border-dashed border-gray-200 dark:border-white/10">
+                          <p className="text-xs font-bold text-gray-600 dark:text-gray-400">No activity yet</p>
+                        </div>
+                      )}
+                    </div>
                   </div>
+
+                </div>
+
+                {/* Right Column: Admin Logs Table */}
+                <div className="w-full lg:w-2/3">
+                  <AdminLogsTable />
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col lg:flex-row gap-8 mb-8 w-full">
+              <div className="w-full lg:w-1/3 flex flex-col space-y-6">
+                
+                <div className="p-5 sm:p-8 rounded-3xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 shadow-xl">
+                  <ClockInButton />
+                  <div className="my-6 h-px bg-gray-200 dark:bg-white/10"></div>
+                  <ClockOutButton />
+                </div>
+
+                <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-rose-500/10 to-orange-500/10 border border-rose-200 dark:border-rose-500/20 shadow-xl">
+                  <h3 className="text-lg font-bold text-rose-900 dark:text-rose-400 mb-4 flex items-center gap-2">
+                    <Gift className="w-5 h-5" /> My Benefits & Bonuses
+                  </h3>
+                  {bonuses.length > 0 ? (
+                    <div className="space-y-3">
+                      {bonuses.map(bonus => (
+                        <div key={bonus.id} className="bg-white dark:bg-black/40 p-4 rounded-2xl border border-rose-100 dark:border-rose-500/10 flex items-center justify-between">
+                          <div>
+                            <div className="text-sm font-bold text-gray-900 dark:text-white">{bonus.type}</div>
+                            <div className="text-[10px] text-gray-500 uppercase tracking-wider">{bonus.year} • Distributed</div>
+                          </div>
+                          <div className="text-lg font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                            +₱{bonus.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-4 bg-white/50 dark:bg-black/20 rounded-2xl border border-white/20 dark:border-white/5">
+                      <p className="text-sm text-gray-500 dark:text-gray-400 italic">No bonuses distributed yet.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="w-full lg:w-2/3">
+                <EmployeeHistoryTable />
+              </div>
+            </div>
+          )}
+
+          {/* COMMON AREA: COMPANY MEMOS */}
+          <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl col-span-1 lg:col-span-2">
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-indigo-500" />
+              Company Memos & Updates
+            </h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {announcements.length > 0 ? (
+                announcements.map((memo) => (
+                  <div 
+                    key={memo.id} 
+                    onClick={() => setSelectedMemo(memo)}
+                    className="group cursor-pointer p-5 bg-slate-50 dark:bg-black/20 rounded-2xl border border-gray-100 dark:border-white/5 hover:border-indigo-500/50 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-all duration-300 flex flex-col justify-between min-h-[120px]"
+                  >
+                    <div>
+                      <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider mb-2 block">
+                        {memo.createdAt ? new Date(memo.createdAt.seconds * 1000).toLocaleDateString() : "New"} • From {memo.author}
+                      </span>
+                      <h4 className="text-sm font-bold text-gray-900 dark:text-white line-clamp-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                        {getMemoTitle(memo.content)}
+                      </h4>
+                    </div>
+                    <div className="mt-4 flex items-center text-xs font-bold text-gray-400 group-hover:text-indigo-500 transition-colors">
+                      Click to read full memo &rarr;
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="col-span-full py-8 text-center text-gray-500 italic bg-slate-50 dark:bg-black/10 rounded-2xl border border-dashed border-gray-200 dark:border-white/10">
+                  No new company announcements.
                 </div>
               )}
             </div>
-
-            <div className="w-full lg:w-2/3">
-              {isAdmin ? <AdminLogsTable /> : <EmployeeHistoryTable />}
-            </div>
           </div>
-
-          {/* AI ANNOUNCEMENTS WIDGET */}
-          <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl col-span-1 lg:col-span-2">
-  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-    <Sparkles className="w-5 h-5 text-indigo-500" />
-    Company Memos & Updates
-  </h3>
-  
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-    {announcements.length > 0 ? (
-      announcements.map((memo) => (
-        <div 
-          key={memo.id} 
-          onClick={() => setSelectedMemo(memo)}
-          className="group cursor-pointer p-5 bg-slate-50 dark:bg-black/20 rounded-2xl border border-gray-100 dark:border-white/5 hover:border-indigo-500/50 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-all duration-300 flex flex-col justify-between min-h-[120px]"
-        >
-          <div>
-            <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider mb-2 block">
-              {memo.createdAt ? new Date(memo.createdAt.seconds * 1000).toLocaleDateString() : "New"} • From {memo.author}
-            </span>
-            <h4 className="text-sm font-bold text-gray-900 dark:text-white line-clamp-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-              {getMemoTitle(memo.content)}
-            </h4>
-          </div>
-          <div className="mt-4 flex items-center text-xs font-bold text-gray-400 group-hover:text-indigo-500 transition-colors">
-            Click to read full memo &rarr;
-          </div>
-        </div>
-      ))
-    ) : (
-      <div className="col-span-full py-8 text-center text-gray-500 italic bg-slate-50 dark:bg-black/10 rounded-2xl border border-dashed border-gray-200 dark:border-white/10">
-        No new company announcements.
-      </div>
-    )}
-  </div>
-</div>
         </div>
 
         <HRChatbot logs={logs} />
         
-        {/* Dangling Shift Modal */}
+        {/* Dangling Shift Modal (Employee Only) */}
         {danglingShift && !isAdmin && (
           <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-fade-in">
             <div className="bg-white dark:bg-[#1a1a1a] p-6 sm:p-8 rounded-3xl shadow-2xl max-w-lg w-full border border-rose-200 dark:border-rose-500/30">
@@ -265,37 +354,31 @@ export default function DashboardPage() {
         )}
 
         {/* The Reading Modal */}
-{selectedMemo && (
-  <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-    <div className="bg-white dark:bg-[#151515] w-full max-w-2xl rounded-3xl shadow-2xl border border-gray-200 dark:border-white/10 flex flex-col max-h-[85vh]">
-      
-      {/* Modal Header */}
-      <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-white/10 sticky top-0 bg-white dark:bg-[#151515] z-10 rounded-t-3xl">
-        <div>
-          <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-            {getMemoTitle(selectedMemo.content)}
-          </h3>
-          <p className="text-xs text-gray-500 mt-1 uppercase tracking-wider font-bold">
-            Published by {selectedMemo.author} • {selectedMemo.createdAt ? new Date(selectedMemo.createdAt.seconds * 1000).toLocaleDateString() : ""}
-          </p>
-        </div>
-        <button 
-          onClick={() => setSelectedMemo(null)} 
-          className="text-gray-400 hover:text-rose-500 transition-colors bg-slate-100 dark:bg-white/5 p-2 rounded-full"
-        >
-          <XCircle className="w-6 h-6" />
-        </button>
-      </div>
-
-      {/* Modal Body (Scrollable) */}
-      <div className="p-8 overflow-y-auto custom-scrollbar flex-1 text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
-        {/* We use replace to clean up some of the heavy markdown asterisks for a cleaner reading experience */}
-        {selectedMemo.content.replace(/\*\*/g, '')}
-      </div>
-      
-    </div>
-  </div>
-)}
+        {selectedMemo && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <div className="bg-white dark:bg-[#151515] w-full max-w-2xl rounded-3xl shadow-2xl border border-gray-200 dark:border-white/10 flex flex-col max-h-[85vh]">
+              <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-white/10 sticky top-0 bg-white dark:bg-[#151515] z-10 rounded-t-3xl">
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                    {getMemoTitle(selectedMemo.content)}
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-1 uppercase tracking-wider font-bold">
+                    Published by {selectedMemo.author} • {selectedMemo.createdAt ? new Date(selectedMemo.createdAt.seconds * 1000).toLocaleDateString() : ""}
+                  </p>
+                </div>
+                <button 
+                  onClick={() => setSelectedMemo(null)} 
+                  className="text-gray-400 hover:text-rose-500 transition-colors bg-slate-100 dark:bg-white/5 p-2 rounded-full"
+                >
+                  <XCircle className="w-6 h-6" />
+                </button>
+              </div>
+              <div className="p-8 overflow-y-auto custom-scrollbar flex-1 text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
+                {selectedMemo.content.replace(/\*\*/g, '')}
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </ProtectedRoute>
   );

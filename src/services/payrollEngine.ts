@@ -127,3 +127,26 @@ export const calculateTimeDeductionPeso = (penaltyMinutes: number, hourlyRate: n
   const minuteRate = hourlyRate / 60;
   return penaltyMinutes * minuteRate;
 };
+
+// DOLE Overtime Calculation (+25% premium for regular workdays past 6:00 PM)
+export const calculateOvertimePay = (timeOut: Date | null, hourlyRate: number) => {
+  if (!timeOut) return { otMinutes: 0, otPay: 0 };
+  
+  // Set the official overtime start threshold to 18:00 (6:00 PM)
+  const otStartHour = 18; 
+  const targetTime = new Date(timeOut);
+  targetTime.setHours(otStartHour, 0, 0, 0);
+  
+  const diffMs = timeOut.getTime() - targetTime.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  
+  if (diffMins <= 0) return { otMinutes: 0, otPay: 0 };
+  
+  const otHourlyRate = hourlyRate * 1.25;
+  const otMinuteRate = otHourlyRate / 60;
+  
+  return {
+    otMinutes: diffMins,
+    otPay: diffMins * otMinuteRate
+  };
+};

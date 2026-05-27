@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { clockInEmployee } from "@/services/attendance"; 
+import { collection, query, where, onSnapshot } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import toast from "react-hot-toast";
 import { AlertTriangle, Send, X } from "lucide-react";
 
@@ -18,8 +20,43 @@ export default function ClockInButton() {
   const [isLateModalOpen, setIsLateModalOpen] = useState(false);
   const [lateReason, setLateReason] = useState("");
   const [pendingCoords, setPendingCoords] = useState<Coordinates | null>(null);
+  const [hasLoggedToday, setHasLoggedToday] = useState<boolean | null>(null);
+  const [prevUserId, setPrevUserId] = useState<string | undefined>(user?.uid);
+
+  if (user?.uid !== prevUserId) {
+    setPrevUserId(user?.uid);
+    setHasLoggedToday(null); 
+  }
+
+  const isCheckingToday = user?.uid ? (hasLoggedToday === null) : false;
+
+  useEffect(() => {
+    if (!user?.uid) return;
+
+    const today = new Date();
+    const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
+    const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
+
+    const q = query(
+      collection(db, "attendanceLogs"),
+      where("userId", "==", user.uid),
+      where("timeIn", ">=", startOfToday),
+      where("timeIn", "<=", endOfToday)
+    );
+
+    // Asynchronous listener callback (Highly optimized & completely safe for state setting)
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setHasLoggedToday(!snapshot.empty);
+    }, (error) => {
+      console.error("Error checking today's logs:", error);
+      setHasLoggedToday(false);
+    });
+
+    return () => unsubscribe();
+  }, [user?.uid]);
+
   const handleClockInClick = () => {
-    if (!user || isClockedIn) return; 
+    if (!user || isClockedIn || hasLoggedToday === true || isCheckingToday) return; 
 
     setIsLoading(true);
     setStatusMsg(""); 
@@ -39,7 +76,6 @@ export default function ClockInButton() {
         (position) => {
           const { latitude, longitude } = position.coords;
 
-          // 🔥 Check if the employee is late (Past 08:00 AM)
           const now = new Date();
           const currentHour = now.getHours();
           const currentMinute = now.getMinutes();
@@ -47,13 +83,11 @@ export default function ClockInButton() {
           const isLate = currentHour > 8 || (currentHour === 8 && currentMinute > 0);
 
           if (isLate) {
-            // Pause the clock-in and ask for a reason
             setPendingCoords({ lat: latitude, lng: longitude });
             setIsLateModalOpen(true);
             setIsLoading(false);
             setStatusMsg("");
           } else {
-            // On time! Proceed directly.
             executeClockIn(latitude, longitude);
           }
         },
@@ -78,7 +112,6 @@ export default function ClockInButton() {
       setStatusMsg("Ika'y nakapag Clock In na!"); 
       toast.success("Successfully clocked in.");
       
-      // Cleanup
       setIsLateModalOpen(false);
       setLateReason("");
       setPendingCoords(null);
@@ -103,21 +136,21 @@ export default function ClockInButton() {
   };
 
   const isSuccessMessage = statusMsg.includes("Successfully") || statusMsg.includes("nakapag Clock In na");
-  const shouldShowMessage = statusMsg !== "" && (!isSuccessMessage || isClockedIn);
+  const shouldShowMessage = (statusMsg !== "" && (!isSuccessMessage || isClockedIn)) || (hasLoggedToday === true && !isClockedIn);
 
   return (
     <div className="relative flex flex-col items-center w-full max-w-sm mx-auto">
       
       <button 
         onClick={handleClockInClick} 
-        disabled={isLoading || isClockedIn}
+        disabled={isLoading || isClockedIn || hasLoggedToday === true || isCheckingToday}
         className={`relative z-20 flex flex-col items-center justify-center w-40 h-40 rounded-full text-white font-bold transition-all shadow-2xl disabled:opacity-80 active:scale-95 ${
-          isClockedIn 
+          (isClockedIn || hasLoggedToday === true || isCheckingToday)
             ? "bg-slate-300 dark:bg-white/10 cursor-not-allowed border-4 border-slate-200 dark:border-white/5" 
             : "bg-gradient-to-tr from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 hover:shadow-emerald-500/50 hover:-translate-y-1"
         }`}
       >
-        {isLoading ? (
+        {isLoading || isCheckingToday ? (
           <>
             <svg className="animate-spin w-10 h-10 mb-2 opacity-90" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -125,12 +158,14 @@ export default function ClockInButton() {
             </svg>
             <span className="text-sm uppercase tracking-widest drop-shadow-md animate-pulse">Syncing...</span>
           </>
-        ) : isClockedIn ? (
+        ) : isClockedIn || hasLoggedToday === true ? (
           <>
             <svg className="w-10 h-10 mb-1 opacity-50 drop-shadow-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <span className="text-sm uppercase tracking-widest text-gray-500 drop-shadow-md text-center">Active<br/>Shift</span>
+            <span className="text-sm uppercase tracking-widest text-gray-500 drop-shadow-md text-center">
+              {hasLoggedToday === true && !isClockedIn ? "Shift\nEnded" : "Active\nShift"}
+            </span>
           </>
         ) : (
           <>
@@ -148,7 +183,9 @@ export default function ClockInButton() {
             ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30" 
             : "bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20"
         }`}>
-          {statusMsg}
+          {hasLoggedToday === true && !isClockedIn 
+            ? "You have already completed a shift today. Please contact HR for manual adjustments." 
+            : statusMsg}
         </div>
       )}
 

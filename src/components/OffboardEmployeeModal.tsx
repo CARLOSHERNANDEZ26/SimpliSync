@@ -5,11 +5,13 @@ import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import toast from "react-hot-toast";
 import { X, UserMinus, AlertTriangle } from "lucide-react";
+import { logSystemAction } from "@/lib/audit"; 
+import { useAuth } from "@/hooks/useAuth"; 
 
 interface Employee {
   id: string;
-  fullName: string;
-  name: string;
+  fullName?: string;
+  name?: string;
 }
 
 interface OffboardModalProps {
@@ -18,12 +20,14 @@ interface OffboardModalProps {
 }
 
 export default function OffboardEmployeeModal({ employee, onClose }: OffboardModalProps) {
+  const { user } = useAuth(); 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [offboardType, setOffboardType] = useState("Resigned");
   const [offboardDate, setOffboardDate] = useState("");
 
   const handleOffboard = async (e: React.FormEvent) => {
     e.preventDefault();
+    
     if (!offboardDate) {
       toast.error("Please provide the effective date.");
       return;
@@ -33,17 +37,25 @@ export default function OffboardEmployeeModal({ employee, onClose }: OffboardMod
     try {
       const userRef = doc(db, "users", employee.id);
       
-      // We update their status and permanently save the offboarding details
       await updateDoc(userRef, {
-        status: offboardType, // Overwrites "active" with "Resigned", etc.
+        status: offboardType,
         offboardDate: offboardDate,
-        workStatus: "Offline", // Ensures they can't be stuck "Working"
+        workStatus: "Offline",
         offboardedAt: serverTimestamp()
       });
 
-      toast.success(`${employee.fullName || employee.name} has been successfully offboarded.`);
+      // Silently log the action to the audit trail
+      if (user?.email) {
+        await logSystemAction(
+          "HR_ACTION",
+          `Offboarded employee ${employee.fullName || employee.name || "Unknown"}. Reason: ${offboardType}. Effective Date: ${offboardDate}.`,
+          user.email
+        );
+      }
+
+      toast.success(`${employee.fullName || employee.name || "Employee"} has been successfully offboarded.`);
       onClose();
-    } catch (error) {
+    } catch (error: unknown) { 
       console.error("Offboarding Error:", error);
       toast.error("Failed to offboard employee.");
     } finally {
@@ -68,7 +80,7 @@ export default function OffboardEmployeeModal({ employee, onClose }: OffboardMod
           <div className="flex items-start gap-3 bg-amber-50 dark:bg-amber-500/10 p-4 rounded-xl border border-amber-200 dark:border-amber-500/20 mb-6">
             <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0" />
             <p className="text-xs text-amber-800 dark:text-amber-200 leading-relaxed">
-              You are about to offboard <strong className="font-bold">{employee.fullName || employee.name}</strong>. This will revoke their access to active systems while preserving their historical logs for DOLE audits and Final Pay calculations.
+              You are about to offboard <strong className="font-bold">{employee.fullName || employee.name || "this employee"}</strong>. This will revoke their access to active systems while preserving their historical logs for DOLE audits and Final Pay calculations.
             </p>
           </div>
 

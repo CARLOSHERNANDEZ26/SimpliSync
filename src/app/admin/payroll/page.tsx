@@ -6,7 +6,7 @@ import Navbar from "@/components/Navbar";
 import { useAuth } from "@/hooks/useAuth";
 import { collection, query, where, onSnapshot, doc, updateDoc, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { Banknote, Edit2, Save, XCircle, Search, Calculator, Calendar, FileText, CheckCircle2, Download } from "lucide-react";
+import { Banknote, Edit2, Save, XCircle, Search, Calculator, Calendar, FileText, CheckCircle2, Download, Printer, ArrowLeft } from "lucide-react";
 import toast from "react-hot-toast";
 
 import { calculateMandatoryDeductions } from "@/lib/deductions";  
@@ -14,7 +14,8 @@ import {
   calculateHourlyRate, 
   calculateLatePenaltyMinutes, 
   calculateUndertimeMinutes, 
-  calculateTimeDeductionPeso 
+  calculateTimeDeductionPeso,
+  calculateOvertimePay 
 } from "@/services/payrollEngine";
 
 interface EmployeePayroll {
@@ -36,6 +37,8 @@ interface PayrollResult {
   totalLateMins: number;
   totalUndertimeMins: number;
   timePenaltiesPeso: number;
+  totalOtMinutes: number; 
+  otPayPeso: number;      
   sss: number;
   philhealth: number;
   pagibig: number;
@@ -64,6 +67,7 @@ export default function PayrollPage() {
   
   const [payrollData, setPayrollData] = useState<Record<string, PayrollResult>>({});
   const [isGenerating, setIsGenerating] = useState(false);
+  const [selectedPayslip, setSelectedPayslip] = useState<{ emp: EmployeePayroll; result: PayrollResult } | null>(null);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -85,10 +89,7 @@ export default function PayrollPage() {
     setIsSaving(true);
     try {
       await updateDoc(doc(db, "users", empId), { baseSalary: Number(editSalary), salaryType: editType });
-      toast.success('Compensation details updated!', { 
-        duration: 1000,
-      });
-      
+      toast.success('Compensation details updated!', { duration: 1000 });
       setEditingId(null);
     } catch (error) {
       console.error(error);
@@ -117,9 +118,8 @@ export default function PayrollPage() {
         if (!emp.baseSalary) continue; 
 
         const hourlyRate = emp.salaryType === "hourly" ? emp.baseSalary : calculateHourlyRate(emp.baseSalary);
-        const dailyRate = hourlyRate * 8; // Derived daily rate for absence deductions
+        const dailyRate = hourlyRate * 8; 
 
-        // --- 1. SCAN ATTENDANCE (LATES / UNDERTIME / DAYS PRESENT) ---
         const attQuery = query(
           collection(db, "attendanceLogs"),
           where("userId", "==", emp.id),
@@ -130,6 +130,8 @@ export default function PayrollPage() {
 
         let totalLateMins = 0;
         let totalUndertimeMins = 0;
+        let totalOtMinutes = 0;
+        let otPayPeso = 0;
         const uniqueDaysPresent = new Set<string>();
 
         attSnap.forEach(doc => {
@@ -137,19 +139,21 @@ export default function PayrollPage() {
           if (data.timeIn) {
             const dateStr = data.timeIn.toDate().toISOString().split('T')[0];
             uniqueDaysPresent.add(dateStr);
-            
-            // Only calculate penalty if the Admin HAS NOT excused it!
             if (!data.isLateExcused) {
               totalLateMins += calculateLatePenaltyMinutes(data.timeIn.toDate(), "08:00");
             }
           }
           if (data.timeOut) {
             totalUndertimeMins += calculateUndertimeMinutes(data.timeOut.toDate(), "17:00");
+            
+            // Calculate OT for this shift
+            const otResult = calculateOvertimePay(data.timeOut.toDate(), hourlyRate);
+            totalOtMinutes += otResult.otMinutes;
+            otPayPeso += otResult.otPay;
           }
         });
         const daysPresent = uniqueDaysPresent.size;
 
-        // --- 2. SCAN APPROVED LEAVES (PAID LEAVE DAYS) ---
         const leaveQuery = query(
           collection(db, "leaveRequests"),
           where("userId", "==", emp.id),
@@ -160,12 +164,14 @@ export default function PayrollPage() {
         let paidLeaveDays = 0;
         leaveSnap.forEach(doc => {
           const data = doc.data();
+
+          if (data.type === "lwop") return; 
+
           const leaveStart = new Date(data.startDate);
           leaveStart.setHours(0, 0, 0, 0);
           const leaveEnd = new Date(data.endDate);
           leaveEnd.setHours(23, 59, 59, 999);
 
-          // Check if the leave falls within our 15-day cutoff
           if (leaveStart <= endDate && leaveEnd >= startDate) {
             const overlapStart = leaveStart < startDate ? startDate : leaveStart;
             const overlapEnd = leaveEnd > endDate ? endDate : leaveEnd;
@@ -175,17 +181,14 @@ export default function PayrollPage() {
           }
         });
 
-        // --- 3. CALCULATE ABSENCES & DEDUCTIONS ---
-        const expectedDaysInCutoff = 11; // Standard 22 working days / 2 cutoffs
+        const expectedDaysInCutoff = 11; 
         let unpaidAbsences = 0;
         let absenceDeductionPeso = 0;
 
-        // Only monthly employees get deducted for absences. Hourly employees just aren't paid for them.
         if (emp.salaryType === "monthly") {
           unpaidAbsences = expectedDaysInCutoff - (daysPresent + paidLeaveDays);
           if (unpaidAbsences < 0) unpaidAbsences = 0;
           if (unpaidAbsences > expectedDaysInCutoff) unpaidAbsences = expectedDaysInCutoff;
-          
           absenceDeductionPeso = unpaidAbsences * dailyRate;
         }
 
@@ -196,39 +199,32 @@ export default function PayrollPage() {
         const lateDeductionPeso = calculateTimeDeductionPeso(totalLateMins, hourlyRate);
         const undertimeDeductionPeso = calculateTimeDeductionPeso(totalUndertimeMins, hourlyRate);
         const totalTimePenalties = lateDeductionPeso + undertimeDeductionPeso;
-        
         const totalAttendanceDeductions = totalTimePenalties + absenceDeductionPeso;
 
-        // --- 4. CALCULATE GOV DEDUCTIONS ---
         const estimatedMonthlyForGov = emp.salaryType === "hourly" ? (hourlyRate * 8 * 22) : emp.baseSalary;
-        let mandatory = { sss: 0, philhealth: 0, pagibig: 0, totalMandatory: 0, taxableIncome: semiMonthlyBase - totalAttendanceDeductions };
+        
+        // Add Overtime to taxable income base
+        const grossPay = semiMonthlyBase + otPayPeso; 
+        
+        let mandatory = { sss: 0, philhealth: 0, pagibig: 0, totalMandatory: 0, taxableIncome: grossPay - totalAttendanceDeductions };
+        
         if (applyDeductions) {
           mandatory = calculateMandatoryDeductions(estimatedMonthlyForGov, cutoffPeriod);
         }
 
-        const netPay = semiMonthlyBase - totalAttendanceDeductions - mandatory.totalMandatory;
+        const netPay = grossPay - totalAttendanceDeductions - mandatory.totalMandatory;
 
         generatedResults[emp.id] = {
-          semiMonthlyBase,
-          hourlyRate,
-          daysPresent,
-          paidLeaveDays,
-          unpaidAbsences,
-          absenceDeductionPeso,
-          totalLateMins,
-          totalUndertimeMins,
-          timePenaltiesPeso: totalTimePenalties,
-          sss: mandatory.sss,
-          philhealth: mandatory.philhealth,
-          pagibig: mandatory.pagibig,
-          totalMandatory: mandatory.totalMandatory,
-          netPay
+          semiMonthlyBase, hourlyRate, daysPresent, paidLeaveDays, unpaidAbsences, absenceDeductionPeso,
+          totalLateMins, totalUndertimeMins, timePenaltiesPeso: totalTimePenalties,
+          totalOtMinutes, otPayPeso,
+          sss: mandatory.sss, philhealth: mandatory.philhealth, pagibig: mandatory.pagibig,
+          totalMandatory: mandatory.totalMandatory, netPay
         };
       }
 
       setPayrollData(generatedResults);
       toast.success(`Payroll generated for ${Object.keys(generatedResults).length} employees!`);
-
     } catch (error) {
       console.error("Payroll Engine Error:", error);
       toast.error("Failed to generate payroll. Check console.");
@@ -242,14 +238,14 @@ export default function PayrollPage() {
     const year = selectedMonth.split('-')[0];
     const cutoffText = cutoffPeriod === 1 ? "1st-15th" : "16th-End";
     const titleString = `Payroll_Export_${monthName}_${year}_${cutoffText}`; 
-    // CSV HEADERS THAT INCLUDE ABSENCES
+    
     let csvContent = `Company Payroll - ${monthName} ${year} (${cutoffText})\n\n`;
-    csvContent += `Employee Name,Department,Base Salary,Type,Semi-Monthly Base,Days Present,Paid Leave (Days),Unpaid Absences,Absence Penalty (PHP),Late/UT (Mins),Time Penalty (PHP),SSS,PhilHealth,Pag-IBIG,Total Gov Deductions,Net Pay\n`;
+    csvContent += `Employee Name,Department,Base Salary,Type,Semi-Monthly Base,Overtime (Mins),Overtime Pay (PHP),Days Present,Paid Leave (Days),Unpaid Absences,Absence Penalty (PHP),Late/UT (Mins),Time Penalty (PHP),SSS,PhilHealth,Pag-IBIG,Total Gov Deductions,Net Pay\n`;
     
     filteredEmployees.forEach(emp => {
       const result = payrollData[emp.id];
       if (result) {
-        csvContent += `"${emp.fullName}","${emp.department || "N/A"}",${emp.baseSalary},${emp.salaryType},${result.semiMonthlyBase.toFixed(2)},${result.daysPresent},${result.paidLeaveDays},${result.unpaidAbsences},${result.absenceDeductionPeso.toFixed(2)},${result.totalLateMins + result.totalUndertimeMins},${result.timePenaltiesPeso.toFixed(2)},${result.sss.toFixed(2)},${result.philhealth.toFixed(2)},${result.pagibig.toFixed(2)},${result.totalMandatory.toFixed(2)},${result.netPay.toFixed(2)}\n`;
+        csvContent += `"${emp.fullName}","${emp.department || "N/A"}",${emp.baseSalary},${emp.salaryType},${result.semiMonthlyBase.toFixed(2)},${result.totalOtMinutes},${result.otPayPeso.toFixed(2)},${result.daysPresent},${result.paidLeaveDays},${result.unpaidAbsences},${result.absenceDeductionPeso.toFixed(2)},${result.totalLateMins + result.totalUndertimeMins},${result.timePenaltiesPeso.toFixed(2)},${result.sss.toFixed(2)},${result.philhealth.toFixed(2)},${result.pagibig.toFixed(2)},${result.totalMandatory.toFixed(2)},${result.netPay.toFixed(2)}\n`;
       }
     });
 
@@ -267,14 +263,22 @@ export default function PayrollPage() {
   const filteredEmployees = employees.filter(emp => emp.fullName.toLowerCase().includes(searchTerm.toLowerCase()));
   const formatPeso = (amount: number) => `₱ ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+  const getCutoffLabel = () => {
+    const monthName = new Date(0, parseInt(selectedMonth.split('-')[1]) - 1).toLocaleString('default', { month: 'long' });
+    const year = selectedMonth.split('-')[0];
+    return `${monthName} ${cutoffPeriod === 1 ? '1-15' : `16-End`}, ${year}`;
+  };
+
   if (!isAdmin && user) return <ProtectedRoute><div className="min-h-screen flex items-center justify-center">Access Denied.</div></ProtectedRoute>;
 
   return (
     <ProtectedRoute>
-      <main className="min-h-screen w-full relative overflow-x-hidden pt-[73px] bg-slate-50 dark:bg-[#0a0a0a]">
-        <Navbar />
+      <main className="min-h-screen w-full relative overflow-x-hidden pt-[73px] bg-slate-50 dark:bg-[#0a0a0a] print:pt-0 print:bg-white">
+        <div className="print:hidden">
+          <Navbar />
+        </div>
         
-        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
+        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-12 print:hidden">
           
           <div className="mb-8">
             <h1 className="text-4xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
@@ -282,7 +286,7 @@ export default function PayrollPage() {
               Payroll Management
             </h1>
             <p className="text-gray-500 dark:text-gray-400 mt-2">
-              Automated semi-monthly salary generation and statutory deductions.
+              Automated semi-monthly salary generation, OT calculations, and deductions.
             </p>
           </div>
 
@@ -294,9 +298,7 @@ export default function PayrollPage() {
                 <div className="relative">
                   <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input 
-                    type="month" 
-                    value={selectedMonth} 
-                    onChange={(e) => setSelectedMonth(e.target.value)} 
+                    type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} 
                     className="bg-gray-50 dark:bg-black/40 border border-gray-200 dark:border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm dark:text-white outline-none focus:ring-2 focus:ring-emerald-500 w-full" 
                   />
                 </div>
@@ -305,8 +307,7 @@ export default function PayrollPage() {
               <div className="flex flex-col gap-1.5 flex-1 md:flex-none">
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Cutoff Period</label>
                 <select 
-                  value={cutoffPeriod} 
-                  onChange={(e) => setCutoffPeriod(Number(e.target.value) as 1 | 2)} 
+                  value={cutoffPeriod} onChange={(e) => setCutoffPeriod(Number(e.target.value) as 1 | 2)} 
                   className="bg-gray-50 dark:bg-black/40 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm dark:text-white outline-none focus:ring-2 focus:ring-emerald-500 w-full cursor-pointer"
                 >
                   <option value={1}>1st Cutoff (1st - 15th)</option>
@@ -318,9 +319,7 @@ export default function PayrollPage() {
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wider hidden md:block">&nbsp;</label>
                 <label className="flex items-center gap-3 bg-gray-50 dark:bg-black/40 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 cursor-pointer hover:border-emerald-500/50 transition-colors h-[42px]">
                   <input 
-                    type="checkbox" 
-                    checked={applyDeductions}
-                    onChange={(e) => setApplyDeductions(e.target.checked)}
+                    type="checkbox" checked={applyDeductions} onChange={(e) => setApplyDeductions(e.target.checked)}
                     className="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500"
                   />
                   <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 select-none">
@@ -341,8 +340,7 @@ export default function PayrollPage() {
               )}
               
               <button 
-                onClick={handleGeneratePayroll}
-                disabled={isGenerating || employees.length === 0}
+                onClick={handleGeneratePayroll} disabled={isGenerating || employees.length === 0}
                 className="w-full sm:w-auto bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white px-8 py-3.5 rounded-xl font-bold transition-all shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 active:scale-95"
               >
                 {isGenerating ? (
@@ -367,12 +365,12 @@ export default function PayrollPage() {
               </div>
             </div>
 
-            <table className="w-full text-left min-w-[1100px]">
+            <table className="w-full text-left min-w-[1200px]">
               <thead>
                 <tr className="text-[10px] font-bold text-gray-400 uppercase tracking-widest border-b border-gray-200 dark:border-white/5">
                   <th className="pb-4 pl-4">Employee</th>
                   <th className="pb-4 text-right">Base Rate</th>
-                  <th className="pb-4 text-right border-l border-gray-100 dark:border-white/5 pl-4">Cutoff Base (Gross)</th>
+                  <th className="pb-4 text-right border-l border-gray-100 dark:border-white/5 pl-4">Earnings (Base + OT)</th>
                   <th className="pb-4 text-right">Attendance Deductions</th>
                   <th className="pb-4 text-right">Gov. Deductions</th>
                   <th className="pb-4 text-right text-emerald-500">Net Pay</th>
@@ -420,11 +418,16 @@ export default function PayrollPage() {
                       {result ? (
                         <>
                           <td className="py-4 text-right border-l border-gray-100 dark:border-white/5 pl-4 font-semibold text-gray-900 dark:text-white">
-                            {formatPeso(result.semiMonthlyBase)}
-                            <div className="text-[10px] text-gray-400 font-normal mt-0.5">Rate: {formatPeso(result.hourlyRate)}/hr</div>
+                            <div>{formatPeso(result.semiMonthlyBase)}</div>
+                            {result.otPayPeso > 0 ? (
+                              <div className="text-[10px] text-teal-600 dark:text-teal-400 font-bold mt-0.5">
+                                + {formatPeso(result.otPayPeso)} OT ({result.totalOtMinutes}m)
+                              </div>
+                            ) : (
+                              <div className="text-[10px] text-gray-400 font-normal mt-0.5">No OT Logged</div>
+                            )}
                           </td>
                           
-                          {/* Displays Absences + Late Minutes */}
                           <td className="py-4 text-right">
                             {(result.absenceDeductionPeso > 0 || result.timePenaltiesPeso > 0) ? (
                               <>
@@ -445,14 +448,17 @@ export default function PayrollPage() {
                           <td className="py-4 text-right">
                             <span className="text-amber-600 dark:text-amber-400 font-bold">- {formatPeso(result.totalMandatory)}</span>
                             <div className="text-[10px] text-gray-400 mt-0.5 tracking-tighter">
-                              {!applyDeductions ? "Waived for Cutoff" : cutoffPeriod === 1 ? `SSS: ${formatPeso(result.sss)} | P-IBIG: ${formatPeso(result.pagibig)}` : `PH: ${formatPeso(result.philhealth)}`}
+                              {!applyDeductions ? "Waived" : cutoffPeriod === 1 ? `SSS: ${formatPeso(result.sss)} | P-IBIG: ${formatPeso(result.pagibig)}` : `PH: ${formatPeso(result.philhealth)}`}
                             </div>
                           </td>
                           <td className="py-4 text-right text-lg font-black text-emerald-600 dark:text-emerald-400">
                             {formatPeso(result.netPay)}
                           </td>
                           <td className="py-4 text-center">
-                            <button className="text-[10px] font-bold bg-slate-100 dark:bg-white/10 hover:bg-emerald-50 dark:hover:bg-emerald-500/20 text-gray-600 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400 px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center gap-1 mx-auto">
+                            <button 
+                              onClick={() => setSelectedPayslip({ emp, result })}
+                              className="text-[10px] font-bold bg-slate-100 dark:bg-white/10 hover:bg-emerald-50 dark:hover:bg-emerald-500/20 text-gray-600 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400 px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center gap-1 mx-auto"
+                            >
                               <FileText className="w-3 h-3" /> Payslip
                             </button>
                           </td>
@@ -461,7 +467,7 @@ export default function PayrollPage() {
                         <td colSpan={5} className="py-4 text-center border-l border-gray-100 dark:border-white/5">
                           <span className="text-xs text-gray-400 italic flex items-center justify-center gap-2">
                             <CheckCircle2 className="w-4 h-4 text-gray-300 dark:text-gray-600" />
-                            Ready to compute for {selectedMonth}
+                            Ready to compute
                           </span>
                         </td>
                       )}
@@ -472,6 +478,165 @@ export default function PayrollPage() {
             </table>
           </div>
         </div>
+
+        {/* DOLE-Compliant Payslip Modal with Overtime */}
+        {selectedPayslip && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 print:p-0 print:bg-white overflow-y-auto">
+            
+            {/* 🔥 NEW: Added the missing wrapper div! */}
+            <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full text-gray-900 print:shadow-none print:w-full print:max-w-none print:h-screen">
+              
+              <div className="flex justify-between items-center p-4 border-b border-gray-200 print:hidden bg-slate-50 rounded-t-xl">
+                
+                <div className="flex items-center gap-4">
+                  <button 
+                    onClick={() => setSelectedPayslip(null)} 
+                    className="flex items-center gap-1.5 text-gray-600 hover:text-gray-900 bg-gray-200/50 hover:bg-gray-200 px-3 py-1.5 rounded-lg transition-colors font-bold text-sm active:scale-95"
+                  >
+                    <ArrowLeft className="w-4 h-4" /> Back to Payroll
+                  </button>
+                  <h3 className="font-bold text-gray-700 hidden sm:block">Payslip Preview</h3>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button onClick={() => window.print()} className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-bold transition-all shadow-sm active:scale-95">
+                    <Printer className="w-4 h-4" /> Save as PDF
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-8 sm:p-12 print:p-8 bg-white">
+                <div className="text-center mb-8 border-b-2 border-gray-900 pb-6">
+                  <h1 className="text-2xl font-black uppercase tracking-widest text-emerald-700 print:text-black">SimplifV Payroll</h1>
+                  <p className="text-sm font-medium text-gray-600 mt-1">Subic City, Zambales</p>
+                  <h2 className="text-lg font-bold mt-4 uppercase text-gray-800">Payslip</h2>
+                  <p className="text-sm text-gray-600 font-semibold">Pay Period: {getCutoffLabel()}</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 mb-8 text-sm">
+                  <div>
+                    <span className="font-bold text-gray-500 uppercase text-xs block mb-0.5">Employee Name</span>
+                    <span className="font-semibold text-base">{selectedPayslip.emp.fullName}</span>
+                  </div>
+                  <div>
+                    <span className="font-bold text-gray-500 uppercase text-xs block mb-0.5">Department</span>
+                    <span className="font-semibold text-base">{selectedPayslip.emp.department || "N/A"}</span>
+                  </div>
+                  <div>
+                    <span className="font-bold text-gray-500 uppercase text-xs block mb-0.5">Salary Profile</span>
+                    <span className="font-semibold">{formatPeso(selectedPayslip.emp.baseSalary || 0)} / {selectedPayslip.emp.salaryType === 'hourly' ? 'Hr' : 'Mo'}</span>
+                  </div>
+                  <div>
+                    <span className="font-bold text-gray-500 uppercase text-xs block mb-0.5">Hourly Rate</span>
+                    <span className="font-semibold">{formatPeso(selectedPayslip.result.hourlyRate)}</span>
+                  </div>
+                </div>
+
+                <div className="w-full border border-gray-300 mb-8 rounded-lg overflow-hidden">
+                  <div className="grid grid-cols-2 bg-gray-100 font-bold uppercase text-xs tracking-wider border-b border-gray-300">
+                    <div className="p-3 border-r border-gray-300 text-gray-700">Earnings</div>
+                    <div className="p-3 text-gray-700">Deductions</div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 text-sm min-h-[160px]">
+                    {/* Earnings Col */}
+                    <div className="p-4 border-r border-gray-300 flex flex-col gap-2">
+                      <div className="flex justify-between">
+                        <span>Basic Pay (Gross)</span>
+                        <span className="font-semibold">{formatPeso(selectedPayslip.result.semiMonthlyBase)}</span>
+                      </div>
+                      {selectedPayslip.result.otPayPeso > 0 && (
+                        <div className="flex justify-between text-teal-700 font-medium">
+                          <span>Overtime Pay ({selectedPayslip.result.totalOtMinutes}m)</span>
+                          <span className="font-semibold">+ {formatPeso(selectedPayslip.result.otPayPeso)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between text-gray-500 text-xs mt-2 pt-2 border-t border-gray-200">
+                        <span>Days Present: {selectedPayslip.result.daysPresent}</span>
+                      </div>
+                      {selectedPayslip.result.paidLeaveDays > 0 && (
+                        <div className="flex justify-between text-gray-500 text-xs">
+                          <span>Paid Leaves: {selectedPayslip.result.paidLeaveDays}</span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Deductions Col */}
+                    <div className="p-4 flex flex-col gap-2">
+                      {selectedPayslip.result.absenceDeductionPeso > 0 && (
+                        <div className="flex justify-between text-rose-600 print:text-black">
+                          <span>Unpaid Absences ({selectedPayslip.result.unpaidAbsences} days)</span>
+                          <span className="font-semibold">{formatPeso(selectedPayslip.result.absenceDeductionPeso)}</span>
+                        </div>
+                      )}
+                      {selectedPayslip.result.timePenaltiesPeso > 0 && (
+                        <div className="flex justify-between text-rose-600 print:text-black">
+                          <span>Lates/UT ({selectedPayslip.result.totalLateMins + selectedPayslip.result.totalUndertimeMins} mins)</span>
+                          <span className="font-semibold">{formatPeso(selectedPayslip.result.timePenaltiesPeso)}</span>
+                        </div>
+                      )}
+                      
+                      {selectedPayslip.result.sss > 0 && (
+                        <div className="flex justify-between">
+                          <span>SSS Contribution</span>
+                          <span className="font-semibold">{formatPeso(selectedPayslip.result.sss)}</span>
+                        </div>
+                      )}
+                      {selectedPayslip.result.philhealth > 0 && (
+                        <div className="flex justify-between">
+                          <span>PhilHealth Contribution</span>
+                          <span className="font-semibold">{formatPeso(selectedPayslip.result.philhealth)}</span>
+                        </div>
+                      )}
+                      {selectedPayslip.result.pagibig > 0 && (
+                        <div className="flex justify-between">
+                          <span>Pag-IBIG Contribution</span>
+                          <span className="font-semibold">{formatPeso(selectedPayslip.result.pagibig)}</span>
+                        </div>
+                      )}
+                      
+                      {selectedPayslip.result.timePenaltiesPeso === 0 && selectedPayslip.result.absenceDeductionPeso === 0 && selectedPayslip.result.totalMandatory === 0 && (
+                        <div className="text-gray-400 italic">No deductions this period.</div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 border-t border-gray-300 font-bold bg-gray-50">
+                    <div className="p-4 border-r border-gray-300 flex justify-between text-gray-800">
+                      <span>Total Earnings</span>
+                      <span>{formatPeso(selectedPayslip.result.semiMonthlyBase + selectedPayslip.result.otPayPeso)}</span>
+                    </div>
+                    <div className="p-4 flex justify-between text-rose-700 print:text-black">
+                      <span>Total Deductions</span>
+                      <span>{formatPeso(selectedPayslip.result.absenceDeductionPeso + selectedPayslip.result.timePenaltiesPeso + selectedPayslip.result.totalMandatory)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-center bg-emerald-50 print:bg-transparent print:border print:border-gray-900 p-4 rounded-lg mb-12">
+                  <span className="text-lg font-black uppercase text-emerald-900 print:text-black tracking-widest">Net Pay</span>
+                  <span className="text-2xl font-black text-emerald-700 print:text-black underline underline-offset-4">{formatPeso(selectedPayslip.result.netPay)}</span>
+                </div>
+
+                <div className="flex justify-between items-end pt-12 px-4">
+                  <div className="text-center w-48">
+                    <div className="border-b border-gray-800 pb-1 font-semibold text-sm">{selectedPayslip.emp.fullName}</div>
+                    <div className="text-xs text-gray-500 mt-1 uppercase tracking-wider">Employee Signature</div>
+                  </div>
+                  <div className="text-center w-48">
+                    <div className="border-b border-gray-800 pb-1 font-semibold text-sm">Human Resources</div>
+                    <div className="text-xs text-gray-500 mt-1 uppercase tracking-wider">Authorized By</div>
+                  </div>
+                </div>
+                
+                <div className="mt-12 text-center text-[10px] text-gray-400 print:block hidden">
+                  Generated by SimpliSync Solutions • Document Date: {new Date().toLocaleDateString()}
+                </div>
+              </div>
+              
+            </div>
+          </div>
+        )}
       </main>
     </ProtectedRoute>
   );
