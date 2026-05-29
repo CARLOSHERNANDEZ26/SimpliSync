@@ -29,6 +29,7 @@ interface BonusCalculation {
   totalEarnedBasic: number; 
   calculatedAmount: number; 
   status: "pending" | "distributed";
+  isAlreadyPaid?: boolean; 
 }
 
 interface DistributionRecord {
@@ -54,8 +55,6 @@ export default function BenefitsPage() {
   const [isDistributing, setIsDistributing] = useState(false);
   
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
-  
-  //  FIX 1: Removed <any[]> and strictly typed the array
   const [historicalRecords, setHistoricalRecords] = useState<DistributionRecord[]>([]);
 
   const currentYear = new Date().getFullYear();
@@ -99,6 +98,9 @@ export default function BenefitsPage() {
       
       for (const emp of employees) {
         if (!emp.baseSalary) continue; 
+
+        // Has this employee already received 13th month this year?
+        const hasBeenPaid = historicalRecords.some(record => record.userId === emp.id);
 
         const qAtt = query(
           collection(db, "attendanceLogs"), 
@@ -184,7 +186,8 @@ export default function BenefitsPage() {
           unpaidAbsences,
           totalEarnedBasic,
           calculatedAmount,
-          status: "pending"
+          status: "pending",
+          isAlreadyPaid: hasBeenPaid // 
         });
       }
 
@@ -200,13 +203,20 @@ export default function BenefitsPage() {
   };
 
   const handleDistributeAll = async () => {
-    if (bonusRoster.length === 0) return;
+    // Filter out those who are already paid
+    const pendingDistributions = bonusRoster.filter(calc => !calc.isAlreadyPaid);
+
+    if (pendingDistributions.length === 0) {
+      toast.error("No pending employees left to distribute to.");
+      return;
+    }
+    
     setIsDistributing(true);
 
     try {
       const batchRef = collection(db, "benefitDistributions");
       
-      for (const calc of bonusRoster) {
+      for (const calc of pendingDistributions) {
         await addDoc(batchRef, {
           userId: calc.userId,
           fullName: calc.fullName,
@@ -224,16 +234,18 @@ export default function BenefitsPage() {
         await logAdminAction(
           user.email, 
           `Distributed 13th Month Pay for ${currentYear}`, 
-          `Total Employees: ${bonusRoster.length}`
+          `Total Employees: ${pendingDistributions.length}`
         );
       }
 
       toast.success("13th Month Pay officially distributed and logged!");
       
+      // Update local history for real-time UI feel
       setHistoricalRecords(prev => [
         ...prev, 
-        ...bonusRoster.map(b => ({
+        ...pendingDistributions.map(b => ({
           id: Math.random().toString(), 
+          userId: b.userId,
           fullName: b.fullName,
           amount: b.calculatedAmount,
           monthsWorked: b.monthsWorked,
@@ -243,7 +255,9 @@ export default function BenefitsPage() {
         } as DistributionRecord))
       ]);
       
-      setBonusRoster([]);
+      // Update roster visually to gray them out immediately
+      setBonusRoster(prev => prev.map(calc => ({ ...calc, isAlreadyPaid: true })));
+
     } catch (error) {
       console.error(error);
       toast.error("Failed to distribute benefits.");
@@ -253,27 +267,19 @@ export default function BenefitsPage() {
   };
 
   const formatPeso = (amount: number) => `₱ ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  
   const formatSafeDate = (timestamp: Timestamp | Date | { seconds: number; nanoseconds: number } | null | undefined) => {
     if (!timestamp) return "Just now";
-    
-    if (timestamp instanceof Date) {
-      return timestamp.toLocaleDateString();
-    }
-    
-    // Check if it's a Firestore Timestamp with a toDate method
-    if ('toDate' in timestamp && typeof timestamp.toDate === 'function') {
-      return timestamp.toDate().toLocaleDateString();
-    }
-    
-    // Check if it's a raw timestamp object from database
-    if ('seconds' in timestamp) {
-      return new Date(timestamp.seconds * 1000).toLocaleDateString();
-    }
-    
+    if (timestamp instanceof Date) return timestamp.toLocaleDateString();
+    if ('toDate' in timestamp && typeof timestamp.toDate === 'function') return timestamp.toDate().toLocaleDateString();
+    if ('seconds' in timestamp) return new Date(timestamp.seconds * 1000).toLocaleDateString();
     return "Invalid Date";
   };
 
-  const totalCalculated = bonusRoster.reduce((sum, item) => sum + item.calculatedAmount, 0);
+  // Only sum the liability for employees who haven't been paid yet
+  const totalCalculated = bonusRoster
+    .filter(item => !item.isAlreadyPaid)
+    .reduce((sum, item) => sum + item.calculatedAmount, 0);
 
   if (!isAdmin && user) return <ProtectedRoute><div className="min-h-screen flex items-center justify-center">Access Denied.</div></ProtectedRoute>;
 
@@ -340,8 +346,13 @@ export default function BenefitsPage() {
                     <tbody className="divide-y divide-gray-100 dark:divide-white/5">
                       {bonusRoster.length > 0 ? (
                         bonusRoster.map((calc, idx) => (
-                          <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-colors">
-                            <td className="px-4 py-3 font-bold text-gray-900 dark:text-white">{calc.fullName}</td>
+                          <tr 
+                            key={idx} 
+                            className={`transition-colors ${calc.isAlreadyPaid ? "opacity-50 bg-gray-50 dark:bg-black/20" : "hover:bg-slate-50 dark:hover:bg-white/[0.02]"}`}
+                          >
+                            <td className="px-4 py-3 font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                              {calc.fullName}
+                            </td>
                             
                             <td className="px-4 py-3 font-medium text-gray-600 dark:text-gray-300">
                               <div className="flex flex-col">
@@ -368,7 +379,13 @@ export default function BenefitsPage() {
                             </td>
 
                             <td className="px-4 py-3 text-right font-black text-emerald-600 dark:text-emerald-400 text-base">
-                              {formatPeso(calc.calculatedAmount)}
+                              {calc.isAlreadyPaid ? (
+                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest bg-gray-200 dark:bg-white/10 px-2.5 py-1 rounded-md">
+                                  Distributed
+                                </span>
+                              ) : (
+                                formatPeso(calc.calculatedAmount)
+                              )}
                             </td>
                           </tr>
                         ))
@@ -392,8 +409,10 @@ export default function BenefitsPage() {
                 
                 <div className="space-y-4 mb-6">
                   <div className="flex justify-between items-center pb-3 border-b border-gray-100 dark:border-white/5">
-                    <span className="text-sm text-gray-500">Eligible Staff</span>
-                    <span className="font-bold text-gray-900 dark:text-white">{bonusRoster.length}</span>
+                    <span className="text-sm text-gray-500">Pending Distribution</span>
+                    <span className="font-bold text-gray-900 dark:text-white">
+                      {bonusRoster.filter(c => !c.isAlreadyPaid).length}
+                    </span>
                   </div>
                   <div className="flex justify-between items-center pb-3 border-b border-gray-100 dark:border-white/5">
                     <span className="text-sm text-gray-500">Company Liability</span>
@@ -403,7 +422,7 @@ export default function BenefitsPage() {
 
                 <button 
                   onClick={handleDistributeAll}
-                  disabled={bonusRoster.length === 0 || isDistributing}
+                  disabled={bonusRoster.filter(c => !c.isAlreadyPaid).length === 0 || isDistributing}
                   className="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-3.5 rounded-xl font-bold transition-all shadow-lg disabled:opacity-50 active:scale-95 flex items-center justify-center gap-2"
                 >
                   <CheckCircle2 className="w-5 h-5" />

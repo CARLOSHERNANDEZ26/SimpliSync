@@ -6,7 +6,7 @@ import Navbar from "@/components/Navbar";
 import { useAuth } from "@/hooks/useAuth";
 import { collection, query, where, onSnapshot, orderBy, doc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { FolderOpen, Star, User, Calendar, Award, ShieldCheck, AlertTriangle, XCircle, Send, Clock, CheckCircle } from "lucide-react";
+import { FolderOpen, Star, User, Calendar, Award, ShieldCheck, AlertTriangle, XCircle, Send, Clock, CheckCircle, Gift } from "lucide-react";
 import toast from "react-hot-toast";
 
 interface Evaluation {
@@ -35,17 +35,25 @@ interface DisciplinaryRecord {
   createdAt: { seconds: number } | null;
 }
 
+interface Bonus { 
+  id: string; 
+  type: string; 
+  year: number; 
+  amount: number; 
+  distributedAt: { seconds: number } | null; 
+}
+
 export default function Employee201FilePage() {
   const { user } = useAuth();
   const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
   const [disciplinaryActions, setDisciplinaryActions] = useState<DisciplinaryRecord[]>([]);
   const [selectedNotice, setSelectedNotice] = useState<DisciplinaryRecord | null>(null);
+  const [bonuses, setBonuses] = useState<Bonus[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  
-  // 🔥 New states for the explanation submission
   const [explanationText, setExplanationText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Fetch Disciplinary Records
   useEffect(() => {
     if (!user?.uid) return;
     
@@ -75,12 +83,28 @@ export default function Employee201FilePage() {
     return () => unsubscribe();
   }, [user?.uid]);
   
-  useEffect(() => {
+  // Fetch Evaluations
+  useEffect(() => {  
     if (!user?.uid) return;
     const q = query(collection(db, "evaluations"), where("employeeId", "==", user.uid), orderBy("year", "desc"), orderBy("quarter", "desc"));
     const unsubscribe = onSnapshot(q, (snap) => {
       setEvaluations(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Evaluation)));
       setIsLoading(false);
+    });
+    return () => unsubscribe();
+  }, [user?.uid]);
+
+  useEffect(() => {
+    if (!user?.uid) return; 
+    const currentYear = new Date().getFullYear();
+    const q = query(
+      collection(db, "bonuses"), 
+      where("userId", "==", user.uid), 
+      where("year", "==", currentYear), 
+      orderBy("distributedAt", "desc")
+    );
+    const unsubscribe = onSnapshot(q, (snap) => {
+      setBonuses(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Bonus)));
     });
     return () => unsubscribe();
   }, [user?.uid]);
@@ -146,7 +170,10 @@ export default function Employee201FilePage() {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
+            {/* LEFT COLUMN: User Profile & Bonuses */}
             <div className="lg:col-span-1 space-y-6">
+              
+              {/* Profile Card */}
               <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl text-center">
                 <div className="w-24 h-24 bg-teal-100 dark:bg-teal-500/20 text-teal-600 dark:text-teal-400 rounded-full flex items-center justify-center mx-auto mb-4 border border-teal-200 dark:border-teal-500/30">
                   <User className="w-10 h-10" />
@@ -171,11 +198,39 @@ export default function Employee201FilePage() {
                   </div>
                 </div>
               </div>
+
+              {/* Migrated Bonus & Benefits Card */}
+              <div className="bg-gradient-to-br from-teal-500/10 to-emerald-500/10 border border-teal-200 dark:border-teal-500/20 rounded-3xl p-6 shadow-xl">
+                <h3 className="text-lg font-bold text-teal-900 dark:text-teal-400 mb-4 flex items-center gap-2">
+                  <Gift className="w-5 h-5" /> Compensation & Bonuses
+                </h3>
+                {bonuses.length > 0 ? (
+                  <div className="space-y-3">
+                    {bonuses.map(bonus => (
+                      <div key={bonus.id} className="bg-white dark:bg-black/40 p-4 rounded-2xl border border-teal-100 dark:border-teal-500/10 flex items-center justify-between">
+                        <div>
+                          <div className="text-sm font-bold text-gray-900 dark:text-white">{bonus.type}</div>
+                          <div className="text-[10px] text-gray-500 uppercase tracking-wider">{bonus.year} • Distributed</div>
+                        </div>
+                        <div className="text-lg font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                          +₱{bonus.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-6 bg-white/50 dark:bg-black/20 rounded-2xl border border-dashed border-teal-200/50 dark:border-white/5">
+                    <p className="text-sm text-gray-500 dark:text-gray-400 italic">No additional compensation logged.</p>
+                  </div>
+                )}
+              </div>
+
             </div>
 
-            <div className="lg:col-span-2">
-              <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl min-h-[500px]">
-                
+            {/* RIGHT COLUMN: Evaluations & Notices */}
+            <div className="lg:col-span-2 space-y-8">
+              
+              <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl">
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
                   <Award className="w-5 h-5 text-teal-500" />
                   Quarterly Appraisals
@@ -226,73 +281,75 @@ export default function Employee201FilePage() {
                     No official performance evaluations on record yet.
                   </div>
                 )}
+              </div>
                 
-                <div className="mt-8 pt-8 border-t border-gray-200 dark:border-white/10">
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-                    <AlertTriangle className="w-5 h-5 text-rose-500" />
-                    Official HR Notices
-                  </h3>
+              <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
+                  <AlertTriangle className="w-5 h-5 text-rose-500" />
+                  Official HR Notices
+                </h3>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {disciplinaryActions.length > 0 ? (
-                      disciplinaryActions.map((record) => {
-                        const isPendingAction = record.status.includes("Drafted") || record.status === "Issued";
-                        const isResolved = record.status.includes("Resolved");
-                        
-                        return (
-                        <div 
-                          key={record.id} 
-                          onClick={() => setSelectedNotice(record)}
-                          className={`group cursor-pointer p-5 rounded-2xl border transition-all duration-300 flex flex-col justify-between ${
-                            isPendingAction 
-                              ? "bg-rose-50 dark:bg-rose-500/10 border-rose-200 dark:border-rose-500/30 hover:border-rose-500" 
-                              : isResolved
-                              ? "bg-slate-50 dark:bg-white/5 border-gray-200 dark:border-white/10 hover:border-gray-400"
-                              : "bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/30 hover:border-amber-500" // Under review
-                          }`}
-                        >
-                          <div>
-                            <div className="flex justify-between items-start mb-2">
-                              <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-md bg-white dark:bg-black/20 border ${
-                                isPendingAction ? "text-rose-600 border-rose-100" : isResolved ? "text-gray-500 border-gray-200" : "text-amber-600 border-amber-100"
-                              }`}>
-                                {record.offenseType}
-                              </span>
-                              <span className="text-[10px] font-bold text-gray-400 uppercase">
-                                {record.createdAt ? new Date(record.createdAt.seconds * 1000).toLocaleDateString() : "Pending"}
-                              </span>
-                            </div>
-                            
-                            <h4 className="text-sm font-bold text-gray-900 dark:text-white mt-2">
-                              Notice to Explain
-                            </h4>
-                            
-                            <p className="text-xs text-gray-500 mt-1 line-clamp-2">
-                              {record.formalNotice.replace(/\*\*/g, '')}
-                            </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {disciplinaryActions.length > 0 ? (
+                    disciplinaryActions.map((record) => {
+                      const isPendingAction = record.status.includes("Drafted") || record.status === "Issued";
+                      const isResolved = record.status.includes("Resolved");
+                      
+                      return (
+                      <div 
+                        key={record.id} 
+                        onClick={() => setSelectedNotice(record)}
+                        className={`group cursor-pointer p-5 rounded-2xl border transition-all duration-300 flex flex-col justify-between ${
+                          isPendingAction 
+                            ? "bg-rose-50 dark:bg-rose-500/10 border-rose-200 dark:border-rose-500/30 hover:border-rose-500" 
+                            : isResolved
+                            ? "bg-slate-50 dark:bg-white/5 border-gray-200 dark:border-white/10 hover:border-gray-400"
+                            : "bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/30 hover:border-amber-500" // Under review
+                        }`}
+                      >
+                        <div>
+                          <div className="flex justify-between items-start mb-2">
+                            <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-md bg-white dark:bg-black/20 border ${
+                              isPendingAction ? "text-rose-600 border-rose-100" : isResolved ? "text-gray-500 border-gray-200" : "text-amber-600 border-amber-100"
+                            }`}>
+                              {record.offenseType}
+                            </span>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase">
+                              {record.createdAt ? new Date(record.createdAt.seconds * 1000).toLocaleDateString() : "Pending"}
+                            </span>
                           </div>
-
-                          <div className={`mt-4 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider ${
-                            isPendingAction ? "text-rose-600 dark:text-rose-400" : isResolved ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"
-                          }`}>
-                            {isPendingAction && <><AlertTriangle className="w-3.5 h-3.5" /> Action Required (Reply Needed)</>}
-                            {!isPendingAction && !isResolved && <><Clock className="w-3.5 h-3.5" /> Under HR Review</>}
-                            {isResolved && <><CheckCircle className="w-3.5 h-3.5" /> Case Resolved</>}
-                          </div>
+                          
+                          <h4 className="text-sm font-bold text-gray-900 dark:text-white mt-2">
+                            Notice to Explain
+                          </h4>
+                          
+                          <p className="text-xs text-gray-500 mt-1 line-clamp-2">
+                            {record.formalNotice.replace(/\*\*/g, '')}
+                          </p>
                         </div>
-                      )})
-                    ) : (
-                      <div className="col-span-full text-center text-gray-500 italic py-12 bg-slate-50 dark:bg-black/10 rounded-3xl border border-dashed border-gray-200 dark:border-white/10">
-                        No disciplinary records on file. Excellent work!
+
+                        <div className={`mt-4 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider ${
+                          isPendingAction ? "text-rose-600 dark:text-rose-400" : isResolved ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"
+                        }`}>
+                          {isPendingAction && <><AlertTriangle className="w-3.5 h-3.5" /> Action Required (Reply Needed)</>}
+                          {!isPendingAction && !isResolved && <><Clock className="w-3.5 h-3.5" /> Under HR Review</>}
+                          {isResolved && <><CheckCircle className="w-3.5 h-3.5" /> Case Resolved</>}
+                        </div>
                       </div>
-                    )}
-                  </div>
+                    )})
+                  ) : (
+                    <div className="col-span-full text-center text-gray-500 italic py-12 bg-slate-50 dark:bg-black/10 rounded-3xl border border-dashed border-gray-200 dark:border-white/10">
+                      No disciplinary records on file. Excellent work!
+                    </div>
+                  )}
                 </div>
               </div>
+
             </div>
 
           </div>
         </div>
+        
         {/* The Interactive Notice & Resolution Modal */}
         {selectedNotice && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">

@@ -11,11 +11,10 @@ import AdminLogsTable from "@/components/AdminLogsTable";
 import EmployeeHistoryTable from "@/components/EmployeeHistoryTable";
 import HRChatbot from "@/components/HRChatbot";
 import { verifyLocationPing, resolveDanglingShift } from "@/services/attendance";
-import { Users, Activity, FileText, Clock, ShieldAlert, Sparkles, Gift, XCircle, TrendingUp, CalendarCheck, AlertCircle, ArrowRight } from "lucide-react"; 
+import { Users, Activity, FileText, ShieldAlert, Sparkles, XCircle, TrendingUp, CalendarCheck, AlertCircle, ArrowRight } from "lucide-react"; 
 import Link from "next/link";
 import toast from "react-hot-toast";
 
-interface Bonus { id: string; type: string; year: number; amount: number; distributedAt: { seconds: number } | null; }
 interface AttendanceLog { id: string; userId: string; timeIn: Date | null; timeOut: Date | null; status: string; fullName?: string; role?: string; }
 interface EmployeeData { id: string; fullName: string; department?: string; status?: string; [key: string]: unknown; }
 interface PendingLeave { id: string; userName: string; type: string; reason: string; status: string; startDate?: string; }
@@ -29,7 +28,6 @@ export default function DashboardPage() {
   const [employees, setEmployees] = useState<EmployeeData[]>([]);
   const [pendingLeaves, setPendingLeaves] = useState<PendingLeave[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [bonuses, setBonuses] = useState<Bonus[]>([]);
   
   const [danglingShift, setDanglingShift] = useState<AttendanceLog | null>(null);
   const [selectedMemo, setSelectedMemo] = useState<{id: string, content: string, author: string, createdAt: { seconds: number } | null} | null>(null);
@@ -106,14 +104,6 @@ export default function DashboardPage() {
       return () => clearInterval(pingInterval);
     }
   }, [isClockedIn, user?.uid]);
-
-  useEffect(() => {
-    if (!user?.uid || isAdmin) return; 
-    const currentYear = new Date().getFullYear();
-    const q = query(collection(db, "bonuses"), where("userId", "==", user.uid), where("year", "==", currentYear), orderBy("distributedAt", "desc"));
-    const unsubscribe = onSnapshot(q, (snap) => setBonuses(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Bonus))));
-    return () => unsubscribe();
-  }, [user?.uid, isAdmin]);
 
   const todaysLogsCount = logs.filter(log => log.timeIn && new Date(log.timeIn).toDateString() === new Date().toDateString()).length;
   
@@ -231,7 +221,6 @@ export default function DashboardPage() {
                             <div key={log.id} className="relative pl-5">
                               <div className={`absolute -left-[5px] top-1.5 w-2.5 h-2.5 rounded-full ring-4 ring-white dark:ring-[#1a1a1a] ${log.status.toLowerCase().includes('late') ? 'bg-amber-500' : 'bg-emerald-500'}`}></div>
                               <div>
-                                {/* Dynamically show timeOut if it exists, otherwise show timeIn */}
                                 <div className="text-[10px] font-bold text-gray-400 mb-0.5 uppercase tracking-wider">
                                   {log.timeOut 
                                     ? log.timeOut.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
@@ -272,30 +261,6 @@ export default function DashboardPage() {
                   <ClockOutButton />
                 </div>
 
-                <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-rose-500/10 to-orange-500/10 border border-rose-200 dark:border-rose-500/20 shadow-xl">
-                  <h3 className="text-lg font-bold text-rose-900 dark:text-rose-400 mb-4 flex items-center gap-2">
-                    <Gift className="w-5 h-5" /> My Benefits & Bonuses
-                  </h3>
-                  {bonuses.length > 0 ? (
-                    <div className="space-y-3">
-                      {bonuses.map(bonus => (
-                        <div key={bonus.id} className="bg-white dark:bg-black/40 p-4 rounded-2xl border border-rose-100 dark:border-rose-500/10 flex items-center justify-between">
-                          <div>
-                            <div className="text-sm font-bold text-gray-900 dark:text-white">{bonus.type}</div>
-                            <div className="text-[10px] text-gray-500 uppercase tracking-wider">{bonus.year} • Distributed</div>
-                          </div>
-                          <div className="text-lg font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                            +₱{bonus.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-4 bg-white/50 dark:bg-black/20 rounded-2xl border border-white/20 dark:border-white/5">
-                      <p className="text-sm text-gray-500 dark:text-gray-400 italic">No bonuses distributed yet.</p>
-                    </div>
-                  )}
-                </div>
               </div>
 
               <div className="w-full lg:w-2/3">

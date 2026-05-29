@@ -481,159 +481,166 @@ export default function PayrollPage() {
 
         {/* DOLE-Compliant Payslip Modal with Overtime */}
         {selectedPayslip && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 print:p-0 print:bg-white overflow-y-auto">
-            
-            {/* 🔥 NEW: Added the missing wrapper div! */}
-            <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full text-gray-900 print:shadow-none print:w-full print:max-w-none print:h-screen">
+          // FIX 1: Unbreakable modal scroll container (no items-center clipping)
+          <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm overflow-y-auto print:bg-white print:overflow-visible">
+            <div className="min-h-screen flex items-start justify-center p-2 sm:p-6 print:p-0">
               
-              <div className="flex justify-between items-center p-4 border-b border-gray-200 print:hidden bg-slate-50 rounded-t-xl">
+              <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full text-gray-900 mt-4 sm:mt-10 mb-4 sm:mb-10 print:m-0 print:shadow-none print:w-full print:max-w-none">
                 
-                <div className="flex items-center gap-4">
+                {/* FIX 2: Responsive Header that wraps cleanly on tiny screens */}
+                <div className="flex flex-wrap sm:flex-nowrap justify-between items-center p-4 sm:p-5 border-b border-gray-200 print:hidden bg-slate-50 rounded-t-xl gap-3">
+                  <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
+                    <button 
+                      onClick={() => setSelectedPayslip(null)} 
+                      className="flex items-center gap-1.5 text-gray-600 hover:text-gray-900 bg-gray-200/50 hover:bg-gray-200 px-3 py-2 rounded-lg transition-colors font-bold text-xs sm:text-sm active:scale-95"
+                    >
+                      <ArrowLeft className="w-4 h-4" /> 
+                      <span className="hidden sm:inline">Back to Payroll</span>
+                      <span className="sm:hidden">Back</span>
+                    </button>
+                    <h3 className="font-bold text-gray-700 hidden sm:block text-sm">Payslip Preview</h3>
+                  </div>
+
                   <button 
-                    onClick={() => setSelectedPayslip(null)} 
-                    className="flex items-center gap-1.5 text-gray-600 hover:text-gray-900 bg-gray-200/50 hover:bg-gray-200 px-3 py-1.5 rounded-lg transition-colors font-bold text-sm active:scale-95"
+                    onClick={() => window.print()} 
+                    className="flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all shadow-sm active:scale-95 w-full sm:w-auto"
                   >
-                    <ArrowLeft className="w-4 h-4" /> Back to Payroll
-                  </button>
-                  <h3 className="font-bold text-gray-700 hidden sm:block">Payslip Preview</h3>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button onClick={() => window.print()} className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-bold transition-all shadow-sm active:scale-95">
-                    <Printer className="w-4 h-4" /> Save as PDF
+                    <Printer className="w-4 h-4 shrink-0" /> Save as PDF
                   </button>
                 </div>
-              </div>
 
-              <div className="p-8 sm:p-12 print:p-8 bg-white">
-                <div className="text-center mb-8 border-b-2 border-gray-900 pb-6">
-                  <h1 className="text-2xl font-black uppercase tracking-widest text-emerald-700 print:text-black">SimplifV Payroll</h1>
-                  <p className="text-sm font-medium text-gray-600 mt-1">Subic City, Zambales</p>
-                  <h2 className="text-lg font-bold mt-4 uppercase text-gray-800">Payslip</h2>
-                  <p className="text-sm text-gray-600 font-semibold">Pay Period: {getCutoffLabel()}</p>
-                </div>
+                <div className="p-5 sm:p-8 md:p-12 print:p-8 bg-white">
+                  <div className="text-center mb-6 sm:mb-8 border-b-2 border-gray-900 pb-4 sm:pb-6">
+                    <h1 className="text-xl sm:text-2xl font-black uppercase tracking-widest text-emerald-700 print:text-black">SimplifV Payroll</h1>
+                    <p className="text-xs sm:text-sm font-medium text-gray-600 mt-1">Subic City, Zambales</p>
+                    <h2 className="text-base sm:text-lg font-bold mt-4 uppercase text-gray-800">Payslip</h2>
+                    <p className="text-xs sm:text-sm text-gray-600 font-semibold">Pay Period: {getCutoffLabel()}</p>
+                  </div>
 
-                <div className="grid grid-cols-2 gap-4 mb-8 text-sm">
-                  <div>
-                    <span className="font-bold text-gray-500 uppercase text-xs block mb-0.5">Employee Name</span>
-                    <span className="font-semibold text-base">{selectedPayslip.emp.fullName}</span>
+                  {/* Employee Info Grid */}
+                  <div className="grid grid-cols-2 gap-4 mb-8 text-xs sm:text-sm">
+                    <div>
+                      <span className="font-bold text-gray-500 uppercase text-[10px] sm:text-xs block mb-0.5">Employee Name</span>
+                      <span className="font-semibold text-sm sm:text-base">{selectedPayslip.emp.fullName}</span>
+                    </div>
+                    <div>
+                      <span className="font-bold text-gray-500 uppercase text-[10px] sm:text-xs block mb-0.5">Department</span>
+                      <span className="font-semibold text-sm sm:text-base">{selectedPayslip.emp.department || "N/A"}</span>
+                    </div>
+                    <div>
+                      <span className="font-bold text-gray-500 uppercase text-[10px] sm:text-xs block mb-0.5">Salary Profile</span>
+                      <span className="font-semibold">{formatPeso(selectedPayslip.emp.baseSalary || 0)} / {selectedPayslip.emp.salaryType === 'hourly' ? 'Hr' : 'Mo'}</span>
+                    </div>
+                    <div>
+                      <span className="font-bold text-gray-500 uppercase text-[10px] sm:text-xs block mb-0.5">Hourly Rate</span>
+                      <span className="font-semibold">{formatPeso(selectedPayslip.result.hourlyRate)}</span>
+                    </div>
                   </div>
-                  <div>
-                    <span className="font-bold text-gray-500 uppercase text-xs block mb-0.5">Department</span>
-                    <span className="font-semibold text-base">{selectedPayslip.emp.department || "N/A"}</span>
-                  </div>
-                  <div>
-                    <span className="font-bold text-gray-500 uppercase text-xs block mb-0.5">Salary Profile</span>
-                    <span className="font-semibold">{formatPeso(selectedPayslip.emp.baseSalary || 0)} / {selectedPayslip.emp.salaryType === 'hourly' ? 'Hr' : 'Mo'}</span>
-                  </div>
-                  <div>
-                    <span className="font-bold text-gray-500 uppercase text-xs block mb-0.5">Hourly Rate</span>
-                    <span className="font-semibold">{formatPeso(selectedPayslip.result.hourlyRate)}</span>
-                  </div>
-                </div>
 
-                <div className="w-full border border-gray-300 mb-8 rounded-lg overflow-hidden">
-                  <div className="grid grid-cols-2 bg-gray-100 font-bold uppercase text-xs tracking-wider border-b border-gray-300">
-                    <div className="p-3 border-r border-gray-300 text-gray-700">Earnings</div>
-                    <div className="p-3 text-gray-700">Deductions</div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 text-sm min-h-[160px]">
-                    {/* Earnings Col */}
-                    <div className="p-4 border-r border-gray-300 flex flex-col gap-2">
-                      <div className="flex justify-between">
-                        <span>Basic Pay (Gross)</span>
-                        <span className="font-semibold">{formatPeso(selectedPayslip.result.semiMonthlyBase)}</span>
+                  {/* FIX 3: Dynamic Table - Stacks vertically on mobile, side-by-side on desktop */}
+                  <div className="w-full border border-gray-300 mb-8 rounded-lg overflow-hidden flex flex-col md:flex-row">
+                    
+                    {/* Earnings Container */}
+                    <div className="w-full md:w-1/2 flex flex-col border-b md:border-b-0 md:border-r border-gray-300">
+                      <div className="bg-gray-100 p-3 font-bold uppercase text-[10px] sm:text-xs tracking-wider border-b border-gray-300 text-gray-700">
+                        Earnings
                       </div>
-                      {selectedPayslip.result.otPayPeso > 0 && (
-                        <div className="flex justify-between text-teal-700 font-medium">
-                          <span>Overtime Pay ({selectedPayslip.result.totalOtMinutes}m)</span>
-                          <span className="font-semibold">+ {formatPeso(selectedPayslip.result.otPayPeso)}</span>
+                      <div className="p-4 flex flex-col gap-3 min-h-[140px] text-xs sm:text-sm">
+                        <div className="flex justify-between gap-2">
+                          <span className="text-gray-700">Basic Pay (Gross)</span>
+                          <span className="font-semibold text-right">{formatPeso(selectedPayslip.result.semiMonthlyBase)}</span>
                         </div>
-                      )}
-                      <div className="flex justify-between text-gray-500 text-xs mt-2 pt-2 border-t border-gray-200">
-                        <span>Days Present: {selectedPayslip.result.daysPresent}</span>
+                        {selectedPayslip.result.otPayPeso > 0 && (
+                          <div className="flex justify-between gap-2 text-teal-700 font-medium">
+                            <span>Overtime Pay ({selectedPayslip.result.totalOtMinutes}m)</span>
+                            <span className="font-semibold text-right">+ {formatPeso(selectedPayslip.result.otPayPeso)}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between text-gray-500 text-[10px] sm:text-xs mt-auto pt-4 border-t border-gray-100">
+                          <span>Days Present: {selectedPayslip.result.daysPresent}</span>
+                          {selectedPayslip.result.paidLeaveDays > 0 && (
+                            <span>Paid Leaves: {selectedPayslip.result.paidLeaveDays}</span>
+                          )}
+                        </div>
                       </div>
-                      {selectedPayslip.result.paidLeaveDays > 0 && (
-                        <div className="flex justify-between text-gray-500 text-xs">
-                          <span>Paid Leaves: {selectedPayslip.result.paidLeaveDays}</span>
-                        </div>
-                      )}
+                      <div className="p-4 mt-auto border-t border-gray-300 bg-gray-50 flex justify-between gap-2 font-bold text-gray-800 text-sm">
+                        <span>Total Earnings</span>
+                        <span className="text-right">{formatPeso(selectedPayslip.result.semiMonthlyBase + selectedPayslip.result.otPayPeso)}</span>
+                      </div>
                     </div>
                     
-                    {/* Deductions Col */}
-                    <div className="p-4 flex flex-col gap-2">
-                      {selectedPayslip.result.absenceDeductionPeso > 0 && (
-                        <div className="flex justify-between text-rose-600 print:text-black">
-                          <span>Unpaid Absences ({selectedPayslip.result.unpaidAbsences} days)</span>
-                          <span className="font-semibold">{formatPeso(selectedPayslip.result.absenceDeductionPeso)}</span>
-                        </div>
-                      )}
-                      {selectedPayslip.result.timePenaltiesPeso > 0 && (
-                        <div className="flex justify-between text-rose-600 print:text-black">
-                          <span>Lates/UT ({selectedPayslip.result.totalLateMins + selectedPayslip.result.totalUndertimeMins} mins)</span>
-                          <span className="font-semibold">{formatPeso(selectedPayslip.result.timePenaltiesPeso)}</span>
-                        </div>
-                      )}
-                      
-                      {selectedPayslip.result.sss > 0 && (
-                        <div className="flex justify-between">
-                          <span>SSS Contribution</span>
-                          <span className="font-semibold">{formatPeso(selectedPayslip.result.sss)}</span>
-                        </div>
-                      )}
-                      {selectedPayslip.result.philhealth > 0 && (
-                        <div className="flex justify-between">
-                          <span>PhilHealth Contribution</span>
-                          <span className="font-semibold">{formatPeso(selectedPayslip.result.philhealth)}</span>
-                        </div>
-                      )}
-                      {selectedPayslip.result.pagibig > 0 && (
-                        <div className="flex justify-between">
-                          <span>Pag-IBIG Contribution</span>
-                          <span className="font-semibold">{formatPeso(selectedPayslip.result.pagibig)}</span>
-                        </div>
-                      )}
-                      
-                      {selectedPayslip.result.timePenaltiesPeso === 0 && selectedPayslip.result.absenceDeductionPeso === 0 && selectedPayslip.result.totalMandatory === 0 && (
-                        <div className="text-gray-400 italic">No deductions this period.</div>
-                      )}
+                    {/* Deductions Container */}
+                    <div className="w-full md:w-1/2 flex flex-col">
+                      <div className="bg-gray-100 p-3 font-bold uppercase text-[10px] sm:text-xs tracking-wider border-b border-gray-300 text-gray-700">
+                        Deductions
+                      </div>
+                      <div className="p-4 flex flex-col gap-3 min-h-[140px] text-xs sm:text-sm">
+                        {selectedPayslip.result.absenceDeductionPeso > 0 && (
+                          <div className="flex justify-between gap-2 text-rose-600 print:text-black">
+                            <span>Unpaid Absences ({selectedPayslip.result.unpaidAbsences}d)</span>
+                            <span className="font-semibold text-right">{formatPeso(selectedPayslip.result.absenceDeductionPeso)}</span>
+                          </div>
+                        )}
+                        {selectedPayslip.result.timePenaltiesPeso > 0 && (
+                          <div className="flex justify-between gap-2 text-rose-600 print:text-black">
+                            <span>Lates/UT ({selectedPayslip.result.totalLateMins + selectedPayslip.result.totalUndertimeMins}m)</span>
+                            <span className="font-semibold text-right">{formatPeso(selectedPayslip.result.timePenaltiesPeso)}</span>
+                          </div>
+                        )}
+                        {selectedPayslip.result.sss > 0 && (
+                          <div className="flex justify-between gap-2">
+                            <span className="text-gray-700">SSS Contrib.</span>
+                            <span className="font-semibold text-right">{formatPeso(selectedPayslip.result.sss)}</span>
+                          </div>
+                        )}
+                        {selectedPayslip.result.philhealth > 0 && (
+                          <div className="flex justify-between gap-2">
+                            <span className="text-gray-700">PhilHealth Contrib.</span>
+                            <span className="font-semibold text-right">{formatPeso(selectedPayslip.result.philhealth)}</span>s
+                          </div>
+                        )}
+                        {selectedPayslip.result.pagibig > 0 && (
+                          <div className="flex justify-between gap-2">
+                            <span className="text-gray-700">Pag-IBIG Contrib.</span>
+                            <span className="font-semibold text-right">{formatPeso(selectedPayslip.result.pagibig)}</span>
+                          </div>
+                        )}
+                        {selectedPayslip.result.timePenaltiesPeso === 0 && selectedPayslip.result.absenceDeductionPeso === 0 && selectedPayslip.result.totalMandatory === 0 && (
+                          <div className="text-gray-400 italic text-center my-auto">No deductions.</div>
+                        )}
+                      </div>
+                      <div className="p-4 mt-auto border-t border-gray-300 bg-gray-50 flex justify-between gap-2 font-bold text-rose-700 print:text-black text-sm">
+                        <span>Total Deductions</span>
+                        <span className="text-right">{formatPeso(selectedPayslip.result.absenceDeductionPeso + selectedPayslip.result.timePenaltiesPeso + selectedPayslip.result.totalMandatory)}</span>
+                      </div>
                     </div>
+
                   </div>
 
-                  <div className="grid grid-cols-2 border-t border-gray-300 font-bold bg-gray-50">
-                    <div className="p-4 border-r border-gray-300 flex justify-between text-gray-800">
-                      <span>Total Earnings</span>
-                      <span>{formatPeso(selectedPayslip.result.semiMonthlyBase + selectedPayslip.result.otPayPeso)}</span>
+                  {/* Net Pay */}
+                  <div className="flex flex-col sm:flex-row justify-between items-center sm:items-end bg-emerald-50 print:bg-transparent print:border print:border-gray-900 p-4 sm:p-6 rounded-lg mb-8 sm:mb-12 gap-2">
+                    <span className="text-base sm:text-lg font-black uppercase text-emerald-900 print:text-black tracking-widest">Net Pay</span>
+                    <span className="text-2xl sm:text-3xl font-black text-emerald-700 print:text-black underline underline-offset-4">{formatPeso(selectedPayslip.result.netPay)}</span>
+                  </div>
+
+                  {/* Signatures */}
+                  <div className="flex flex-col sm:flex-row justify-between items-center sm:items-end gap-8 pt-8 sm:pt-12 px-2 sm:px-4">
+                    <div className="text-center w-full sm:w-48">
+                      <div className="border-b border-gray-800 pb-1 font-semibold text-xs sm:text-sm truncate">{selectedPayslip.emp.fullName}</div>
+                      <div className="text-[10px] sm:text-xs text-gray-500 mt-1 uppercase tracking-wider">Employee Signature</div>
                     </div>
-                    <div className="p-4 flex justify-between text-rose-700 print:text-black">
-                      <span>Total Deductions</span>
-                      <span>{formatPeso(selectedPayslip.result.absenceDeductionPeso + selectedPayslip.result.timePenaltiesPeso + selectedPayslip.result.totalMandatory)}</span>
+                    <div className="text-center w-full sm:w-48">
+                      <div className="border-b border-gray-800 pb-1 font-semibold text-xs sm:text-sm">Human Resources</div>
+                      <div className="text-[10px] sm:text-xs text-gray-500 mt-1 uppercase tracking-wider">Authorized By</div>
                     </div>
                   </div>
-                </div>
-
-                <div className="flex justify-between items-center bg-emerald-50 print:bg-transparent print:border print:border-gray-900 p-4 rounded-lg mb-12">
-                  <span className="text-lg font-black uppercase text-emerald-900 print:text-black tracking-widest">Net Pay</span>
-                  <span className="text-2xl font-black text-emerald-700 print:text-black underline underline-offset-4">{formatPeso(selectedPayslip.result.netPay)}</span>
-                </div>
-
-                <div className="flex justify-between items-end pt-12 px-4">
-                  <div className="text-center w-48">
-                    <div className="border-b border-gray-800 pb-1 font-semibold text-sm">{selectedPayslip.emp.fullName}</div>
-                    <div className="text-xs text-gray-500 mt-1 uppercase tracking-wider">Employee Signature</div>
-                  </div>
-                  <div className="text-center w-48">
-                    <div className="border-b border-gray-800 pb-1 font-semibold text-sm">Human Resources</div>
-                    <div className="text-xs text-gray-500 mt-1 uppercase tracking-wider">Authorized By</div>
+                  
+                  <div className="mt-12 text-center text-[10px] text-gray-400 print:block hidden">
+                    Generated by SimpliSync Solutions • Document Date: {new Date().toLocaleDateString()}
                   </div>
                 </div>
                 
-                <div className="mt-12 text-center text-[10px] text-gray-400 print:block hidden">
-                  Generated by SimpliSync Solutions • Document Date: {new Date().toLocaleDateString()}
-                </div>
               </div>
-              
             </div>
           </div>
         )}
