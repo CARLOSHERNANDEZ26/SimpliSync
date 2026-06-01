@@ -18,8 +18,6 @@ import toast from "react-hot-toast";
 interface AttendanceLog { id: string; userId: string; timeIn: Date | null; timeOut: Date | null; status: string; fullName?: string; role?: string; }
 interface EmployeeData { id: string; fullName: string; department?: string; status?: string; [key: string]: unknown; }
 interface PendingLeave { id: string; userName: string; type: string; reason: string; status: string; startDate?: string; }
-
-// 🔥 UPDATED: Added title and category to match new schema
 interface Announcement { 
   id: string; 
   title?: string; 
@@ -43,8 +41,6 @@ export default function DashboardPage() {
   const [exceptionTime, setExceptionTime] = useState("");
   const [exceptionReason, setExceptionReason] = useState("");
   const [isResolving, setIsResolving] = useState(false);
-
-  // 🔥 NEW: Color Coded Badges for the Dashboard
   const getCategoryBadgeColor = (category?: string) => {
     switch(category) {
       case "Attendance & Timekeeping": return "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400 border-blue-200 dark:border-blue-500/30";
@@ -107,7 +103,6 @@ export default function DashboardPage() {
   }, [user?.uid, isAdmin]);
 
   useEffect(() => {
-    // 🔥 FIX: Increased limit to 8 to show all seeded policies
     const unsubscribe = onSnapshot(query(collection(db, "announcements"), orderBy("createdAt", "desc"), limit(8)), (snap) => setAnnouncements(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Announcement))));
     return () => unsubscribe();
   }, []);
@@ -290,7 +285,7 @@ export default function DashboardPage() {
               Company Memos & Updates
             </h3>
             
-            {/* 🔥 FIX: Scrollable grid container for 8+ items */}
+            {/* Scrollable grid container for 8+ items */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
               {announcements.length > 0 ? (
                 announcements.map((memo) => (
@@ -300,7 +295,6 @@ export default function DashboardPage() {
                     className="group cursor-pointer p-5 bg-slate-50 dark:bg-black/20 rounded-2xl border border-gray-100 dark:border-white/5 hover:border-indigo-500/50 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-all duration-300 flex flex-col justify-between min-h-[140px]"
                   >
                     <div>
-                      {/* 🔥 FIX: Using exact title from schema, with category badge */}
                       <div className="flex justify-between items-start mb-3 gap-2">
                         <span className={`px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider border whitespace-nowrap flex items-center gap-1 ${getCategoryBadgeColor(memo.category)}`}>
                           <Tag className="w-2.5 h-2.5" /> {memo.category || "General"}
