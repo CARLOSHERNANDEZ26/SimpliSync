@@ -332,15 +332,18 @@ export default function MemoGeneratorPage() {
               </h1>
               <p className="text-gray-500 dark:text-gray-400 mt-2">Manage and categorize DOLE-compliant company guidelines.</p>
             </div>
-            
-            <button 
+
+            {/*}
+           <button 
               onClick={handleSeedDatabase} disabled={isSeeding}
               className="flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white px-4 py-2.5 rounded-xl font-bold transition-all shadow-md active:scale-95 disabled:opacity-50 text-sm"
             >
               <Database className="w-4 h-4" />
               {isSeeding ? "Seeding..." : "Dev: Seed Policies"}
             </button>
+            */}
           </div>
+          
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             

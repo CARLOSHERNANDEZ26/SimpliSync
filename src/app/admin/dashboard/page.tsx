@@ -5,17 +5,17 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import Navbar from "@/components/Navbar";
 import { 
   collection, query, onSnapshot, orderBy, limit, getDocs, where, startAfter, 
-  QueryDocumentSnapshot, DocumentData, QueryConstraint // <-- Imported QueryConstraint
+  QueryDocumentSnapshot, DocumentData, QueryConstraint
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie } from "recharts";
-import { Users, Activity, ShieldAlert, TrendingUp, PieChart as PieIcon, Calendar, RefreshCw } from "lucide-react";
+import { Users, Activity, ShieldAlert, TrendingUp, PieChart as PieIcon, Calendar, RefreshCw, FileText } from "lucide-react";
 
 interface AuditLog {
   id: string;
   adminEmail: string;
-  action: string;
-  target: string;
+  actionType: string;
+  details: string;
   timestamp: { seconds: number } | null;
 }
 
@@ -25,12 +25,11 @@ export default function AdminCommandCenter() {
   const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>(""); 
   const [hasMore, setHasMore] = useState(true);
-
-  const [stats, setStats] = useState({ totalEmployees: 0, avgPerformance: 0 });
+  const [stats, setStats] = useState({ totalEmployees: 0, avgPerformance: 0, activePolicies: 0 });
   const [deptData, setDeptData] = useState<{name: string, value: number, fill: string}[]>([]);
   const [perfData, setPerfData] = useState<{name: string, score: number}[]>([]);
 
-  // Helper to strip UIDs from text
+  // Helper to strip UIDs from text for cleaner reading
   const formatTargetText = (text: string) => {
     if (!text) return "";
     const firebaseUidRegex = /\(?([A-Za-z0-9]{28})\)?/g;
@@ -62,7 +61,8 @@ export default function AdminCommandCenter() {
         constraints.push(startAfter(cursorDoc));
       }
 
-      const qLogs = query(collection(db, "auditLogs"), ...constraints);
+      //  UPDATED: Now queries the newly merged "systemLogs" collection
+      const qLogs = query(collection(db, "systemLogs"), ...constraints);
       const snap = await getDocs(qLogs);
 
       const fetchedLogs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as AuditLog));
@@ -87,6 +87,7 @@ export default function AdminCommandCenter() {
   }, [fetchLogs]);
 
   useEffect(() => {  
+    // 1. Fetch Users
     const qUsers = query(collection(db, "users"));
     const unsubUsers = onSnapshot(qUsers, (snap) => {
       const employees = snap.docs.filter(d => d.data().role === "employee");
@@ -117,7 +118,15 @@ export default function AdminCommandCenter() {
       })));
     });
 
-    return () => { unsubUsers(); };
+    const qPolicies = query(collection(db, "announcements"));
+    const unsubPolicies = onSnapshot(qPolicies, (snap) => {
+      setStats(prev => ({ ...prev, activePolicies: snap.docs.length }));
+    });
+
+    return () => { 
+      unsubUsers(); 
+      unsubPolicies();
+    };
   }, []);
 
   return (
@@ -134,17 +143,25 @@ export default function AdminCommandCenter() {
             <p className="text-gray-500 mt-2">Real-time HR analytics and system audit trails.</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <div className="bg-white dark:bg-white/5 p-6 rounded-3xl border border-gray-200 dark:border-white/10 shadow-sm">
               <Users className="text-indigo-500 mb-2" />
               <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalEmployees}</div>
               <div className="text-xs text-gray-400 uppercase font-bold tracking-wider">Total Headcount</div>
             </div>
+            
             <div className="bg-white dark:bg-white/5 p-6 rounded-3xl border border-gray-200 dark:border-white/10 shadow-sm">
               <TrendingUp className="text-emerald-500 mb-2" />
               <div className="text-2xl font-bold text-gray-900 dark:text-white">4.2 / 5.0</div>
               <div className="text-xs text-gray-400 uppercase font-bold tracking-wider">Org Performance</div>
             </div>
+
+            <div className="bg-white dark:bg-white/5 p-6 rounded-3xl border border-gray-200 dark:border-white/10 shadow-sm">
+              <FileText className="text-amber-500 mb-2" />
+              <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.activePolicies}</div>
+              <div className="text-xs text-gray-400 uppercase font-bold tracking-wider">Active Policies</div>
+            </div>
+
             <div className="bg-white dark:bg-white/5 p-6 rounded-3xl border border-gray-200 dark:border-white/10 shadow-sm">
               <ShieldAlert className="text-rose-500 mb-2" />
               <div className="text-2xl font-bold text-gray-900 dark:text-white">Active</div>
@@ -221,14 +238,20 @@ export default function AdminCommandCenter() {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {logs.length > 0 ? logs.map(log => (
-                <div key={log.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-black/20 rounded-2xl border border-gray-100 dark:border-white/5">
+                <div key={log.id} className="flex items-start justify-between p-4 bg-slate-50 dark:bg-black/20 rounded-2xl border border-gray-100 dark:border-white/5">
                   <div>
-                    <div className="text-xs font-bold text-indigo-500 uppercase">{log.action}</div>
-                    <div className="text-sm text-gray-700 dark:text-gray-300">{formatTargetText(log.target)}</div>
-                    <div className="text-[10px] text-gray-400 mt-1">{log.adminEmail}</div>
+                    <div className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider mb-0.5">
+                      {log.actionType || "GENERAL"}
+                    </div>
+                    <div className="text-sm font-medium text-gray-900 dark:text-white leading-snug">
+                      {formatTargetText(log.details)}
+                    </div>
+                    <div className="text-[10px] text-gray-500 mt-1.5 font-mono">
+                      {log.adminEmail}
+                    </div>
                   </div>
-                  <div className="text-[10px] font-mono text-gray-400 bg-white dark:bg-black/40 px-2 py-1 rounded-md border border-gray-100 dark:border-white/10">
-                    {log.timestamp ? new Date(log.timestamp.seconds * 1000).toLocaleTimeString() : "..."}
+                  <div className="text-[10px] font-mono font-semibold text-gray-500 dark:text-gray-400 bg-white dark:bg-black/40 px-2 py-1 rounded-md border border-gray-200 dark:border-white/10 shrink-0 ml-4">
+                    {log.timestamp ? new Date(log.timestamp.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "..."}
                   </div>
                 </div>
               )) : !loadingLogs && (

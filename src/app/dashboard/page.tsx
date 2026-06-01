@@ -11,14 +11,23 @@ import AdminLogsTable from "@/components/AdminLogsTable";
 import EmployeeHistoryTable from "@/components/EmployeeHistoryTable";
 import HRChatbot from "@/components/HRChatbot";
 import { verifyLocationPing, resolveDanglingShift } from "@/services/attendance";
-import { Users, Activity, FileText, ShieldAlert, Sparkles, XCircle, TrendingUp, CalendarCheck, AlertCircle, ArrowRight } from "lucide-react"; 
+import { Users, Activity, FileText, ShieldAlert, Sparkles, XCircle, TrendingUp, CalendarCheck, AlertCircle, ArrowRight, Tag } from "lucide-react"; 
 import Link from "next/link";
 import toast from "react-hot-toast";
 
 interface AttendanceLog { id: string; userId: string; timeIn: Date | null; timeOut: Date | null; status: string; fullName?: string; role?: string; }
 interface EmployeeData { id: string; fullName: string; department?: string; status?: string; [key: string]: unknown; }
 interface PendingLeave { id: string; userName: string; type: string; reason: string; status: string; startDate?: string; }
-interface Announcement { id: string; content: string; author: string; createdAt: { seconds: number } | null; }
+
+// 🔥 UPDATED: Added title and category to match new schema
+interface Announcement { 
+  id: string; 
+  title?: string; 
+  category?: string; 
+  content: string; 
+  author: string; 
+  createdAt: { seconds: number } | null; 
+}
 
 export default function DashboardPage() {
   const { user, isClockedIn } = useAuth(); 
@@ -30,16 +39,20 @@ export default function DashboardPage() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   
   const [danglingShift, setDanglingShift] = useState<AttendanceLog | null>(null);
-  const [selectedMemo, setSelectedMemo] = useState<{id: string, content: string, author: string, createdAt: { seconds: number } | null} | null>(null);
+  const [selectedMemo, setSelectedMemo] = useState<Announcement | null>(null);
   const [exceptionTime, setExceptionTime] = useState("");
   const [exceptionReason, setExceptionReason] = useState("");
   const [isResolving, setIsResolving] = useState(false);
 
-  const getMemoTitle = (content: string) => {
-    const lines = content.split('\n');
-    const subjectLine = lines.find(line => line.toUpperCase().includes('SUBJECT:'));
-    if (subjectLine) return subjectLine.replace(/\*\*/g, '').replace(/SUBJECT:/i, '').trim();
-    return "Official Company Memorandum"; 
+  // 🔥 NEW: Color Coded Badges for the Dashboard
+  const getCategoryBadgeColor = (category?: string) => {
+    switch(category) {
+      case "Attendance & Timekeeping": return "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400 border-blue-200 dark:border-blue-500/30";
+      case "Leaves & Absences": return "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 border-amber-200 dark:border-amber-500/30";
+      case "Payroll & Compensation": return "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30";
+      case "Code of Conduct & Security": return "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400 border-rose-200 dark:border-rose-500/30";
+      default: return "bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-gray-400 border-gray-200 dark:border-white/20";
+    }
   };
 
   const handleResolveException = async (e: React.FormEvent) => {
@@ -94,7 +107,8 @@ export default function DashboardPage() {
   }, [user?.uid, isAdmin]);
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(query(collection(db, "announcements"), orderBy("createdAt", "desc"), limit(3)), (snap) => setAnnouncements(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Announcement))));
+    // 🔥 FIX: Increased limit to 8 to show all seeded policies
+    const unsubscribe = onSnapshot(query(collection(db, "announcements"), orderBy("createdAt", "desc"), limit(8)), (snap) => setAnnouncements(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Announcement))));
     return () => unsubscribe();
   }, []);
 
@@ -276,29 +290,38 @@ export default function DashboardPage() {
               Company Memos & Updates
             </h3>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* 🔥 FIX: Scrollable grid container for 8+ items */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
               {announcements.length > 0 ? (
                 announcements.map((memo) => (
                   <div 
                     key={memo.id} 
                     onClick={() => setSelectedMemo(memo)}
-                    className="group cursor-pointer p-5 bg-slate-50 dark:bg-black/20 rounded-2xl border border-gray-100 dark:border-white/5 hover:border-indigo-500/50 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-all duration-300 flex flex-col justify-between min-h-[120px]"
+                    className="group cursor-pointer p-5 bg-slate-50 dark:bg-black/20 rounded-2xl border border-gray-100 dark:border-white/5 hover:border-indigo-500/50 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-all duration-300 flex flex-col justify-between min-h-[140px]"
                   >
                     <div>
-                      <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider mb-2 block">
-                        {memo.createdAt ? new Date(memo.createdAt.seconds * 1000).toLocaleDateString() : "New"} • From {memo.author}
-                      </span>
-                      <h4 className="text-sm font-bold text-gray-900 dark:text-white line-clamp-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                        {getMemoTitle(memo.content)}
+                      {/* 🔥 FIX: Using exact title from schema, with category badge */}
+                      <div className="flex justify-between items-start mb-3 gap-2">
+                        <span className={`px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider border whitespace-nowrap flex items-center gap-1 ${getCategoryBadgeColor(memo.category)}`}>
+                          <Tag className="w-2.5 h-2.5" /> {memo.category || "General"}
+                        </span>
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">
+                          {memo.createdAt ? new Date(memo.createdAt.seconds * 1000).toLocaleDateString() : "New"}
+                        </span>
+                      </div>
+                      
+                      <h4 className="text-sm font-bold text-gray-900 dark:text-white line-clamp-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors leading-tight">
+                        {memo.title || "Official Company Memorandum"}
                       </h4>
                     </div>
-                    <div className="mt-4 flex items-center text-xs font-bold text-gray-400 group-hover:text-indigo-500 transition-colors">
-                      Click to read full memo &rarr;
+                    <div className="mt-4 flex items-center justify-between text-xs font-bold text-gray-400 group-hover:text-indigo-500 transition-colors">
+                      <span>From {memo.author}</span>
+                      <span>Read memo &rarr;</span>
                     </div>
                   </div>
                 ))
               ) : (
-                <div className="col-span-full py-8 text-center text-gray-500 italic bg-slate-50 dark:bg-black/10 rounded-2xl border border-dashed border-gray-200 dark:border-white/10">
+                <div className="col-span-full py-12 text-center text-gray-500 italic bg-slate-50 dark:bg-black/10 rounded-2xl border border-dashed border-gray-200 dark:border-white/10">
                   No new company announcements.
                 </div>
               )}
@@ -325,26 +348,30 @@ export default function DashboardPage() {
 
         {/* The Reading Modal */}
         {selectedMemo && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-            <div className="bg-white dark:bg-[#151515] w-full max-w-2xl rounded-3xl shadow-2xl border border-gray-200 dark:border-white/10 flex flex-col max-h-[85vh]">
-              <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-white/10 sticky top-0 bg-white dark:bg-[#151515] z-10 rounded-t-3xl">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+            <div className="bg-white dark:bg-[#151515] w-full max-w-2xl max-h-[85vh] rounded-3xl shadow-2xl flex flex-col border border-gray-200 dark:border-white/10 animate-in zoom-in-95 duration-200">
+              
+              <div className="flex items-start justify-between p-6 border-b border-gray-100 dark:border-white/5 bg-slate-50 dark:bg-white/[0.02] rounded-t-3xl">
                 <div>
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-                    {getMemoTitle(selectedMemo.content)}
-                  </h3>
-                  <p className="text-xs text-gray-500 mt-1 uppercase tracking-wider font-bold">
-                    Published by {selectedMemo.author} • {selectedMemo.createdAt ? new Date(selectedMemo.createdAt.seconds * 1000).toLocaleDateString() : ""}
-                  </p>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white pr-4">{selectedMemo.title || "Official Company Memorandum"}</h3>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border ${getCategoryBadgeColor(selectedMemo.category)}`}>
+                      {selectedMemo.category || "Uncategorized"}
+                    </span>
+                    <p className="text-xs text-gray-500 font-semibold">
+                      Published {selectedMemo.createdAt ? new Date(selectedMemo.createdAt.seconds * 1000).toLocaleDateString() : "Just now"} by {selectedMemo.author}
+                    </p>
+                  </div>
                 </div>
                 <button 
                   onClick={() => setSelectedMemo(null)} 
-                  className="text-gray-400 hover:text-rose-500 transition-colors bg-slate-100 dark:bg-white/5 p-2 rounded-full"
+                  className="p-2 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-colors shrink-0 shadow-sm"
                 >
-                  <XCircle className="w-6 h-6" />
+                  <XCircle className="w-5 h-5 text-gray-500 dark:text-gray-300" />
                 </button>
               </div>
               <div className="p-8 overflow-y-auto custom-scrollbar flex-1 text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
-                {selectedMemo.content.replace(/\*\*/g, '')}
+                {selectedMemo.content}
               </div>
             </div>
           </div>
