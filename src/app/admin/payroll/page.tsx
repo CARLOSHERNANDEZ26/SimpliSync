@@ -122,9 +122,7 @@ export default function PayrollPage() {
 
         const attQuery = query(
           collection(db, "attendanceLogs"),
-          where("userId", "==", emp.id),
-          where("timeIn", ">=", startDate),
-          where("timeIn", "<=", endDate)
+          where("userId", "==", emp.id)
         );
         const attSnap = await getDocs(attQuery);
 
@@ -136,20 +134,42 @@ export default function PayrollPage() {
 
         attSnap.forEach(doc => {
           const data = doc.data();
-          if (data.timeIn) {
-            const dateStr = data.timeIn.toDate().toISOString().split('T')[0];
-            uniqueDaysPresent.add(dateStr);
-            if (!data.isLateExcused) {
-              totalLateMins += calculateLatePenaltyMinutes(data.timeIn.toDate(), "08:00");
-            }
+          if (!data.timeIn) return;
+
+          let logDate: Date;
+          if (typeof data.timeIn.toDate === "function") {
+            logDate = data.timeIn.toDate();
+          } else if (data.timeIn instanceof Date) {
+            logDate = data.timeIn;
+          } else {
+            logDate = new Date(data.timeIn); 
           }
-          if (data.timeOut) {
-            totalUndertimeMins += calculateUndertimeMinutes(data.timeOut.toDate(), "17:00");
-            
-            // Calculate OT for this shift
-            const otResult = calculateOvertimePay(data.timeOut.toDate(), hourlyRate);
-            totalOtMinutes += otResult.otMinutes;
-            otPayPeso += otResult.otPay;
+
+          if (logDate >= startDate && logDate <= endDate) {
+            const dateStr = logDate.toISOString().split('T')[0];
+            uniqueDaysPresent.add(dateStr);
+
+            if (!data.isLateExcused && !data.status.toUpperCase().includes("RESOLVED")) {
+              totalLateMins += calculateLatePenaltyMinutes(logDate, "08:00");
+            }
+
+            if (data.timeOut) {
+              let logOutDate: Date;
+              if (typeof data.timeOut.toDate === "function") {
+                logOutDate = data.timeOut.toDate();
+              } else if (data.timeOut instanceof Date) {
+                logOutDate = data.timeOut;
+              } else {
+                logOutDate = new Date(data.timeOut);
+              }
+
+              totalUndertimeMins += calculateUndertimeMinutes(logOutDate, "17:00");
+              
+              // Compute OT
+              const otResult = calculateOvertimePay(logOutDate, hourlyRate);
+              totalOtMinutes += otResult.otMinutes;
+              otPayPeso += otResult.otPay;
+            }
           }
         });
         const daysPresent = uniqueDaysPresent.size;
@@ -164,7 +184,6 @@ export default function PayrollPage() {
         let paidLeaveDays = 0;
         leaveSnap.forEach(doc => {
           const data = doc.data();
-
           if (data.type === "lwop") return; 
 
           const leaveStart = new Date(data.startDate);
@@ -202,12 +221,9 @@ export default function PayrollPage() {
         const totalAttendanceDeductions = totalTimePenalties + absenceDeductionPeso;
 
         const estimatedMonthlyForGov = emp.salaryType === "hourly" ? (hourlyRate * 8 * 22) : emp.baseSalary;
-        
-        // Add Overtime to taxable income base
         const grossPay = semiMonthlyBase + otPayPeso; 
         
         let mandatory = { sss: 0, philhealth: 0, pagibig: 0, totalMandatory: 0, taxableIncome: grossPay - totalAttendanceDeductions };
-        
         if (applyDeductions) {
           mandatory = calculateMandatoryDeductions(estimatedMonthlyForGov, cutoffPeriod);
         }
