@@ -98,7 +98,7 @@ export default function Employee201FilePage() {
     if (!user?.uid) return; 
     const currentYear = new Date().getFullYear();
     const q = query(
-      collection(db, "bonuses"), 
+      collection(db, "benefitDistributions"), 
       where("userId", "==", user.uid), 
       where("year", "==", currentYear), 
       orderBy("distributedAt", "desc")
