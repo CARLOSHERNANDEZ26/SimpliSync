@@ -99,13 +99,26 @@ export default function Employee201FilePage() {
     const currentYear = new Date().getFullYear();
     const q = query(
       collection(db, "benefitDistributions"), 
-      where("userId", "==", user.uid), 
-      where("year", "==", currentYear), 
-      orderBy("distributedAt", "desc")
+      where("userId", "==", user.uid)
     );
+    
     const unsubscribe = onSnapshot(q, (snap) => {
-      setBonuses(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Bonus)));
+      let fetchedBonuses = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Bonus));
+      
+      fetchedBonuses = fetchedBonuses
+        .filter(b => b.year === currentYear)
+        .sort((a, b) => {
+          const timeA = a.distributedAt?.seconds || 0;
+          const timeB = b.distributedAt?.seconds || 0;
+          return timeB - timeA;
+        });
+
+      setBonuses(fetchedBonuses);
+    }, (error) => {
+      console.error("Error fetching bonuses:", error);
+      console.log("No bonuses found or error occurred while fetching bonuses.");
     });
+    
     return () => unsubscribe();
   }, [user?.uid]);
 
