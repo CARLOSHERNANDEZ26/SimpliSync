@@ -6,7 +6,7 @@ import Navbar from "@/components/Navbar";
 import { useAuth } from "@/hooks/useAuth";
 import { collection, query, where, onSnapshot, doc, updateDoc, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { Banknote, Edit2, Save, XCircle, Search, Calculator, Calendar, FileText, CheckCircle2, Download, Printer, ArrowLeft } from "lucide-react";
+import { Banknote, Edit2, Save, XCircle, Search, Calculator, Calendar, FileText, CheckCircle2, Download, Printer, ArrowLeft, ChevronDown } from "lucide-react";
 import toast from "react-hot-toast";
 
 import { calculateMandatoryDeductions } from "@/lib/deductions";  
@@ -49,25 +49,23 @@ interface PayrollResult {
 export default function PayrollPage() {
   const { user } = useAuth();
   const isAdmin = user?.email === "admin@simplisync.local";
-  
   const [employees, setEmployees] = useState<EmployeePayroll[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editSalary, setEditSalary] = useState<number | "">("");
   const [editType, setEditType] = useState<"monthly" | "hourly">("monthly");
   const [isSaving, setIsSaving] = useState(false);
-
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const today = new Date();
     return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
   });
   const [cutoffPeriod, setCutoffPeriod] = useState<1 | 2>(1);
   const [applyDeductions, setApplyDeductions] = useState(true);
-  
   const [payrollData, setPayrollData] = useState<Record<string, PayrollResult>>({});
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedPayslip, setSelectedPayslip] = useState<{ emp: EmployeePayroll; result: PayrollResult } | null>(null);
+  const [authorizedBy, setAuthorizedBy] = useState("Human Resources");
+  const [isEditingAuth, setIsEditingAuth] = useState(false);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -315,20 +313,23 @@ export default function PayrollPage() {
                   <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input 
                     type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} 
-                    className="bg-gray-50 dark:bg-black/40 border border-gray-200 dark:border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm dark:text-white outline-none focus:ring-2 focus:ring-emerald-500 w-full" 
+                    className="bg-gray-50 dark:bg-black/40 border border-gray-200 dark:border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500 w-full" 
                   />
                 </div>
               </div>
 
               <div className="flex flex-col gap-1.5 flex-1 md:flex-none">
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Cutoff Period</label>
-                <select 
-                  value={cutoffPeriod} onChange={(e) => setCutoffPeriod(Number(e.target.value) as 1 | 2)} 
-                  className="bg-gray-50 dark:bg-black/40 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm dark:text-white outline-none focus:ring-2 focus:ring-emerald-500 w-full cursor-pointer"
-                >
-                  <option value={1}>1st Cutoff (1st - 15th)</option>
-                  <option value={2}>2nd Cutoff (16th - End)</option>
-                </select>
+                <div className="relative">
+                  <select 
+                    value={cutoffPeriod} onChange={(e) => setCutoffPeriod(Number(e.target.value) as 1 | 2)} 
+                    className="bg-gray-50 dark:bg-black/40 border border-gray-200 dark:border-white/10 rounded-xl pl-4 pr-10 py-2.5 text-sm text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500 w-full cursor-pointer appearance-none"
+                  >
+                    <option value={1} className="text-gray-900">1st Cutoff (1st - 15th)</option>
+                    <option value={2} className="text-gray-900">2nd Cutoff (16th - End)</option>
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                </div>
               </div>
 
               <div className="flex flex-col gap-1.5 w-full md:w-auto pt-1 md:pt-0">
@@ -376,7 +377,7 @@ export default function PayrollPage() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input 
                   type="text" placeholder="Search employee..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} 
-                  className="pl-10 pr-4 py-2 bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl text-sm outline-none dark:text-white focus:ring-2 focus:ring-emerald-500 transition-all" 
+                  className="pl-10 pr-4 py-2 bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl text-sm outline-none text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 transition-all" 
                 />
               </div>
             </div>
@@ -408,8 +409,8 @@ export default function PayrollPage() {
                       <td className="py-4 text-right font-medium text-gray-700 dark:text-gray-300">
                         {editingId === emp.id ? (
                           <div className="flex items-center justify-end gap-2">
-                            <input type="number" value={editSalary} onChange={(e) => setEditSalary(Number(e.target.value))} placeholder="Amount" className="w-24 px-2 py-1 bg-white dark:bg-black/40 border border-gray-200 dark:border-white/10 rounded text-right dark:text-white outline-none focus:ring-2 focus:ring-emerald-500" />
-                            <select value={editType} onChange={(e) => setEditType(e.target.value as "monthly" | "hourly")} className="px-2 py-1.5 bg-white dark:bg-black/40 border border-gray-200 dark:border-white/10 rounded text-xs dark:text-white outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer">
+                            <input type="number" value={editSalary} onChange={(e) => setEditSalary(Number(e.target.value))} placeholder="Amount" className="w-24 px-2 py-1 bg-white dark:bg-black/40 border border-gray-200 dark:border-white/10 rounded text-right text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500" />
+                            <select value={editType} onChange={(e) => setEditType(e.target.value as "monthly" | "hourly")} className="px-2 py-1.5 bg-white dark:bg-black/40 border border-gray-200 dark:border-white/10 rounded text-xs text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer">
                               <option value="monthly">/mo</option>
                               <option value="hourly">/hr</option>
                             </select>
@@ -497,13 +498,11 @@ export default function PayrollPage() {
 
         {/* DOLE-Compliant Payslip Modal with Overtime */}
         {selectedPayslip && (
-          // FIX 1: Unbreakable modal scroll container (no items-center clipping)
           <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm overflow-y-auto print:bg-white print:overflow-visible">
             <div className="min-h-screen flex items-start justify-center p-2 sm:p-6 print:p-0">
               
               <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full text-gray-900 mt-4 sm:mt-10 mb-4 sm:mb-10 print:m-0 print:shadow-none print:w-full print:max-w-none">
                 
-                {/* FIX 2: Responsive Header that wraps cleanly on tiny screens */}
                 <div className="flex flex-wrap sm:flex-nowrap justify-between items-center p-4 sm:p-5 border-b border-gray-200 print:hidden bg-slate-50 rounded-t-xl gap-3">
                   <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
                     <button 
@@ -553,7 +552,6 @@ export default function PayrollPage() {
                     </div>
                   </div>
 
-                  {/* FIX 3: Dynamic Table - Stacks vertically on mobile, side-by-side on desktop */}
                   <div className="w-full border border-gray-300 mb-8 rounded-lg overflow-hidden flex flex-col md:flex-row">
                     
                     {/* Earnings Container */}
@@ -645,8 +643,30 @@ export default function PayrollPage() {
                       <div className="border-b border-gray-800 pb-1 font-semibold text-xs sm:text-sm truncate">{selectedPayslip.emp.fullName}</div>
                       <div className="text-[10px] sm:text-xs text-gray-500 mt-1 uppercase tracking-wider">Employee Signature</div>
                     </div>
-                    <div className="text-center w-full sm:w-48">
-                      <div className="border-b border-gray-800 pb-1 font-semibold text-xs sm:text-sm">Human Resources</div>
+                    
+                    <div className="text-center w-full sm:w-48 group">
+                      {isEditingAuth ? (
+                        <input 
+                          type="text" 
+                          value={authorizedBy} 
+                          onChange={(e) => setAuthorizedBy(e.target.value)}
+                          onBlur={() => setIsEditingAuth(false)}
+                          onKeyDown={(e) => e.key === 'Enter' && setIsEditingAuth(false)}
+                          className="border-b border-gray-800 pb-1 font-semibold text-xs sm:text-sm w-full text-center outline-none bg-emerald-50 print:bg-transparent text-gray-900"
+                          autoFocus
+                        />
+                      ) : (
+                        <div className="border-b border-gray-800 pb-1 font-semibold text-xs sm:text-sm relative flex justify-center items-center text-gray-900">
+                          <span>{authorizedBy}</span>
+                          <button 
+                            onClick={() => setIsEditingAuth(true)}
+                            className="absolute -right-6 opacity-0 group-hover:opacity-100 transition-opacity print:hidden text-gray-400 hover:text-emerald-600"
+                            title="Edit Signatory"
+                          >
+                            <Edit2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      )}
                       <div className="text-[10px] sm:text-xs text-gray-500 mt-1 uppercase tracking-wider">Authorized By</div>
                     </div>
                   </div>

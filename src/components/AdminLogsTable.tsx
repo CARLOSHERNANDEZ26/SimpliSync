@@ -190,7 +190,7 @@ export default function AdminLogsTable() {
               placeholder="Search employee..." 
               value={searchTerm} 
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl text-sm outline-none dark:text-white focus:ring-2 focus:ring-emerald-500 transition-all"
+              className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl text-sm outline-none text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 transition-all"
             />
           </div>
           <div className="relative">
@@ -199,7 +199,7 @@ export default function AdminLogsTable() {
                type="month" 
                value={selectedMonth} 
                onChange={(e) => setSelectedMonth(e.target.value)} 
-               className="bg-gray-50 dark:bg-black/40 border border-gray-200 dark:border-white/10 rounded-xl text-sm pl-10 pr-4 py-2.5 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500 transition-all cursor-pointer" 
+               className="bg-gray-50 dark:bg-black/40 border border-gray-200 dark:border-white/10 rounded-xl text-sm pl-10 pr-4 py-2.5 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500 transition-all cursor-pointer" 
              />
           </div>
         </div>

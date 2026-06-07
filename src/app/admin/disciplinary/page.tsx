@@ -6,7 +6,7 @@ import Navbar from "@/components/Navbar";
 import { useAuth } from "@/hooks/useAuth";
 import { collection, query, where, onSnapshot, addDoc, serverTimestamp, orderBy, doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { Gavel, AlertTriangle, Send, FileText, XCircle, UserX, ShieldAlert, CheckCircle, Clock, UserCheck } from "lucide-react";
+import { Gavel, AlertTriangle, Send, FileText, XCircle, UserX, ShieldAlert, CheckCircle, Clock, UserCheck, ChevronDown } from "lucide-react";
 import toast from "react-hot-toast";
 import { logAdminAction } from "@/lib/audit";
 
@@ -61,8 +61,7 @@ export default function DisciplinaryPage() {
     return () => { unsubEmp(); unsubRec(); };
   }, [isAdmin]);
 
-
-  const handleGenerateAdvisor = async (e: React.SubmitEvent<HTMLFormElement>) => {
+  const handleGenerateAdvisor = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!selectedEmp || !offenseType || !description) return toast.error("Please fill all fields.");
 
@@ -88,14 +87,13 @@ export default function DisciplinaryPage() {
       setAiDraft(data.memo || "");
       toast.success("AI Recommendation Generated!");
     } catch (error) {
-        console.error("AI Advisor Error:", error);
+      console.error("AI Advisor Error:", error);
       toast.error("Failed to connect to AI Advisor.");
     } finally {
       setIsGenerating(false);
     }
   };
 
-  // (Keep handleSaveRecord exactly the same)
   const handleSaveRecord = async () => {
     if (!aiDraft) return;
     setIsSaving(true);
@@ -113,26 +111,26 @@ export default function DisciplinaryPage() {
       toast.success("Disciplinary record securely saved.");
 
       if (user?.email) {
-      await logAdminAction(
-        user.email, 
-        `Issued Notice to Explain for ${offenseType}`, 
-        `Employee ID: ${selectedEmp}`
-      );
-    }
+        await logAdminAction(
+          user.email, 
+          `Issued Notice to Explain for ${offenseType}`, 
+          `Employee: ${empName}`
+        );
+      }
       setIsModalOpen(false);
       setAiDraft("");
       setOffenseType("");
       setDescription("");
       setSelectedEmp("");
     } catch (error) {
-        console.error ("Failed to save record.", error);
+      console.error("Failed to save record.", error);
       toast.error("Failed to save record.");
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleResolveCase = async (e: React.SubmitEvent<HTMLFormElement>) => {
+  const handleResolveCase = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!selectedCase || !verdict || !resolutionText.trim()) return toast.error("Please fill all resolution fields.");
     
@@ -153,7 +151,7 @@ export default function DisciplinaryPage() {
         await logAdminAction(
           user.email, 
           `Resolved Disciplinary Case: ${verdict}`, 
-          `Employee ID: ${selectedCase.employeeId} | Offense: ${selectedCase.offenseType}`
+          `Employee: ${selectedCase.employeeName} | Offense: ${selectedCase.offenseType}`
         );
       }
       
@@ -178,7 +176,6 @@ export default function DisciplinaryPage() {
     setResolutionText("");
   };
 
-  // Helper for dynamic status badge colors
   const getStatusBadge = (status: string) => {
     if (status.includes("Resolved")) {
       return <span className="bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 w-fit"><CheckCircle className="w-3 h-3"/> {status}</span>;
@@ -212,7 +209,7 @@ export default function DisciplinaryPage() {
             </div>
             <button 
               onClick={() => setIsModalOpen(true)}
-              className="flex items-center justify-center gap-2 bg-rose-600 hover:bg-rose-500 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg"
+              className="flex items-center justify-center gap-2 bg-rose-600 hover:bg-rose-500 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg animate-fade-in"
             >
               <AlertTriangle className="w-5 h-5" /> Log Incident
             </button>
@@ -261,10 +258,9 @@ export default function DisciplinaryPage() {
             </table>
           </div>
 
-          {/* ... (Keep the Incident Logging Modal completely unchanged) ... */}
           {isModalOpen && (
-             <div className="fixed inset-0 z-[100] flex flex-col justify-end sm:justify-center items-center bg-black/60 backdrop-blur-sm p-0 sm:p-4 transition-all">
-              <div className="bg-white dark:bg-[#151515] w-full max-w-4xl h-full sm:h-auto max-h-[95dvh] sm:max-h-[90vh] rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col animate-fade-in-up">
+             <div className="fixed inset-0 z-[100] flex flex-col justify-end sm:justify-center md:justify-start md:pt-[90px] items-center bg-black/60 backdrop-blur-sm p-0 sm:p-4 transition-all overflow-y-auto">
+              <div className="bg-white dark:bg-[#151515] w-full max-w-4xl h-full sm:h-auto max-h-[95dvh] sm:max-h-[80vh] rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col animate-fade-in-up md:my-0">
                 
                 {/* Fixed Sticky Header */}
                 <div className="flex justify-between items-center p-5 sm:p-6 border-b border-gray-200 dark:border-white/10 shrink-0 bg-white dark:bg-[#151515] z-[110] sticky top-0">
@@ -280,24 +276,43 @@ export default function DisciplinaryPage() {
                   {/* Left Column: Input Form */}
                   <div className="w-full lg:w-1/2 p-5 sm:p-6 border-b lg:border-b-0 lg:border-r border-gray-200 dark:border-white/10 lg:overflow-y-auto custom-scrollbar shrink-0 sm:shrink">
                     <form onSubmit={handleGenerateAdvisor} className="space-y-4">
+                      
+                      {/* Select Employee */}
                       <div className="space-y-1.5">
                         <label className="text-xs font-bold text-gray-500 uppercase">Select Employee</label>
-                        <select required value={selectedEmp} onChange={(e) => setSelectedEmp(e.target.value)} className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 outline-none text-sm dark:text-white appearance-none focus:ring-2 focus:ring-rose-500">
-                          <option value="">-- Choose Employee --</option>
-                          {employees.map(emp => (<option key={emp.id} value={emp.id}>{emp.fullName} ({emp.department || "No Dept"})</option>))}
-                        </select>
+                        <div className="relative">
+                          <select 
+                            required 
+                            value={selectedEmp} 
+                            onChange={(e) => setSelectedEmp(e.target.value)} 
+                            className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 outline-none text-sm text-gray-900 dark:text-white appearance-none focus:ring-2 focus:ring-rose-500 cursor-pointer"
+                          >
+                            <option value="" className="text-gray-900">-- Choose Employee --</option>
+                            {employees.map(emp => (<option key={emp.id} value={emp.id} className="text-gray-900">{emp.fullName} ({emp.department || "No Dept"})</option>))}
+                          </select>
+                          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                        </div>
                       </div>
                       
+                      {/* Offense Category */}
                       <div className="space-y-1.5">
                         <label className="text-xs font-bold text-gray-500 uppercase">Offense Type</label>
-                        <select required value={offenseType} onChange={(e) => setOffenseType(e.target.value)} className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 outline-none text-sm dark:text-white appearance-none focus:ring-2 focus:ring-rose-500">
-                          <option value="">-- Select Offense Category --</option>
-                          <option value="Chronic Tardiness">Chronic Tardiness</option>
-                          <option value="Absenteeism / AWOL">Absenteeism / AWOL</option>
-                          <option value="Insubordination">Insubordination</option>
-                          <option value="Policy Violation">Policy Violation (Dress Code, IT, etc.)</option>
-                          <option value="Misconduct">Professional Misconduct</option>
-                        </select>
+                        <div className="relative">
+                          <select 
+                            required 
+                            value={offenseType} 
+                            onChange={(e) => setOffenseType(e.target.value)} 
+                            className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 outline-none text-sm text-gray-900 dark:text-white appearance-none focus:ring-2 focus:ring-rose-500 cursor-pointer"
+                          >
+                            <option value="" className="text-gray-900">-- Select Offense Category --</option>
+                            <option value="Chronic Tardiness" className="text-gray-900">Chronic Tardiness</option>
+                            <option value="Absenteeism / AWOL" className="text-gray-900">Absenteeism / AWOL</option>
+                            <option value="Insubordination" className="text-gray-900">Insubordination</option>
+                            <option value="Policy Violation" className="text-gray-900">Policy Violation (Dress Code, IT, etc.)</option>
+                            <option value="Misconduct" className="text-gray-900">Professional Misconduct</option>
+                          </select>
+                          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                        </div>
                       </div>
 
                       <div className="space-y-1.5">
@@ -311,7 +326,7 @@ export default function DisciplinaryPage() {
                     </form>
                   </div>
 
-                  {/* Right Column: AI Output */}
+                  {/* Right Column: AI Output Textarea */}
                   <div className="w-full lg:w-1/2 p-5 sm:p-6 flex flex-col bg-slate-50 dark:bg-black/10 lg:overflow-y-auto custom-scrollbar shrink-0 sm:shrink">
                     <div className="mb-4">
                       <h4 className="text-sm font-bold text-gray-500 uppercase flex items-center gap-2">
@@ -323,7 +338,7 @@ export default function DisciplinaryPage() {
                       value={aiDraft}
                       onChange={(e) => setAiDraft(e.target.value)}
                       placeholder="Type the formal Notice to Explain here..."
-                      className="flex-1 w-full min-h-[200px] bg-white dark:bg-black/40 border border-gray-200 dark:border-white/10 rounded-xl p-4 text-sm text-gray-700 dark:text-gray-300 overflow-y-auto custom-scrollbar resize-none outline-none focus:ring-2 focus:ring-teal-500"
+                      className="flex-1 w-full min-h-[200px] bg-white dark:bg-black/40 border border-gray-200 dark:border-white/10 rounded-xl p-4 text-sm text-gray-700 dark:text-gray-300 overflow-y-auto custom-scrollbar resize-none outline-none text-gray-900 focus:ring-2 focus:ring-teal-500 placeholder-gray-400 dark:placeholder-gray-600"
                     />
                     <div className="mt-4 space-y-3">
                       <button 
@@ -340,10 +355,9 @@ export default function DisciplinaryPage() {
             </div>
           )}
 
-          {/* 🔥 NEW: Admin Case Resolution Modal */}
           {selectedCase && (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-              <div className="bg-slate-50 dark:bg-[#121212] w-full max-w-4xl rounded-3xl shadow-2xl border border-gray-200 dark:border-white/10 flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="fixed inset-0 z-[100] flex flex-col justify-end sm:justify-center md:justify-start md:pt-[90px] items-center bg-black/60 backdrop-blur-sm p-0 sm:p-4 transition-all overflow-y-auto">
+              <div className="bg-slate-50 dark:bg-[#121212] w-full max-w-4xl rounded-t-3xl sm:rounded-3xl shadow-2xl border border-gray-200 dark:border-white/10 flex flex-col max-h-[95dvh] sm:max-h-[80vh] overflow-hidden animate-in zoom-in-95 duration-200 md:my-0">
                 
                 {/* Modal Header */}
                 <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-white/10 bg-white dark:bg-[#151515] shrink-0">
@@ -419,29 +433,37 @@ export default function DisciplinaryPage() {
                         </div>
                       </div>
                     ) : (
-                      // Interactive Form if pending
+                      // Interactive Action Form
                       <form onSubmit={handleResolveCase} className="space-y-4">
                         <div className="space-y-1.5">
                           <label className="text-xs font-bold text-gray-500 uppercase">Final Verdict</label>
-                          <select required value={verdict} onChange={(e) => setVerdict(e.target.value)} className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 outline-none text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500">
-                            <option value="">-- Select Final Action --</option>
-                            <option value="Cleared / Exonerated">Cleared / Exonerated</option>
-                            <option value="Verbal Warning Documented">Verbal Warning Documented</option>
-                            <option value="Written Warning">Written Warning</option>
-                            <option value="Suspension">Suspension</option>
-                            <option value="Termination">Termination</option>
-                          </select>
+                          <div className="relative">
+                            <select 
+                              required 
+                              value={verdict} 
+                              onChange={(e) => setVerdict(e.target.value)} 
+                              className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 outline-none text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer"
+                            >
+                              <option value="" className="text-gray-900">-- Select Final Action --</option>
+                              <option value="Cleared / Exonerated" className="text-gray-900">Cleared / Exonerated</option>
+                              <option value="Verbal Warning Documented" className="text-gray-900">Verbal Warning Documented</option>
+                              <option value="Written Warning" className="text-gray-900">Written Warning</option>
+                              <option value="Suspension" className="text-gray-900">Suspension</option>
+                              <option value="Termination" className="text-gray-900">Termination</option>
+                            </select>
+                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                          </div>
                         </div>
                         
                         <div className="space-y-1.5">
                           <label className="text-xs font-bold text-gray-500 uppercase">Resolution Details & Justification</label>
-                        <textarea 
-                         required 
-                         value={resolutionText} 
-                         onChange={(e) => setResolutionText(e.target.value)} 
-                         placeholder="Detail the reasoning behind the verdict based on the employee's explanation and company policy..." 
-                         className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 min-h-[120px] resize-none outline-none text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 focus:ring-2 focus:ring-indigo-500 custom-scrollbar"
-/>
+                          <textarea 
+                            required 
+                            value={resolutionText} 
+                            onChange={(e) => setResolutionText(e.target.value)} 
+                            placeholder="Detail the reasoning behind the verdict based on the employee's explanation and company policy..." 
+                            className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 min-h-[120px] resize-none outline-none text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 focus:ring-2 focus:ring-indigo-500 custom-scrollbar"
+                          />
                         </div>
 
                         <button 

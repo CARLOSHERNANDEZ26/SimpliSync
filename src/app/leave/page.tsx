@@ -6,8 +6,9 @@ import Navbar from "@/components/Navbar";
 import { collection, query, where, onSnapshot, addDoc, updateDoc, doc, serverTimestamp, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/hooks/useAuth";
-import { Calendar as CalendarIcon, Clock, CheckCircle, XCircle, ExternalLink } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, CheckCircle, XCircle, ExternalLink, MessageSquareWarning } from "lucide-react";
 import toast from "react-hot-toast";
+
 interface LeaveRequest {
   id: string;
   userId: string;
@@ -18,6 +19,7 @@ interface LeaveRequest {
   reason: string;
   attachmentUrl?: string;
   status: "pending" | "approved" | "rejected";
+  adminRemarks?: string; 
   createdAt: { seconds: number; nanoseconds: number } | null;
 }
 
@@ -33,6 +35,8 @@ export default function LeavePage() {
   const [endDate, setEndDate] = useState("");
   const [reason, setReason] = useState("");
   const [attachmentUrl, setAttachmentUrl] = useState(""); 
+  const [requestToDecline, setRequestToDecline] = useState<LeaveRequest | null>(null);
+  const [declineReason, setDeclineReason] = useState("");
 
   useEffect(() => {
     if (!user?.uid) return;
@@ -76,7 +80,6 @@ export default function LeavePage() {
 
   const getTrueBalance = (leaveType: "vl" | "sl" | "sil") => {
     const rawBalance = balances[leaveType];
-    
     const pendingReqs = requests.filter(r => r.userId === user?.uid && r.type === leaveType && r.status === "pending");
     
     const lockedDays = pendingReqs.reduce((total, req) => {
@@ -103,7 +106,6 @@ export default function LeavePage() {
 
     const diffDays = Math.ceil(Math.abs(end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
     
-    //  FIX: Bypass balance checking if they are requesting Leave Without Pay
     if (type !== "lwop") {
       const { available, locked } = getTrueBalance(type);
 
@@ -139,7 +141,7 @@ export default function LeavePage() {
     }
   };
 
-  const handleUpdateStatus = async (id: string, newStatus: "approved" | "rejected", request: LeaveRequest) => {
+  const handleUpdateStatus = async (id: string, newStatus: "approved" | "rejected", request: LeaveRequest, remarks?: string) => {
     try {
       if (newStatus === "approved") {
         const start = new Date(request.startDate);
@@ -162,7 +164,10 @@ export default function LeavePage() {
         }
       }
 
-      await updateDoc(doc(db, "leaveRequests", id), { status: newStatus });
+      const updatePayload: Partial<LeaveRequest> = { status: newStatus };
+      if (remarks) updatePayload.adminRemarks = remarks;
+
+      await updateDoc(doc(db, "leaveRequests", id), updatePayload);
       toast.success(`Request ${newStatus}!`);
     } catch (error: unknown) {
       console.error("Status update error:", error);
@@ -170,14 +175,24 @@ export default function LeavePage() {
     }
   };
 
+  const submitDecline = async () => {
+    if (!requestToDecline) return;
+    if (!declineReason.trim()) return toast.error("Please provide a reason for declining.");
+    
+    await handleUpdateStatus(requestToDecline.id, "rejected", requestToDecline, declineReason);
+    
+    setRequestToDecline(null);
+    setDeclineReason("");
+  };
+
   const pendingRequests = requests.filter(r => r.status === "pending");
   const pastRequests = requests.filter(r => r.status !== "pending");
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "pending": return <span className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 rounded-lg text-xs font-semibold"><Clock className="w-3.5 h-3.5" /> Pending</span>;
-      case "approved": return <span className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 rounded-lg text-xs font-semibold"><CheckCircle className="w-3.5 h-3.5" /> Approved</span>;
-      case "rejected": return <span className="flex items-center gap-1.5 px-2.5 py-1 bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400 rounded-lg text-xs font-semibold"><XCircle className="w-3.5 h-3.5" /> Rejected</span>;
+      case "pending": return <span className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 rounded-lg text-xs font-semibold w-fit"><Clock className="w-3.5 h-3.5" /> Pending</span>;
+      case "approved": return <span className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 rounded-lg text-xs font-semibold w-fit"><CheckCircle className="w-3.5 h-3.5" /> Approved</span>;
+      case "rejected": return <span className="flex items-center gap-1.5 px-2.5 py-1 bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400 rounded-lg text-xs font-semibold w-fit"><XCircle className="w-3.5 h-3.5" /> Declined</span>;
       default: return null;
     }
   };
@@ -279,7 +294,8 @@ export default function LeavePage() {
 
                           <div className="flex gap-2 pt-2">
                             <button onClick={() => handleUpdateStatus(req.id, "approved", req)} className="flex-1 py-2 bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-500/20 dark:hover:bg-emerald-500/30 text-emerald-700 dark:text-emerald-400 rounded-lg text-xs font-bold active:scale-95 transition-all">Approve</button>
-                            <button onClick={() => handleUpdateStatus(req.id, "rejected", req)} className="flex-1 py-2 bg-rose-100 hover:bg-rose-200 dark:bg-rose-500/20 dark:hover:bg-rose-500/30 text-rose-700 dark:text-rose-400 rounded-lg text-xs font-bold active:scale-95 transition-all">Reject</button>
+                            
+                            <button onClick={() => setRequestToDecline(req)} className="flex-1 py-2 bg-rose-100 hover:bg-rose-200 dark:bg-rose-500/20 dark:hover:bg-rose-500/30 text-rose-700 dark:text-rose-400 rounded-lg text-xs font-bold active:scale-95 transition-all">Decline</button>
                           </div>
                         </div>
                       ))}
@@ -299,13 +315,13 @@ export default function LeavePage() {
                       <th className="pb-4 pl-2">Employee</th>
                       <th className="pb-4">Type</th>
                       <th className="pb-4 hidden sm:table-cell">Dates</th>
-                      <th className="pb-4">Status</th>
+                      <th className="pb-4">Status & Remarks</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-white/5">
                     {(isAdmin ? pastRequests : requests).map(req => (
                       <tr key={req.id} className="text-sm hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-colors">
-                        <td className="py-4 pl-2 text-gray-900 dark:text-white font-medium">
+                        <td className="py-4 pl-2 text-gray-900 dark:text-white font-medium align-top">
                           {req.userName}
                           {req.attachmentUrl && (
                             <a href={req.attachmentUrl} target="_blank" rel="noopener noreferrer" title="View Document" className="ml-2 text-indigo-500 dark:text-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300 inline-block align-middle">
@@ -313,11 +329,21 @@ export default function LeavePage() {
                             </a>
                           )}
                         </td>
-                        <td className={`py-4 font-bold uppercase text-xs ${req.type === 'lwop' ? 'text-amber-600 dark:text-amber-400' : 'text-teal-600 dark:text-teal-400'}`}>
+                        <td className={`py-4 font-bold uppercase text-xs align-top ${req.type === 'lwop' ? 'text-amber-600 dark:text-amber-400' : 'text-teal-600 dark:text-teal-400'}`}>
                           {req.type}
                         </td>
-                        <td className="py-4 hidden sm:table-cell text-xs text-gray-500">{req.startDate} to {req.endDate}</td>
-                        <td className="py-4">{getStatusBadge(req.status)}</td>
+                        <td className="py-4 hidden sm:table-cell text-xs text-gray-500 align-top">{req.startDate} to {req.endDate}</td>
+                        <td className="py-4 align-top">
+                          {getStatusBadge(req.status)}
+                          
+                          {/* Displaying the Admin's Remarks */}
+                          {req.adminRemarks && (
+                            <div className="mt-2 text-xs text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-500/10 p-2 rounded-lg border border-rose-100 dark:border-rose-500/20 max-w-xs flex gap-1.5 items-start">
+                              <MessageSquareWarning className="w-4 h-4 shrink-0 mt-0.5" />
+                              <span className="italic font-medium leading-tight">&quot;{req.adminRemarks}&quot;</span>
+                            </div>
+                          )}
+                        </td>
                       </tr>
                     ))}
                     {(isAdmin ? pastRequests : requests).length === 0 && (
@@ -332,6 +358,48 @@ export default function LeavePage() {
 
           </div>
         </div>
+
+        {/* Admin Decline Reason Modal */}
+        {requestToDecline && (
+          <div className="fixed inset-0 z-[100] flex flex-col justify-end sm:justify-center items-center bg-black/60 backdrop-blur-sm p-0 sm:p-4 transition-all">
+            <div className="bg-white dark:bg-[#151515] w-full max-w-lg flex flex-col max-h-[90dvh] sm:max-h-[90vh] rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 md:my-0">
+              
+              <div className="flex justify-between items-center p-5 sm:p-6 border-b border-gray-200 dark:border-white/10 bg-rose-50 dark:bg-rose-500/5">
+                <div className="flex items-center gap-2">
+                  <XCircle className="w-6 h-6 text-rose-500" />
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">Decline Leave Request</h3>
+                </div>
+                <button onClick={() => { setRequestToDecline(null); setDeclineReason(""); }} className="text-gray-400 hover:text-rose-500 transition-colors p-1">
+                  <XCircle className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="p-5 sm:p-6 space-y-4">
+                <p className="text-sm text-gray-600 dark:text-gray-300">
+                  You are declining the <strong className="uppercase">{requestToDecline.type}</strong> request from <strong>{requestToDecline.userName}</strong>.
+                </p>
+                
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-500 uppercase">Reason for Denial <span className="text-rose-500">*</span></label>
+                  <textarea 
+                    value={declineReason} 
+                    onChange={e => setDeclineReason(e.target.value)} 
+                    placeholder="e.g., Insufficient staffing for this date, missing medical certificate..." 
+                    className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white resize-none h-32 focus:ring-2 focus:ring-rose-500 outline-none custom-scrollbar"
+                  ></textarea>
+                </div>
+                
+                <button 
+                  onClick={submitDecline} 
+                  className="w-full bg-rose-600 hover:bg-rose-500 text-white font-bold py-3.5 rounded-xl transition-all shadow-md mt-2"
+                >
+                  Confirm & Decline Request
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
       </main>
     </ProtectedRoute>
   );

@@ -231,10 +231,12 @@ export default function BenefitsPage() {
       }
 
       if (user?.email) {
+        const processedNames = pendingDistributions.map(c => c.fullName).join(", ");
+
         await logAdminAction(
           user.email, 
           `Distributed 13th Month Pay for ${currentYear}`, 
-          `Total Employees: ${pendingDistributions.length}`
+          `Processed Recipients: ${processedNames}`
         );
       }
 

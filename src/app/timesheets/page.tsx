@@ -212,14 +212,14 @@ function TimesheetsContent() {
                 type="month" 
                 value={selectedMonth} 
                 onChange={(e) => setSelectedMonth(e.target.value)} 
-                className="w-full sm:w-auto bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm font-medium dark:text-white outline-none focus:ring-2 focus:ring-teal-500 shadow-sm"
+                className="w-full sm:w-auto bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm font-medium text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-teal-500 shadow-sm"
               />
               <select 
                 value={cutoff}
                 onChange={(e) => setCutoff(e.target.value as "1" | "2")}
-                className="w-full sm:w-auto bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm font-medium dark:text-white outline-none focus:ring-2 focus:ring-teal-500 shadow-sm cursor-pointer"
+                className="w-full sm:w-auto bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm font-medium text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-teal-500 shadow-sm cursor-pointer"
               >
-                <option value="1">1st Half (1st - 15th)</option>
+                <option value="1" >1st Half (1st - 15th)</option>
                 <option value="2">2nd Half (16th - End)</option>
               </select>
 

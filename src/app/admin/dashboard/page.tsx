@@ -18,6 +18,17 @@ interface AuditLog {
   details: string;
   timestamp: { seconds: number } | null;
 }
+interface EmployeeProfile {
+  id: string;
+  role: string;
+  department?: string;
+}
+
+interface EvaluationData {
+  id: string;
+  employeeId: string;
+  averageScore: number;
+}
 
 export default function AdminCommandCenter() {
   const [logs, setLogs] = useState<AuditLog[]>([]);
@@ -25,11 +36,15 @@ export default function AdminCommandCenter() {
   const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>(""); 
   const [hasMore, setHasMore] = useState(true);
+  
   const [stats, setStats] = useState({ totalEmployees: 0, avgPerformance: 0, activePolicies: 0 });
   const [deptData, setDeptData] = useState<{name: string, value: number, fill: string}[]>([]);
   const [perfData, setPerfData] = useState<{name: string, score: number}[]>([]);
 
-  // Helper to strip UIDs from text for cleaner reading
+  // Internal states for the Client-Side Join
+  const [employees, setEmployees] = useState<EmployeeProfile[]>([]);
+  const [evaluations, setEvaluations] = useState<EvaluationData[]>([]);
+
   const formatTargetText = (text: string) => {
     if (!text) return "";
     const firebaseUidRegex = /\(?([A-Za-z0-9]{28})\)?/g;
@@ -50,18 +65,11 @@ export default function AdminCommandCenter() {
         startOfDay.setHours(0, 0, 0, 0);
         const endOfDay = new Date(selectedDate);
         endOfDay.setHours(23, 59, 59, 999);
-
-        constraints.unshift(
-          where("timestamp", ">=", startOfDay),
-          where("timestamp", "<=", endOfDay)
-        );
+        constraints.unshift(where("timestamp", ">=", startOfDay), where("timestamp", "<=", endOfDay));
       }
 
-      if (!isFirstLoad && cursorDoc) {
-        constraints.push(startAfter(cursorDoc));
-      }
+      if (!isFirstLoad && cursorDoc) constraints.push(startAfter(cursorDoc));
 
-      //  UPDATED: Now queries the newly merged "systemLogs" collection
       const qLogs = query(collection(db, "systemLogs"), ...constraints);
       const snap = await getDocs(qLogs);
 
@@ -86,36 +94,16 @@ export default function AdminCommandCenter() {
     fetchLogs(true, null);
   }, [fetchLogs]);
 
+
   useEffect(() => {  
-    // 1. Fetch Users
-    const qUsers = query(collection(db, "users"));
+    const qUsers = query(collection(db, "users"), where("role", "==", "employee"));
     const unsubUsers = onSnapshot(qUsers, (snap) => {
-      const employees = snap.docs.filter(d => d.data().role === "employee");
-      setStats(prev => ({ ...prev, totalEmployees: employees.length }));
+      setEmployees(snap.docs.map(d => ({ id: d.id, ...d.data() } as EmployeeProfile)));
+    });
 
-      const depts: Record<string, { totalScore: number, count: number }> = {};
-      
-      employees.forEach(emp => {
-        const d = emp.data().department || "Unassigned";
-        const score = emp.data().avgPerformance || 3.5; 
-        
-        if (!depts[d]) depts[d] = { totalScore: 0, count: 0 };
-        depts[d].totalScore += score;
-        depts[d].count += 1;
-      });
-
-      const COLORS = ["#06b6d4", "#8b5cf6", "#ec4899", "#f59e0b"];
-
-      setDeptData(Object.keys(depts).map((key, index) => ({ 
-        name: key, 
-        value: depts[key].count,
-        fill: COLORS[index % COLORS.length]
-      })));
-
-      setPerfData(Object.keys(depts).map(key => ({ 
-        name: key, 
-        score: Number((depts[key].totalScore / depts[key].count).toFixed(1)) 
-      })));
+    const qEvals = query(collection(db, "evaluations"));
+    const unsubEvals = onSnapshot(qEvals, (snap) => {
+      setEvaluations(snap.docs.map(d => ({ id: d.id, ...d.data() } as EvaluationData)));
     });
 
     const qPolicies = query(collection(db, "announcements"));
@@ -123,11 +111,55 @@ export default function AdminCommandCenter() {
       setStats(prev => ({ ...prev, activePolicies: snap.docs.length }));
     });
 
-    return () => { 
-      unsubUsers(); 
-      unsubPolicies();
-    };
+    return () => { unsubUsers(); unsubEvals(); unsubPolicies(); };
   }, []);
+
+  useEffect(() => {
+    if (!employees.length) return;
+
+    const empDeptMap: Record<string, string> = {};
+    const deptCounts: Record<string, number> = {};
+
+    // Map departments
+    employees.forEach(emp => {
+      const dept = emp.department || "Unassigned";
+      empDeptMap[emp.id] = dept;
+      deptCounts[dept] = (deptCounts[dept] || 0) + 1;
+    });
+
+    const COLORS = ["#06b6d4", "#8b5cf6", "#ec4899", "#f59e0b", "#10b981", "#ef4444"];
+    const newDeptData = Object.entries(deptCounts).map(([name, count], i) => ({
+      name, value: count, fill: COLORS[i % COLORS.length]
+    }));
+
+    // Aggregate true Evaluation Scores
+    const deptScores: Record<string, { total: number, count: number }> = {};
+    let totalOrgScore = 0;
+    let totalEvalsCount = 0;
+
+    evaluations.forEach(ev => {
+      const dept = empDeptMap[ev.employeeId] || "Unassigned";
+      if (!deptScores[dept]) deptScores[dept] = { total: 0, count: 0 };
+
+      deptScores[dept].total += ev.averageScore;
+      deptScores[dept].count += 1;
+      
+      totalOrgScore += ev.averageScore;
+      totalEvalsCount += 1;
+    });
+
+    const newPerfData = Object.entries(deptScores).map(([name, data]) => ({
+      name,
+      score: Number((data.total / data.count).toFixed(1))
+    }));
+
+    const trueOrgAvg = totalEvalsCount > 0 ? Number((totalOrgScore / totalEvalsCount).toFixed(1)) : 0;
+
+    setDeptData(newDeptData);
+    setPerfData(newPerfData);
+    setStats(prev => ({ ...prev, totalEmployees: employees.length, avgPerformance: trueOrgAvg }));
+
+  }, [employees, evaluations]);
 
   return (
     <ProtectedRoute>
@@ -150,10 +182,16 @@ export default function AdminCommandCenter() {
               <div className="text-xs text-gray-400 uppercase font-bold tracking-wider">Total Headcount</div>
             </div>
             
-            <div className="bg-white dark:bg-white/5 p-6 rounded-3xl border border-gray-200 dark:border-white/10 shadow-sm">
-              <TrendingUp className="text-emerald-500 mb-2" />
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">4.2 / 5.0</div>
-              <div className="text-xs text-gray-400 uppercase font-bold tracking-wider">Org Performance</div>
+            <div className="bg-white dark:bg-white/5 p-6 rounded-3xl border border-gray-200 dark:border-white/10 shadow-sm relative group overflow-hidden">
+              <div className="absolute -right-6 -top-6 w-24 h-24 bg-emerald-50 dark:bg-emerald-500/10 rounded-full group-hover:scale-150 transition-transform duration-500 ease-out"></div>
+              <div className="relative z-10">
+                <TrendingUp className="text-emerald-500 mb-2" />
+                <div className="text-2xl font-bold text-gray-900 dark:text-white flex items-baseline gap-1">
+                  {stats.avgPerformance > 0 ? stats.avgPerformance.toFixed(1) : "-"} 
+                  <span className="text-sm font-medium text-gray-400">/ 5.0</span>
+                </div>
+                <div className="text-xs text-gray-400 uppercase font-bold tracking-wider mt-0.5">Org Performance</div>
+              </div>
             </div>
 
             <div className="bg-white dark:bg-white/5 p-6 rounded-3xl border border-gray-200 dark:border-white/10 shadow-sm">
@@ -164,44 +202,55 @@ export default function AdminCommandCenter() {
 
             <div className="bg-white dark:bg-white/5 p-6 rounded-3xl border border-gray-200 dark:border-white/10 shadow-sm">
               <ShieldAlert className="text-rose-500 mb-2" />
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">Active</div>
+              <div className="text-2xl font-bold text-emerald-500 dark:text-emerald-400">Active</div>
               <div className="text-xs text-gray-400 uppercase font-bold tracking-wider">Audit Monitoring</div>
             </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            {/* Diversity Pie Chart */}
             <div className="bg-white dark:bg-white/5 p-8 rounded-3xl border border-gray-200 dark:border-white/10 shadow-xl flex flex-col">
               <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
                 <PieIcon className="w-5 h-5 text-indigo-500" /> Department Diversity
               </h3>
               <div className="flex-1 min-h-[250px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={deptData} innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value" />
-                    <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', backgroundColor: '#1e293b', color: '#fff' }} itemStyle={{ color: '#fff' }} />
-                  </PieChart>
-                </ResponsiveContainer>
+                {deptData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={deptData} innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value" />
+                      <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', backgroundColor: '#1e293b', color: '#fff' }} itemStyle={{ color: '#fff' }} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex items-center justify-center h-full text-sm text-gray-400 italic">No department data available.</div>
+                )}
               </div>
             </div>
 
+            {/* Dynamic Performance Bar Chart */}
             <div className="bg-white dark:bg-white/5 p-8 rounded-3xl border border-gray-200 dark:border-white/10 shadow-xl flex flex-col">
               <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
                 <TrendingUp className="w-5 h-5 text-emerald-500" /> Org Performance by Dept
               </h3>
               <div className="flex-1 min-h-[250px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={perfData}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.1} />
-                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} />
-                    <YAxis domain={[0, 5]} axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} />
-                    <Tooltip cursor={{fill: 'transparent'}} contentStyle={{ borderRadius: '12px', border: 'none', backgroundColor: '#1e293b', color: '#fff' }} />
-                    <Bar dataKey="score" fill="#8b5cf6" radius={[6, 6, 0, 0]} barSize={30} />
-                  </BarChart>
-                </ResponsiveContainer>
+                {perfData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={perfData} margin={{ bottom: 20 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.1} />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 10}} interval={0} angle={-15} textAnchor="end" />
+                      <YAxis domain={[0, 5]} axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} />
+                      <Tooltip cursor={{fill: 'transparent'}} contentStyle={{ borderRadius: '12px', border: 'none', backgroundColor: '#1e293b', color: '#fff' }} />
+                      <Bar dataKey="score" fill="#8b5cf6" radius={[6, 6, 0, 0]} barSize={30} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex items-center justify-center h-full text-sm text-gray-400 italic">Submit an evaluation to generate chart.</div>
+                )}
               </div>
             </div>
           </div>
 
+          {/* Audit Logs Section */}
           <div className="bg-white dark:bg-white/5 p-8 rounded-3xl border border-gray-200 dark:border-white/10 shadow-xl">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
               <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -219,10 +268,7 @@ export default function AdminCommandCenter() {
                   />
                 </div>
                 {selectedDate && (
-                  <button 
-                    onClick={() => setSelectedDate("")}
-                    className="text-xs text-rose-500 font-semibold hover:underline"
-                  >
+                  <button onClick={() => setSelectedDate("")} className="text-xs text-rose-500 font-semibold hover:underline">
                     Clear Filter
                   </button>
                 )}
