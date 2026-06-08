@@ -34,8 +34,8 @@ export default function LandingPageClient() {
       <nav className="sticky top-0 z-50 w-full border-b border-gray-200/80 dark:border-white/5 bg-white/70 dark:bg-[#0a0a0a]/70 backdrop-blur-md transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 relative rounded-md overflow-hidden shadow-md shadow-indigo-500/10 shrink-0">
-              <Image src="/simplifvlogo.jpg" alt="SimplifV Logo" fill className="object-cover" sizes="32px" />
+            <div className="w-8 h-8 relative rounded-full overflow-hidden shadow-md shadow-indigo-500/10 shrink-0">
+              <Image src="/simplifvlogo.png" alt="SimplifV Logo" fill className="object-cover" sizes="32px" />
             </div>
             <span className="text-xl font-black tracking-tight text-gray-900 dark:text-white">
               Sympli<span className="text-emerald-600 dark:text-emerald-400">Sync</span>
@@ -138,8 +138,8 @@ export default function LandingPageClient() {
         <div className="max-w-7xl mx-auto px-6 py-10 sm:py-12">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6 pb-8 border-b border-gray-200/80 dark:border-white/[0.05]">
             <div className="flex items-center gap-2.5">
-              <div className="w-6 h-6 relative rounded-sm overflow-hidden shadow-sm shrink-0">
-                <Image src="/simplifvlogo.jpg" alt="SimplifV Logo" fill className="object-cover" sizes="24px" />
+              <div className="w-6 h-6 relative rounded-full overflow-hidden shadow-sm shrink-0">
+                <Image src="/simplifvlogo.png" alt="SimplifV Logo" fill className="object-cover" sizes="24px" />
               </div>
               <span className="text-base font-black tracking-tight text-gray-900 dark:text-white">
                 Sympli<span className="text-emerald-600 dark:text-emerald-400">Sync</span>
