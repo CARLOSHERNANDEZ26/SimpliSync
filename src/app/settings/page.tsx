@@ -7,10 +7,11 @@ import AdminSettings from "@/components/AdminSettings";
 import HolidaySettings from "@/components/HolidaySettings";
 import { useAuth } from "@/hooks/useAuth";
 import { useState, useEffect } from "react";
-import { doc, updateDoc, getDoc } from "firebase/firestore"; // 🔥 Added getDoc
+import { doc, updateDoc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import toast from "react-hot-toast";
-import { MapPin, Crosshair, Save } from "lucide-react"; // 🔥 Added icons for UI
+import Image from "next/image";
+import { MapPin, Crosshair, Save, Target, Lightbulb, Briefcase, Receipt, Banknote, Phone, Mail, Globe } from "lucide-react";
 
 export default function SettingsPage() {
   const { user } = useAuth();
@@ -23,7 +24,6 @@ export default function SettingsPage() {
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        // 🔥 Fixed: Added getDoc to actually fetch the snapshot
         const settingsSnap = await getDoc(doc(db, "settings", "company"));
         if (settingsSnap.exists()) {
           const data = settingsSnap.data();
@@ -94,15 +94,18 @@ export default function SettingsPage() {
 
         <div className="relative z-10 w-full max-w-[95%] 2xl:max-w-[100rem] mx-auto px-4 sm:px-6 py-6 sm:py-12">
           <div className="flex flex-col space-y-8 animate-fade-in-up">
+            
+            {/* Header */}
             <div className="space-y-4 text-center lg:text-left">
               <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-gray-900 dark:text-white mb-2 transition-colors">
                 Settings
               </h2>
               <p className="text-lg text-gray-500 dark:text-gray-400 transition-colors">
-                Manage your application preferences.
+                Manage your application preferences and view company details.
               </p>
             </div>
 
+            {/* Main Settings Grid */}
             <div className={`grid grid-cols-1 ${isAdmin ? "lg:grid-cols-2 max-w-5xl mx-auto" : "max-w-md mx-auto"} gap-6 items-stretch w-full`}>
                <div className="w-full flex h-full order-1 lg:order-last">
                  <PreferencesSettings />
@@ -187,14 +190,140 @@ export default function SettingsPage() {
                           </button>
                         </div>
                       </div>
-
-                      
                     </div>
-                    
                   </div>
                 </>
               )}
             </div>
+
+            {/* SimplifV Company Profile Section */}
+            <div className="max-w-5xl mx-auto w-full mt-10">
+              <div className="bg-white dark:bg-[#151515] border border-gray-200 dark:border-white/10 rounded-3xl overflow-hidden shadow-xl">
+                
+                {/* Profile Header */}
+                <div className="bg-gradient-to-r from-teal-600 to-emerald-600 p-8 sm:p-10 text-white relative overflow-hidden">
+                  <div className="absolute inset-0 bg-black/10"></div>
+                  <div className="relative z-10 flex flex-col sm:flex-row items-center sm:items-start gap-6">
+                    <div className="w-20 h-20 bg-[#0d1117] rounded-full relative shadow-lg overflow-hidden shrink-0 border border-white/10">
+  <Image 
+    src="/simplifvlogo.png" 
+    alt="SimplifV Logo" 
+    fill
+    priority
+    className="object-contain p-1.5" 
+    sizes="80px"
+  />
+</div>
+                    <div className="text-center sm:text-left">
+                      <h3 className="text-2xl sm:text-3xl font-black tracking-tight mb-1">SimplifV Business Consulting Corp.</h3>
+                      <p className="text-teal-100 font-medium text-lg">&quot;Let&apos;s SimplifV your Business&quot;</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Mission & Vision */}
+                <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-200 dark:divide-white/10 bg-slate-50 dark:bg-white/[0.02] border-b border-gray-200 dark:border-white/10">
+                  <div className="p-8">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="p-2 bg-indigo-100 dark:bg-indigo-500/20 rounded-lg">
+                        <Target className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                      </div>
+                      <h4 className="text-lg font-bold text-gray-900 dark:text-white uppercase tracking-wider">Mission</h4>
+                    </div>
+                    <p className="text-gray-600 dark:text-gray-300 leading-relaxed text-sm">
+                      To help our clients upscale by simplifying their processes and other corporate activities so they can focus on their core businesses.
+                    </p>
+                  </div>
+                  <div className="p-8">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="p-2 bg-amber-100 dark:bg-amber-500/20 rounded-lg">
+                        <Lightbulb className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                      </div>
+                      <h4 className="text-lg font-bold text-gray-900 dark:text-white uppercase tracking-wider">Vision</h4>
+                    </div>
+                    <p className="text-gray-600 dark:text-gray-300 leading-relaxed text-sm">
+                      To be the leading outsourced services provider in Accounting, Taxation and Payroll Management.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Core Services */}
+                <div className="p-8 sm:p-10">
+                  <h4 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-8 text-center">Our Core Services</h4>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    {/* Accounting */}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3">
+                        <Briefcase className="w-6 h-6 text-teal-500" />
+                        <h5 className="text-lg font-bold text-gray-900 dark:text-white">Accounting</h5>
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                        Running a business without an accountant? We got that covered! With our full suite of accounting services, you can have peace of mind while growing your business.
+                      </p>
+                      <ul className="text-sm text-gray-700 dark:text-gray-300 space-y-2">
+                        <li className="flex items-start gap-2"><div className="w-1.5 h-1.5 rounded-full bg-teal-50 mt-1.5 shrink-0"></div> Business Registration</li>
+                        <li className="flex items-start gap-2"><div className="w-1.5 h-1.5 rounded-full bg-teal-50 mt-1.5 shrink-0"></div> Business Renewal and Closure</li>
+                        <li className="flex items-start gap-2"><div className="w-1.5 h-1.5 rounded-full bg-teal-50 mt-1.5 shrink-0"></div> Bookkeeping</li>
+                        <li className="flex items-start gap-2"><div className="w-1.5 h-1.5 rounded-full bg-teal-50 mt-1.5 shrink-0"></div> Business Management Advisory</li>
+                      </ul>
+                    </div>
+
+                    {/* Taxation */}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3">
+                        <Receipt className="w-6 h-6 text-indigo-500" />
+                        <h5 className="text-lg font-bold text-gray-900 dark:text-white">Taxation</h5>
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                        BIR Compliance? Not knowing what, where and when to file and pay your taxes can bankrupt your business. Save money with SimplifV!
+                      </p>
+                      <ul className="text-sm text-gray-700 dark:text-gray-300 space-y-2">
+                        <li className="flex items-start gap-2"><div className="w-1.5 h-1.5 rounded-full bg-indigo-50 mt-1.5 shrink-0"></div> Tax Registration</li>
+                        <li className="flex items-start gap-2"><div className="w-1.5 h-1.5 rounded-full bg-indigo-50 mt-1.5 shrink-0"></div> Monthly, Quarterly & Annual Filings</li>
+                        <li className="flex items-start gap-2"><div className="w-1.5 h-1.5 rounded-full bg-indigo-50 mt-1.5 shrink-0"></div> Tax Assessments</li>
+                        <li className="flex items-start gap-2"><div className="w-1.5 h-1.5 rounded-full bg-indigo-50 mt-1.5 shrink-0"></div> Clearing of Open Cases</li>
+                      </ul>
+                    </div>
+
+                    {/* Payroll */}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3">
+                        <Banknote className="w-6 h-6 text-emerald-500" />
+                        <h5 className="text-lg font-bold text-gray-900 dark:text-white">Payroll</h5>
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                        Growing number of employees? Let us manage your payroll so you can focus on Growing your Business! Compliant with all labor laws and requirements.
+                      </p>
+                      <ul className="text-sm text-gray-700 dark:text-gray-300 space-y-2">
+                        <li className="flex items-start gap-2"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0"></div> Full Payroll Management</li>
+                        <li className="flex items-start gap-2"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0"></div> SSS Compliance</li>
+                        <li className="flex items-start gap-2"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0"></div> Philhealth & HDMF Compliance</li>
+                        <li className="flex items-start gap-2"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0"></div> BIR Compliance</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Contact Footer */}
+                <div className="bg-gray-100 dark:bg-white/5 border-t border-gray-200 dark:border-white/10 p-6 sm:p-8 flex flex-col md:flex-row justify-center gap-6 md:gap-10 text-sm font-medium text-gray-600 dark:text-gray-300">
+                  <div className="flex items-center justify-center gap-2">
+                    <Phone className="w-4 h-4 text-gray-400" /> 0917 130 0418
+                  </div>
+                  <div className="flex items-center justify-center gap-2">
+                    <Mail className="w-4 h-4 text-gray-400" /> consult@simplifv.com
+                  </div>
+                  <div className="flex items-center justify-center gap-2">
+                    <Globe className="w-4 h-4 text-gray-400" /> simplifv.com
+                  </div>
+                  <div className="flex items-center justify-center gap-2 text-center">
+                    <MapPin className="w-4 h-4 text-gray-400 shrink-0" /> 0146 National Road, Baraca-Camachile (Pob.), Subic, Zambales 2209
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
           </div>
         </div>
       </main>
