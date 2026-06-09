@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowRight, BrainCircuit, MapPin, Calculator, Scale, Sun, Moon, Mail, Phone } from "lucide-react";
+import { ArrowRight, BrainCircuit, MapPin, Calculator, Scale, Sun, Moon, Mail, Phone, Calendar, Clock } from "lucide-react";
 
 export default function LandingPageClient() {
   const [isDark, setIsDark] = useState(() => {
@@ -25,6 +25,38 @@ export default function LandingPageClient() {
       localStorage.setItem("theme", "light");
     }
   }, [isDark]);
+
+  useEffect(() => {
+  function update() {
+    const now = new Date();
+    const ph = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Manila" }));
+    const h = ph.getHours(), m = ph.getMinutes();
+    const ampm = h >= 12 ? "PM" : "AM";
+    const hh = h % 12 || 12;
+    const clockEl = document.getElementById("ph-clock");
+    if (clockEl) clockEl.textContent = `${hh}:${String(m).padStart(2, "0")} ${ampm}`;
+
+    const day = ph.getDate(), month = ph.getMonth(), year = ph.getFullYear();
+    const lastDay = new Date(year, month + 1, 0).getDate();
+    let cutoffDay = day <= 15 ? 15 : lastDay;
+    let cutoffDate = new Date(year, month, cutoffDay);
+    if (cutoffDate <= ph) {
+      cutoffDate = cutoffDay === 15
+        ? new Date(year, month, lastDay)
+        : new Date(year, month + 1, 15);
+      cutoffDay = cutoffDate.getDate();
+    }
+    const diff = Math.ceil((cutoffDate.getTime() - ph.getTime()) / (1000 * 60 * 60 * 24));
+    const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const labelEl = document.getElementById("cutoff-label");
+    const daysEl = document.getElementById("cutoff-days");
+    if (labelEl) labelEl.textContent = `${months[cutoffDate.getMonth()]} ${cutoffDay}`;
+    if (daysEl) daysEl.textContent = diff === 1 ? "(tomorrow)" : `(${diff} days)`;
+  }
+  update();
+  const id = setInterval(update, 1000);
+  return () => clearInterval(id);
+}, []);
 
   return (
     <main className="min-h-screen flex flex-col w-full bg-slate-50 dark:bg-[#0a0a0a] selection:bg-indigo-500/30 font-sans overflow-x-hidden relative transition-colors duration-300">
@@ -78,14 +110,35 @@ export default function LandingPageClient() {
           <p className="text-base sm:text-lg md:text-xl text-gray-600 dark:text-gray-400 mb-10 max-w-3xl leading-relaxed">
             <strong className="text-gray-900 dark:text-gray-200">SympliSync:</strong> A Cloud-Hosted Human Resource Management Platform Featuring AI-Enhanced Policy Decision Support for SimplifV.
           </p>
-          <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
-            <Link href="/login" className="w-full sm:w-auto flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-4 rounded-xl text-base font-bold transition-all shadow-lg shadow-indigo-500/25 active:scale-95">
-              Access Employee Portal
-            </Link>
-            <Link href="/login" className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white dark:bg-white/5 hover:bg-gray-50 dark:hover:bg-white/10 text-gray-900 dark:text-white border border-gray-200 dark:border-white/10 px-8 py-4 rounded-xl text-base font-bold transition-all shadow-sm active:scale-95">
-              HR Admin Dashboard
-            </Link>
-          </div>
+          <div className="flex flex-wrap items-center justify-center gap-3 mt-2">
+  {/* System status */}
+  <div className="flex items-center gap-2 px-4 py-2.5 rounded-full border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-sm text-gray-500 dark:text-gray-400">
+    <span className="relative flex h-2 w-2">
+      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+    </span>
+    System operational
+  </div>
+
+  {/* Live PH clock */}
+  <div className="flex items-center gap-2 px-4 py-2.5 rounded-full border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-sm text-gray-500 dark:text-gray-400">
+    <Clock className="w-4 h-4 text-indigo-500" />
+    PH time: <span className="font-semibold text-gray-900 dark:text-white ml-1" id="ph-clock" suppressHydrationWarning />
+  </div>
+
+  {/* Next payroll cutoff */}
+  <div className="flex items-center gap-2 px-4 py-2.5 rounded-full border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-sm text-gray-500 dark:text-gray-400">
+    <Calendar className="w-4 h-4 text-amber-500" />
+    Next cutoff: <span className="font-semibold text-gray-900 dark:text-white ml-1" id="cutoff-label" suppressHydrationWarning />
+    <span className="text-xs text-gray-400 dark:text-gray-500" id="cutoff-days" suppressHydrationWarning />
+  </div>
+
+  {/* Geofence */}
+  <div className="flex items-center gap-2 px-4 py-2.5 rounded-full border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-sm text-gray-500 dark:text-gray-400">
+    <MapPin className="w-4 h-4 text-teal-500" />
+    Geofence <span className="font-semibold text-gray-900 dark:text-white ml-1">active</span>
+  </div>
+</div>
         </section>
 
         <section id="features" className="relative z-10 max-w-7xl w-full mx-auto px-6 pb-20 sm:pb-32 pt-10 scroll-mt-20">
@@ -166,13 +219,6 @@ export default function LandingPageClient() {
             <p className="text-[11px] sm:text-xs font-medium text-gray-500 dark:text-gray-500 text-center sm:text-left">
               © 2026 SympliSync Solutions. All rights reserved. Exclusively deployed for SimplifV.
             </p>
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-[10px] sm:text-[11px] font-bold text-emerald-700 dark:text-emerald-400 shadow-sm shadow-emerald-500/5 transition-colors duration-300">
-              <span className="relative flex h-1.5 w-1.5 shrink-0">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
-              </span>
-              System Operational
-            </div>
           </div>
         </div>
       </footer>
