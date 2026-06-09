@@ -3,13 +3,23 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { collection, getDocs, query, limit } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
-// Initialize Gemini
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
-
 export async function POST(req: Request) {
   try {
+    const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
+    if (!apiKey) {
+      console.error("CRITICAL ERROR: GOOGLE_GEMINI_API_KEY is not defined in .env.local");
+      return NextResponse.json(
+        { error: "Server configuration error: Missing API Key. Check terminal." },
+        { status: 500 }
+      );
+    }
+
+    // Initialize Gemini safely now that we know the key exists
+    const genAI = new GoogleGenerativeAI(apiKey);
+
     const { messages, logs } = await req.json();
     let policyContext = "No active company policies found.";
+    
     try {
       const q = query(collection(db, "announcements"), limit(20));
       const querySnapshot = await getDocs(q);
@@ -24,7 +34,6 @@ export async function POST(req: Request) {
       });
 
       if (policies.length > 0) {
-
         const groupedPolicies = policies.reduce((acc, policy) => {
           if (!acc[policy.category]) acc[policy.category] = [];
           acc[policy.category].push(`- **${policy.title}**: ${policy.content}`);
@@ -38,7 +47,6 @@ export async function POST(req: Request) {
     } catch (error) {
       console.error("Error fetching policies for context:", error);
     }
-
 
     const systemPrompt = `You are the SimpliSync HR Assistant. You are a helpful, professional, and slightly conversational AI for a company in the Philippines (Subic City).
 
@@ -55,10 +63,8 @@ RULES:
 4. Be concise, friendly, and format your answers clearly (use bullet points if needed).
 5. Never invent or hallucinate company rules.`;
 
-
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     
-
     const latestUserMessage = messages[messages.length - 1].content;
     
     const result = await model.generateContent({
