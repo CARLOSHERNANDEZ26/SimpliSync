@@ -36,7 +36,7 @@ export const getSuggestedDeduction = async (
   attendanceSnap.forEach(doc => {
     const data = doc.data();
     if (data.timeIn) {
-      const dateString = data.timeIn.toDate().toISOString().split('T')[0];
+      const dateString = (data.timeIn.toDate() as Date).toISOString().split('T')[0];
       uniqueDaysPresent.add(dateString);
     }
   });
@@ -53,8 +53,8 @@ export const getSuggestedDeduction = async (
 
   leaveSnap.forEach(doc => {
     const data = doc.data();
-    const leaveStart = new Date(data.startDate);
-    const leaveEnd = new Date(data.endDate);
+    const leaveStart = new Date(data.startDate as string);
+    const leaveEnd = new Date(data.endDate as string);
     
     if (leaveStart <= endOfMonth && leaveEnd >= startOfMonth) {
       const diffTime = Math.abs(leaveEnd.getTime() - leaveStart.getTime());
@@ -63,12 +63,9 @@ export const getSuggestedDeduction = async (
     }
   });
 
-
   let unpaidAbsences = expectedDaysInMonth - (daysPresent + paidLeaveDays);
   
   if (unpaidAbsences < 0) unpaidAbsences = 0; 
-  
-
   if (unpaidAbsences > expectedDaysInMonth) unpaidAbsences = expectedDaysInMonth;
 
   const dailyRate = baseSalary / expectedDaysInMonth;
@@ -82,16 +79,21 @@ export const getSuggestedDeduction = async (
     suggestedDeduction
   };
 };
+
 // DOLE Hourly Rate Calculation
-export const calculateHourlyRate = (monthlySalary: number) => {
+export const calculateHourlyRate = (monthlySalary: number): number => {
   if (!monthlySalary) return 0;
   // Standard Formula: (Monthly / 22 working days) / 8 hours
   return (monthlySalary / 22) / 8;
 };
 
 // SimpliV 15-Minute Lateness Ceiling Rule
-export const calculateLatePenaltyMinutes = (timeIn: Date | null, shiftStartTime: string = "08:00") => {
-  if (!timeIn) return 0;
+export const calculateLatePenaltyMinutes = (
+  timeIn: Date | null, 
+  shiftStartTime: string = "08:00",
+  isLateExcused: boolean = false
+): number => {
+  if (!timeIn || isLateExcused) return 0; // On time, early, or explicitly excused by admin
 
   const [startHour, startMin] = shiftStartTime.split(":").map(Number);
   const targetTime = new Date(timeIn);
@@ -108,7 +110,7 @@ export const calculateLatePenaltyMinutes = (timeIn: Date | null, shiftStartTime:
 };
 
 // Early Clock Out Penalty
-export const calculateUndertimeMinutes = (timeOut: Date | null, shiftEndTime: string = "17:00") => {
+export const calculateUndertimeMinutes = (timeOut: Date | null, shiftEndTime: string = "17:00"): number => {
   if (!timeOut) return 0;
 
   const [endHour, endMin] = shiftEndTime.split(":").map(Number);
@@ -123,13 +125,18 @@ export const calculateUndertimeMinutes = (timeOut: Date | null, shiftEndTime: st
 };
 
 // Translates penalty minutes into a direct peso deduction
-export const calculateTimeDeductionPeso = (penaltyMinutes: number, hourlyRate: number) => {
+export const calculateTimeDeductionPeso = (penaltyMinutes: number, hourlyRate: number): number => {
   const minuteRate = hourlyRate / 60;
   return penaltyMinutes * minuteRate;
 };
 
 // DOLE Overtime Calculation (+25% premium for regular workdays past 6:00 PM)
-export const calculateOvertimePay = (timeOut: Date | null, hourlyRate: number) => {
+export interface OvertimeResult {
+  otMinutes: number;
+  otPay: number;
+}
+
+export const calculateOvertimePay = (timeOut: Date | null, hourlyRate: number): OvertimeResult => {
   if (!timeOut) return { otMinutes: 0, otPay: 0 };
   
   // Set the official overtime start threshold to 18:00 (6:00 PM)

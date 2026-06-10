@@ -4,7 +4,6 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import Navbar from "@/components/Navbar";
 import PreferencesSettings from "@/components/PreferencesSettings";
 import AdminSettings from "@/components/AdminSettings";
-import HolidaySettings from "@/components/HolidaySettings";
 import { useAuth } from "@/hooks/useAuth";
 import { useState, useEffect } from "react";
 import { doc, updateDoc, getDoc } from "firebase/firestore";
@@ -86,7 +85,6 @@ export default function SettingsPage() {
   return (
     <ProtectedRoute>
       <main className="min-h-screen w-full bg-slate-50 dark:bg-[#0a0a0a] text-gray-900 dark:text-white font-sans relative overflow-y-auto overflow-x-hidden transition-colors duration-500 pt-[73px] pb-20">
-        {/* Dynamic Background Glows */}
         <div className="absolute top-0 left-0 w-[40rem] h-[40rem] bg-teal-400/20 dark:bg-teal-600/10 rounded-full blur-[150px] pointer-events-none"></div>
         <div className="absolute bottom-0 right-0 w-[30rem] h-[30rem] bg-emerald-400/20 dark:bg-emerald-600/10 rounded-full blur-[120px] pointer-events-none"></div>
 
@@ -95,31 +93,27 @@ export default function SettingsPage() {
         <div className="relative z-10 w-full max-w-[95%] 2xl:max-w-[100rem] mx-auto px-4 sm:px-6 py-6 sm:py-12">
           <div className="flex flex-col space-y-8 animate-fade-in-up">
             
-            {/* Header */}
-            <div className="space-y-4 text-center lg:text-left">
-              <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-gray-900 dark:text-white mb-2 transition-colors">
+            <div className="space-y-2 text-center lg:text-left">
+              <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-gray-900 dark:text-white transition-colors">
                 Settings
               </h2>
-              <p className="text-lg text-gray-500 dark:text-gray-400 transition-colors">
+              <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400 transition-colors">
                 Manage your application preferences and view company details.
               </p>
             </div>
 
-            {/* Main Settings Grid */}
-            <div className={`grid grid-cols-1 ${isAdmin ? "lg:grid-cols-2 max-w-5xl mx-auto" : "max-w-md mx-auto"} gap-6 items-stretch w-full`}>
-               <div className="w-full flex h-full order-1 lg:order-last">
+            <div className={`grid grid-cols-1 ${isAdmin ? "md:grid-cols-2 lg:grid-cols-3 max-w-7xl mx-auto" : "max-w-md mx-auto"} gap-6 items-start w-full`}>
+               <div className="w-full">
                  <PreferencesSettings />
                </div>
                
               {isAdmin && (
                 <>
-                  <div className="w-full flex h-full">
-                    <HolidaySettings />
-                  </div>
-                  <div className="w-full flex h-full">
+                  <div className="w-full">
                     <AdminSettings />
                   </div>
-                  <div className="w-full flex flex-col h-full">
+                  
+                  <div className="w-full md:col-span-2 lg:col-span-1">
                     <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl backdrop-blur-md">
                       <div className="flex items-center gap-3 mb-6">
                         <div className="p-2.5 bg-teal-100 dark:bg-teal-500/20 rounded-xl">
@@ -200,20 +194,19 @@ export default function SettingsPage() {
             <div className="max-w-5xl mx-auto w-full mt-10">
               <div className="bg-white dark:bg-[#151515] border border-gray-200 dark:border-white/10 rounded-3xl overflow-hidden shadow-xl">
                 
-                {/* Profile Header */}
                 <div className="bg-gradient-to-r from-teal-600 to-emerald-600 p-8 sm:p-10 text-white relative overflow-hidden">
                   <div className="absolute inset-0 bg-black/10"></div>
                   <div className="relative z-10 flex flex-col sm:flex-row items-center sm:items-start gap-6">
                     <div className="w-20 h-20 bg-[#0d1117] rounded-full relative shadow-lg overflow-hidden shrink-0 border border-white/10">
-  <Image 
-    src="/simplifvlogo.png" 
-    alt="SimplifV Logo" 
-    fill
-    priority
-    className="object-contain p-1.5" 
-    sizes="80px"
-  />
-</div>
+                      <Image 
+                        src="/simplifvlogo.png" 
+                        alt="SimplifV Logo" 
+                        fill
+                        priority
+                        className="object-contain p-1.5" 
+                        sizes="80px"
+                      />
+                    </div>
                     <div className="text-center sm:text-left">
                       <h3 className="text-2xl sm:text-3xl font-black tracking-tight mb-1">SimplifV Business Consulting Corp.</h3>
                       <p className="text-teal-100 font-medium text-lg">&quot;Let&apos;s SimplifV your Business&quot;</p>
@@ -221,7 +214,6 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                {/* Mission & Vision */}
                 <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-200 dark:divide-white/10 bg-slate-50 dark:bg-white/[0.02] border-b border-gray-200 dark:border-white/10">
                   <div className="p-8">
                     <div className="flex items-center gap-3 mb-4">
@@ -247,12 +239,10 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                {/* Core Services */}
                 <div className="p-8 sm:p-10">
                   <h4 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-8 text-center">Our Core Services</h4>
                   
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    {/* Accounting */}
                     <div className="space-y-4">
                       <div className="flex items-center gap-3">
                         <Briefcase className="w-6 h-6 text-teal-500" />
@@ -262,14 +252,13 @@ export default function SettingsPage() {
                         Running a business without an accountant? We got that covered! With our full suite of accounting services, you can have peace of mind while growing your business.
                       </p>
                       <ul className="text-sm text-gray-700 dark:text-gray-300 space-y-2">
-                        <li className="flex items-start gap-2"><div className="w-1.5 h-1.5 rounded-full bg-teal-50 mt-1.5 shrink-0"></div> Business Registration</li>
-                        <li className="flex items-start gap-2"><div className="w-1.5 h-1.5 rounded-full bg-teal-50 mt-1.5 shrink-0"></div> Business Renewal and Closure</li>
-                        <li className="flex items-start gap-2"><div className="w-1.5 h-1.5 rounded-full bg-teal-50 mt-1.5 shrink-0"></div> Bookkeeping</li>
-                        <li className="flex items-start gap-2"><div className="w-1.5 h-1.5 rounded-full bg-teal-50 mt-1.5 shrink-0"></div> Business Management Advisory</li>
+                        <li className="flex items-start gap-2"><div className="w-1.5 h-1.5 rounded-full bg-teal-500 mt-1.5 shrink-0"></div> Business Registration</li>
+                        <li className="flex items-start gap-2"><div className="w-1.5 h-1.5 rounded-full bg-teal-500 mt-1.5 shrink-0"></div> Business Renewal and Closure</li>
+                        <li className="flex items-start gap-2"><div className="w-1.5 h-1.5 rounded-full bg-teal-500 mt-1.5 shrink-0"></div> Bookkeeping</li>
+                        <li className="flex items-start gap-2"><div className="w-1.5 h-1.5 rounded-full bg-teal-500 mt-1.5 shrink-0"></div> Business Management Advisory</li>
                       </ul>
                     </div>
 
-                    {/* Taxation */}
                     <div className="space-y-4">
                       <div className="flex items-center gap-3">
                         <Receipt className="w-6 h-6 text-indigo-500" />
@@ -279,14 +268,13 @@ export default function SettingsPage() {
                         BIR Compliance? Not knowing what, where and when to file and pay your taxes can bankrupt your business. Save money with SimplifV!
                       </p>
                       <ul className="text-sm text-gray-700 dark:text-gray-300 space-y-2">
-                        <li className="flex items-start gap-2"><div className="w-1.5 h-1.5 rounded-full bg-indigo-50 mt-1.5 shrink-0"></div> Tax Registration</li>
-                        <li className="flex items-start gap-2"><div className="w-1.5 h-1.5 rounded-full bg-indigo-50 mt-1.5 shrink-0"></div> Monthly, Quarterly & Annual Filings</li>
-                        <li className="flex items-start gap-2"><div className="w-1.5 h-1.5 rounded-full bg-indigo-50 mt-1.5 shrink-0"></div> Tax Assessments</li>
-                        <li className="flex items-start gap-2"><div className="w-1.5 h-1.5 rounded-full bg-indigo-50 mt-1.5 shrink-0"></div> Clearing of Open Cases</li>
+                        <li className="flex items-start gap-2"><div className="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-1.5 shrink-0"></div> Tax Registration</li>
+                        <li className="flex items-start gap-2"><div className="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-1.5 shrink-0"></div> Monthly, Quarterly & Annual Filings</li>
+                        <li className="flex items-start gap-2"><div className="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-1.5 shrink-0"></div> Tax Assessments</li>
+                        <li className="flex items-start gap-2"><div className="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-1.5 shrink-0"></div> Clearing of Open Cases</li>
                       </ul>
                     </div>
 
-                    {/* Payroll */}
                     <div className="space-y-4">
                       <div className="flex items-center gap-3">
                         <Banknote className="w-6 h-6 text-emerald-500" />
@@ -305,7 +293,6 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                {/* Contact Footer */}
                 <div className="bg-gray-100 dark:bg-white/5 border-t border-gray-200 dark:border-white/10 p-6 sm:p-8 flex flex-col md:flex-row justify-center gap-6 md:gap-10 text-sm font-medium text-gray-600 dark:text-gray-300">
                   <div className="flex items-center justify-center gap-2">
                     <Phone className="w-4 h-4 text-gray-400" /> 0917 130 0418

@@ -3,187 +3,311 @@
 import { useState, useEffect } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Navbar from "@/components/Navbar";
-import { collection, query, onSnapshot, orderBy } from "firebase/firestore";
+import { collection, query, orderBy, onSnapshot, addDoc, deleteDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { CalendarDays, ChevronLeft, ChevronRight, XCircle } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { Calendar as CalendarIcon, Plus, Trash2, AlertTriangle, ChevronLeft, ChevronRight, Tag, HelpCircle, Info, X } from "lucide-react";
+import toast from "react-hot-toast";
 
 interface Holiday {
   id: string;
-  name?: string;
-  holidayName?: string;
-  fullName?: string;
-  date: string;
-  type: string;
+  holidayName: string;
+  date: string; 
+  type: string;  
   description?: string; 
 }
 
-export default function CalendarPage() {
+export default function CompanyCalendarPage() {
+  const { user } = useAuth();
+  const isAdmin = user?.email === "admin@simplisync.local";
   const [holidays, setHolidays] = useState<Holiday[]>([]);
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedHoliday, setSelectedHoliday] = useState<Holiday | null>(null);
+  const [holidayName, setName] = useState("");
+  const [date, setDate] = useState("");
+  const [type, setType] = useState("Company-Wide");
+  const [description, setDescription] = useState(""); 
+  const [isAdding, setIsAdding] = useState(false);
+  const [activeInspectionHoliday, setActiveInspectionHoliday] = useState<Holiday | null>(null);
+  const [currentNavDate, setCurrentNavDate] = useState(new Date());
+  const navYear = currentNavDate.getFullYear();
+  const navMonth = currentNavDate.getMonth(); 
+
+  const monthNames = [
+    "January", "February", "March", "April", "May", "June", 
+    "July", "August", "September", "October", "November", "December"
+  ];
 
   useEffect(() => {
     const q = query(collection(db, "holidays"), orderBy("date", "asc"));
-    
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setHolidays(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Holiday)));
-    }, (error) => {
-      if (error.code !== "permission-denied") {
-        console.error("Calendar sync error:", error);
-      }
     });
-    
     return () => unsubscribe();
   }, []);
 
-  const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
-  const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay();
+  const firstDayIndex = new Date(navYear, navMonth, 1).getDay();
+  const totalDaysInMonth = new Date(navYear, navMonth + 1, 0).getDate();
+  const blankCells = Array(firstDayIndex).fill(null);
+  const monthDays = Array.from({ length: totalDaysInMonth }, (_, i) => i + 1);
 
-  const prevMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+  const handlePrevMonth = () => {
+    setCurrentNavDate(new Date(navYear, navMonth - 1, 1));
   };
 
-  const nextMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+  const handleNextMonth = () => {
+    setCurrentNavDate(new Date(navYear, navMonth + 1, 1));
   };
 
-  const days = [];
-  for (let i = 0; i < firstDayOfMonth; i++) {
-    days.push(<div key={`empty-${i}`} className="min-h-[4rem] sm:min-h-[6rem] md:min-h-0 h-full border border-gray-100 dark:border-white/5 bg-slate-50/50 dark:bg-white/5 opacity-50"></div>);
-  }
+  const handleDayClick = (day: number) => {
+    if (!isAdmin) return; // Block staff from picking dates to alter form targets
+    const paddedMonth = String(navMonth + 1).padStart(2, "0");
+    const paddedDay = String(day).padStart(2, "0");
+    setDate(`${navYear}-${paddedMonth}-${paddedDay}`);
+  };
 
-  for (let d = 1; d <= daysInMonth; d++) {
-    const currentIterDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), d);
-    const dateString = `${currentIterDate.getFullYear()}-${String(currentIterDate.getMonth() + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  const handleAdd = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!isAdmin || !holidayName || !date) return;
     
-    const dayHolidays = holidays.filter(h => h.date === dateString);
-    const isToday = new Date().toDateString() === currentIterDate.toDateString();
+    setIsAdding(true);
+    try {
+      await addDoc(collection(db, "holidays"), { holidayName, date, type, description });
+      toast.success("Holiday locked into organizational schedule!");
+      setName(""); setDate(""); setDescription(""); 
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to append event allocation.");
+    } finally {
+      setIsAdding(false);
+    }
+  };
 
-    days.push(
-      <div key={d} className={`min-h-[4rem] sm:min-h-[6rem] md:min-h-0 h-full border border-gray-100 dark:border-white/5 p-1 sm:p-2 flex flex-col transition-colors hover:bg-slate-50 dark:hover:bg-white/5 ${isToday ? 'bg-teal-50/30 dark:bg-teal-900/10' : 'bg-white dark:bg-black/20'}`}>
-        <div className="flex justify-between items-center mb-0.5 sm:mb-1">
-          <span className={`text-[10px] sm:text-sm font-medium ${isToday ? 'w-4 h-4 sm:w-6 sm:h-6 rounded-full bg-teal-500 text-white flex items-center justify-center' : 'text-gray-700 dark:text-gray-300'}`}>
-            {d}
-          </span>
-        </div>
-        <div className="flex-1 overflow-y-auto space-y-0.5 sm:space-y-1 custom-scrollbar pr-0 sm:pr-1">
-          {dayHolidays.map(hol => (
-            <div 
-              key={hol.id} 
-              // 🔥 NEW: Added onClick to open the modal
-              onClick={() => setSelectedHoliday(hol)}
-              className="text-[8px] sm:text-xs font-semibold px-1 sm:px-2 py-0.5 sm:py-1 rounded-sm sm:rounded-md bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 line-clamp-1 group-hover:line-clamp-none group-active:line-clamp-none text-balance transition-all cursor-pointer hover:bg-emerald-200 dark:hover:bg-emerald-500/30" 
-            >
-              <span className="hidden sm:inline">🎊 </span>{hol.holidayName || hol.fullName || hol.name}
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
+  const executeDelete = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, "holidays", id));
+      toast.success("Holiday de-allocated successfully.");
+      setActiveInspectionHoliday(null);
+    } catch (error) {
+      console.error(error);
+      toast.error("Deletion constraint error.");
+    }
+  };
 
-  const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-  const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const getTypeStyle = (holidayType: string) => {
+    switch (holidayType) {
+      case "Company-Wide": return "bg-emerald-500 text-white shadow-emerald-500/20";
+      case "Regional": return "bg-indigo-500 text-white shadow-indigo-500/20";
+      default: return "bg-amber-500 text-white shadow-amber-500/20";
+    }
+  };
 
   return (
     <ProtectedRoute>
-      <main className="h-screen w-full relative overflow-hidden pt-[73px] bg-slate-50 dark:bg-[#0a0a0a] flex flex-col">
-        <div className="absolute top-0 left-0 w-[40rem] h-[40rem] bg-teal-400/20 dark:bg-teal-600/10 rounded-full blur-[150px] pointer-events-none"></div>
-        <div className="absolute bottom-0 right-0 w-[30rem] h-[30rem] bg-emerald-400/20 dark:bg-emerald-600/10 rounded-full blur-[120px] pointer-events-none"></div>
-
+      <main className="min-h-screen w-full relative overflow-y-auto pt-[73px] bg-slate-50 dark:bg-[#0a0a0a] text-gray-900 dark:text-white">
         <Navbar />
-        
-        <div className="relative z-10 w-full h-full flex flex-col max-w-7xl mx-auto px-4 sm:px-6 py-6 pb-8 min-h-0">
-          
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-4 shrink-0">
-            <div>
-              <h1 className="text-4xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
-                <CalendarDays className="w-10 h-10 text-teal-500" />
-                Company Calendar
-              </h1>
-              <p className="text-gray-500 dark:text-gray-400 mt-2 text-lg">
-                View upcoming holidays and important company-wide dates.
-              </p>
-            </div>
 
-            <div className="flex items-center justify-between md:justify-start gap-2 sm:gap-4 w-full md:w-auto bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl p-2 shadow-sm">
-              <button onClick={prevMonth} className="p-2 hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-colors active:scale-95 text-gray-600 dark:text-gray-400">
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-              <div className="w-full md:w-32 text-center font-bold text-gray-900 dark:text-white text-sm sm:text-base">
-                {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
-              </div>
-              <button onClick={nextMonth} className="p-2 hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-colors active:scale-95 text-gray-600 dark:text-gray-400">
-                <ChevronRight className="w-5 h-5" />
-              </button>
-            </div>
+        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
+          <div className="mb-8">
+            <h1 className="text-3xl font-black tracking-tight flex items-center gap-3">
+              <CalendarIcon className="w-8 h-8 text-teal-500" />
+              Company Scheduler Center
+            </h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Configure workspace cycles, leaves, and calendar adjustments.</p>
           </div>
 
-          <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl md:rounded-3xl overflow-hidden shadow-xl flex flex-col flex-1 min-h-0">
-            <div className="grid grid-cols-7 bg-slate-50 dark:bg-black/40 border-b border-gray-200 dark:border-white/10">
-              {weekDays.map(day => (
-                <div key={day} className="py-2 sm:py-3 md:py-4 text-center text-[10px] sm:text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  {day.slice(0, 3)}
-                </div>
-              ))}
-            </div>
+          {/* Adaptive layout based on employee vs admin credentials */}
+          <div className={`grid grid-cols-1 ${isAdmin ? "lg:grid-cols-3" : "max-w-4xl mx-auto"} gap-8 items-start`}>
             
-            <div className="grid grid-cols-7 bg-gray-200 dark:bg-white/10 gap-px flex-1 auto-rows-[minmax(5rem,1fr)] sm:auto-rows-[minmax(6rem,1fr)] md:auto-rows-[minmax(0,1fr)] overflow-y-auto custom-scrollbar">
-              {days}
-            </div>
-          </div>
+            <div className={`${isAdmin ? "lg:col-span-2" : "w-full"} bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl backdrop-blur-md flex flex-col`}>
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold tracking-tight font-mono text-gray-800 dark:text-gray-200">
+                  {monthNames[navMonth]} {navYear}
+                </h2>
+                <div className="flex items-center gap-2">
+                  <button onClick={handlePrevMonth} className="p-2 border border-gray-200 dark:border-white/10 bg-slate-50 dark:bg-black/20 hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-all text-gray-600 dark:text-gray-400"><ChevronLeft className="w-4 h-4" /></button>
+                  <button onClick={handleNextMonth} className="p-2 border border-gray-200 dark:border-white/10 bg-slate-50 dark:bg-black/20 hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-all text-gray-600 dark:text-gray-400"><ChevronRight className="w-4 h-4" /></button>
+                </div>
+              </div>
 
+              <div className="grid grid-cols-7 text-center gap-2 mb-2 text-xs font-bold text-gray-400 uppercase tracking-wider font-mono">
+                {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => <div key={day} className="py-2">{day}</div>)}
+              </div>
+
+              <div className="grid grid-cols-7 gap-2">
+                {blankCells.map((_, i) => (
+                  <div key={`blank-${i}`} className="aspect-square bg-slate-100/40 dark:bg-white/[0.01] rounded-xl border border-dashed border-gray-200/50 dark:border-white/[0.02]"></div>
+                ))}
+                
+                {monthDays.map((day) => {
+                  const paddedMonth = String(navMonth + 1).padStart(2, "0");
+                  const paddedDay = String(day).padStart(2, "0");
+                  const matchingIsoString = `${navYear}-${paddedMonth}-${paddedDay}`;
+                  const dayHolidays = holidays.filter(h => h.date === matchingIsoString);
+
+                  return (
+                    <div 
+                      key={`day-${day}`}
+                      onClick={() => handleDayClick(day)}
+                      className={`aspect-square p-2 bg-slate-50 dark:bg-black/10 border border-gray-200/60 dark:border-white/5 rounded-2xl flex flex-col justify-between items-start transition-all select-none relative overflow-hidden ${
+                        isAdmin ? 'cursor-pointer' : 'cursor-default'
+                      } ${
+                        date === matchingIsoString && isAdmin 
+                          ? 'ring-2 ring-teal-500 bg-teal-50/20 dark:bg-teal-500/10' 
+                          : 'hover:bg-slate-100/70 dark:hover:bg-white/5'
+                      }`}
+                    >
+                      <span className={`text-xs font-bold font-mono ${date === matchingIsoString && isAdmin ? 'text-teal-500' : 'text-gray-700 dark:text-gray-400'}`}>
+                        {day}
+                      </span>
+
+                      <div className="w-full flex flex-col gap-1 mt-1 z-10 max-h-[70%] overflow-hidden">
+                        {dayHolidays.map(h => (
+                          <div 
+                            key={h.id}
+                            onClick={(e) => { e.stopPropagation(); setActiveInspectionHoliday(h); }}
+                            className={`w-full truncate text-[9px] font-bold px-1.5 py-0.5 rounded cursor-pointer border border-transparent transition-all uppercase tracking-wider flex items-center justify-between ${getTypeStyle(h.type)}`}
+                            title={`Inspect details for ${h.holidayName}`}
+                          >
+                            <span className="truncate">{h.holidayName}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {isAdmin && (
+              <div className="bg-white dark:bg-[#151515] border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl flex flex-col sticky top-[90px]">
+                <div className="mb-4 pb-3 border-b border-gray-100 dark:border-white/5">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <Tag className="w-4 h-4 text-teal-500" /> Allocation Control
+                  </h3>
+                  <p className="text-xs text-gray-400 mt-1">Assign an event block or click empty cells inside the month canvas to auto-populate target parameters.</p>
+                </div>
+
+                <form onSubmit={handleAdd} className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Event Name</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Subic Fiesta"
+                      value={holidayName}
+                      onChange={(e) => setName(e.target.value)}
+                      className="bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 focus:ring-2 focus:ring-teal-500 focus:outline-none transition-all dark:text-white text-sm font-medium"
+                      required
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Assigned Target Calendar Slot</label>
+                    <input
+                      type="date"
+                      value={date}
+                      onChange={(e) => setDate(e.target.value)}
+                      className="bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 focus:ring-2 focus:ring-teal-500 focus:outline-none transition-all dark:text-white text-sm font-mono font-bold"
+                      required
+                    />
+                  </div>
+                  
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Short Description Rule</label>
+                    <textarea
+                      placeholder="e.g. Regular non-working holiday compensation adjustments..."
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      className="bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 focus:ring-2 focus:ring-teal-500 focus:outline-none transition-all dark:text-white text-sm resize-none h-16 leading-relaxed"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Allocation Scope Classification</label>
+                    <select
+                      value={type}
+                      onChange={(e) => setType(e.target.value)}
+                      className="bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 focus:ring-2 focus:ring-teal-500 focus:outline-none transition-all dark:text-white text-sm font-medium cursor-pointer"
+                    >
+                      <option value="Company-Wide">Company-Wide (Regular)</option>
+                      <option value="Regional">Regional (Special Non-Working)</option>
+                      <option value="Optional">Optional / Floating Allocation</option>
+                    </select>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isAdding || !holidayName || !date}
+                    className="w-full mt-2 bg-gradient-to-r from-teal-600 to-emerald-500 hover:from-teal-500 hover:to-emerald-400 text-white rounded-xl font-bold py-3.5 shadow-lg shadow-teal-500/20 transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
+                  >
+                    <Plus className="w-4 h-4" />
+                    {isAdding ? "Allocating..." : "Lock Event to Schedule"}
+                  </button>
+                </form>
+
+                <div className="mt-6 pt-4 border-t border-gray-100 dark:border-white/5 flex flex-col gap-2">
+                  <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-1"><HelpCircle className="w-3 h-3" /> Calendar Class Key</div>
+                  <div className="flex flex-wrap gap-3 mt-1">
+                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-500 uppercase"><span className="w-2.5 h-2.5 rounded bg-emerald-500"></span> Regular</div>
+                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-500 uppercase"><span className="w-2.5 h-2.5 rounded bg-indigo-500"></span> Regional</div>
+                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-500 uppercase"><span className="w-2.5 h-2.5 rounded bg-amber-500"></span> Floating</div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* 🔥 NEW: Holiday Details Modal */}
-        {selectedHoliday && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in-up">
-            <div className="bg-white dark:bg-[#1a1a1a] p-6 rounded-3xl shadow-2xl max-w-md w-full border border-gray-200 dark:border-white/10 relative">
-              <button 
-                onClick={() => setSelectedHoliday(null)}
-                className="absolute top-4 right-4 p-2 text-gray-400 hover:text-rose-500 transition-colors rounded-full hover:bg-rose-50 dark:hover:bg-rose-500/10"
-              >
-                <XCircle className="w-6 h-6" />
-              </button>
-
-              <div className="flex items-center gap-3 mb-4 pr-8">
-                <span className="text-3xl">🎊</span>
-                <div>
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white leading-tight">
-                    {selectedHoliday.holidayName || selectedHoliday.fullName || selectedHoliday.name}
-                  </h3>
-                  <p className="text-sm font-semibold text-teal-600 dark:text-teal-400 mt-1">
-                    {new Date(selectedHoliday.date).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                  </p>
-                </div>
+        {activeInspectionHoliday && (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+            <div className="bg-white dark:bg-[#151515] w-full max-w-sm rounded-3xl shadow-2xl border border-gray-200 dark:border-white/10 overflow-hidden animate-in zoom-in-95 duration-200">
+              <div className="flex justify-between items-center p-5 border-b border-gray-100 dark:border-white/5 bg-slate-50 dark:bg-white/[0.02]">
+                <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  <Info className="w-4 h-4 text-teal-500" /> Holiday Details
+                </h3>
+                <button 
+                  onClick={() => setActiveInspectionHoliday(null)}
+                  className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
 
-              <div className="bg-slate-50 dark:bg-white/5 p-4 rounded-2xl border border-gray-100 dark:border-white/5">
-                <div className="mb-2">
-                  <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Classification</span>
-                  <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{selectedHoliday.type}</p>
-                </div>
-                
-                {selectedHoliday.description && (
-                  <div>
-                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Description</span>
-                    <p className="text-sm text-gray-700 dark:text-gray-300 mt-1 whitespace-pre-wrap leading-relaxed">
-                      {selectedHoliday.description}
-                    </p>
+              <div className="p-6 space-y-4">
+                <div>
+                  <h4 className="text-xl font-black text-gray-900 dark:text-white leading-tight">
+                    {activeInspectionHoliday.holidayName}
+                  </h4>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
+                      activeInspectionHoliday.type === 'Company-Wide' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400' :
+                      activeInspectionHoliday.type === 'Regional' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-400' :
+                      'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400'
+                    }`}>
+                      {activeInspectionHoliday.type}
+                    </span>
+                    <span className="text-xs text-gray-400 font-mono font-bold">
+                      {new Date(activeInspectionHoliday.date).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}
+                    </span>
                   </div>
+                </div>
+
+                <div className="p-3.5 bg-slate-50 dark:bg-black/20 rounded-xl border border-gray-100 dark:border-white/5 text-xs text-gray-600 dark:text-gray-300 leading-relaxed italic">
+                  &ldquo;{activeInspectionHoliday.description || "No description provided for this calendar entry."}&rdquo;
+                </div>
+
+                {/* Secure Deletion Trigger Option: Restricted to Admins exclusively */}
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => executeDelete(activeInspectionHoliday.id)}
+                    className="w-full mt-2 py-2.5 bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-600 dark:hover:bg-rose-600 text-rose-600 dark:text-rose-400 hover:text-white font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-1.5 border border-rose-200 dark:border-rose-500/20 shadow-sm"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" /> Remove from Schedule
+                  </button>
                 )}
               </div>
-              
-              <button 
-                onClick={() => setSelectedHoliday(null)}
-                className="mt-6 w-full bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 text-gray-800 dark:text-white font-bold py-3 rounded-xl transition-all"
-              >
-                Close Details
-              </button>
             </div>
           </div>
         )}
-
       </main>
     </ProtectedRoute>
   );

@@ -284,7 +284,7 @@ export default function PerformancePage() {
                             className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl pl-4 pr-10 py-3 outline-none text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer disabled:opacity-50"
                           >
                             <option value="" disabled>-- Choose Employee --</option>
-                            {employees.map(emp => (<option key={emp.id} value={emp.id} className="text-gray-900">{emp.fullName} ({emp.department || "No Dept"})</option>))}
+                            {employees.map(emp => (<option key={emp.id} value={emp.id} className="text-gray-900 dark:text-white">{emp.fullName} ({emp.department || "No Dept"})</option>))}
                           </select>
                           <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
                         </div>
@@ -300,10 +300,10 @@ export default function PerformancePage() {
                             disabled={!!editingEvalId}
                             className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl pl-4 pr-10 py-3 outline-none text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer disabled:opacity-50"
                           >
-                            <option value="Q1" className="text-gray-900">Q1 (Jan - Mar)</option>
-                            <option value="Q2" className="text-gray-900">Q2 (Apr - Jun)</option>
-                            <option value="Q3" className="text-gray-900">Q3 (Jul - Sep)</option>
-                            <option value="Q4" className="text-gray-900">Q4 (Oct - Dec)</option>
+                            <option value="Q1" className="text-gray-900 dark:text-white">Q1 (Jan - Mar)</option>
+                            <option value="Q2" className="text-gray-900 dark:text-white">Q2 (Apr - Jun)</option>
+                            <option value="Q3" className="text-gray-900 dark:text-white">Q3 (Jul - Sep)</option>
+                            <option value="Q4" className="text-gray-900 dark:text-white">Q4 (Oct - Dec)</option>
                           </select>
                           <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
                         </div>

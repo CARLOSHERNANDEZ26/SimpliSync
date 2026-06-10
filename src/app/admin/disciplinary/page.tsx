@@ -69,10 +69,12 @@ export default function DisciplinaryPage() {
     setAiDraft("");
     const empName = employees.find(e => e.id === selectedEmp)?.fullName || "the employee";
 
-    const advisorPrompt = `Act as an expert Philippine HR Advisor. An employee named ${empName} has committed the following offense: ${offenseType}. 
+    const todayString = new Date().toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric' });
+
+    const advisorPrompt = `Act as an expert Philippine HR Advisor. Today is ${todayString}. An employee named ${empName} has committed the following offense: ${offenseType}. 
     Context/Description: ${description}. 
     1. Briefly state the recommended standard disciplinary action (e.g., Verbal Warning, Written Warning, Notice to Explain) based on standard corporate policies and DOLE guidelines.
-    2. Draft a professional, unbiased official memo/notice to be issued to the employee.`;
+    2. Draft a professional, unbiased official memo/notice to be issued to the employee. You MUST use today's exact date (${todayString}) in the memo header.`;
 
     try {
       const response = await fetch("/api/generate-memo", {
@@ -196,7 +198,6 @@ export default function DisciplinaryPage() {
         
         <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
           
-          {/* Header */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10">
             <div>
               <h1 className="text-4xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
@@ -215,7 +216,6 @@ export default function DisciplinaryPage() {
             </button>
           </div>
 
-          {/* AI Disclaimer */}
           <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 p-4 rounded-2xl mb-8 flex items-start gap-3">
             <ShieldAlert className="w-6 h-6 text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
             <div>
@@ -226,7 +226,6 @@ export default function DisciplinaryPage() {
             </div>
           </div>
 
-          {/* History Table */}
           <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl overflow-x-auto">
             <table className="w-full text-left min-w-[800px]">
               <thead>
@@ -262,7 +261,6 @@ export default function DisciplinaryPage() {
              <div className="fixed inset-0 z-[100] flex flex-col justify-end sm:justify-center md:justify-start md:pt-[90px] items-center bg-black/60 backdrop-blur-sm p-0 sm:p-4 transition-all overflow-y-auto">
               <div className="bg-white dark:bg-[#151515] w-full max-w-4xl h-full sm:h-auto max-h-[95dvh] sm:max-h-[80vh] rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col animate-fade-in-up md:my-0">
                 
-                {/* Fixed Sticky Header */}
                 <div className="flex justify-between items-center p-5 sm:p-6 border-b border-gray-200 dark:border-white/10 shrink-0 bg-white dark:bg-[#151515] z-[110] sticky top-0">
                   <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2"><AlertTriangle className="w-6 h-6 text-rose-500" /> Log New Incident</h3>
                   <button onClick={() => setIsModalOpen(false)} className="p-2 -mr-2 text-gray-400 hover:text-rose-500 transition-colors rounded-full hover:bg-rose-50 dark:hover:bg-rose-500/10">
@@ -270,14 +268,11 @@ export default function DisciplinaryPage() {
                   </button>
                 </div>
 
-                {/* Content Body */}
                 <div className="flex flex-col lg:flex-row flex-1 overflow-y-auto lg:overflow-hidden">
                   
-                  {/* Left Column: Input Form */}
                   <div className="w-full lg:w-1/2 p-5 sm:p-6 border-b lg:border-b-0 lg:border-r border-gray-200 dark:border-white/10 lg:overflow-y-auto custom-scrollbar shrink-0 sm:shrink">
                     <form onSubmit={handleGenerateAdvisor} className="space-y-4">
                       
-                      {/* Select Employee */}
                       <div className="space-y-1.5">
                         <label className="text-xs font-bold text-gray-500 uppercase">Select Employee</label>
                         <div className="relative">
@@ -288,13 +283,12 @@ export default function DisciplinaryPage() {
                             className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 outline-none text-sm text-gray-900 dark:text-white appearance-none focus:ring-2 focus:ring-rose-500 cursor-pointer"
                           >
                             <option value="" className="text-gray-900">-- Choose Employee --</option>
-                            {employees.map(emp => (<option key={emp.id} value={emp.id} className="text-gray-900">{emp.fullName} ({emp.department || "No Dept"})</option>))}
+                            {employees.map(emp => (<option key={emp.id} value={emp.id} className="text-gray-900 dark:text-white">{emp.fullName} ({emp.department || "No Dept"})</option>))}
                           </select>
                           <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                         </div>
                       </div>
                       
-                      {/* Offense Category */}
                       <div className="space-y-1.5">
                         <label className="text-xs font-bold text-gray-500 uppercase">Offense Type</label>
                         <div className="relative">
@@ -304,12 +298,12 @@ export default function DisciplinaryPage() {
                             onChange={(e) => setOffenseType(e.target.value)} 
                             className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 outline-none text-sm text-gray-900 dark:text-white appearance-none focus:ring-2 focus:ring-rose-500 cursor-pointer"
                           >
-                            <option value="" className="text-gray-900">-- Select Offense Category --</option>
-                            <option value="Chronic Tardiness" className="text-gray-900">Chronic Tardiness</option>
-                            <option value="Absenteeism / AWOL" className="text-gray-900">Absenteeism / AWOL</option>
-                            <option value="Insubordination" className="text-gray-900">Insubordination</option>
-                            <option value="Policy Violation" className="text-gray-900">Policy Violation (Dress Code, IT, etc.)</option>
-                            <option value="Misconduct" className="text-gray-900">Professional Misconduct</option>
+                            <option value="" className="text-gray-900 dark:text-white">-- Select Offense Category --</option>
+                            <option value="Chronic Tardiness" className="text-gray-900 dark:text-white">Chronic Tardiness</option>
+                            <option value="Absenteeism / AWOL" className="text-gray-900 dark:text-white">Absenteeism / AWOL</option>
+                            <option value="Insubordination" className="text-gray-900 dark:text-white">Insubordination</option>
+                            <option value="Policy Violation" className="text-gray-900 dark:text-white">Policy Violation (Dress Code, IT, etc.)</option>
+                            <option value="Misconduct" className="text-gray-900 dark:text-white">Professional Misconduct</option>
                           </select>
                           <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                         </div>
@@ -326,7 +320,6 @@ export default function DisciplinaryPage() {
                     </form>
                   </div>
 
-                  {/* Right Column: AI Output Textarea */}
                   <div className="w-full lg:w-1/2 p-5 sm:p-6 flex flex-col bg-slate-50 dark:bg-black/10 lg:overflow-y-auto custom-scrollbar shrink-0 sm:shrink">
                     <div className="mb-4">
                       <h4 className="text-sm font-bold text-gray-500 uppercase flex items-center gap-2">
@@ -359,7 +352,6 @@ export default function DisciplinaryPage() {
             <div className="fixed inset-0 z-[100] flex flex-col justify-end sm:justify-center md:justify-start md:pt-[90px] items-center bg-black/60 backdrop-blur-sm p-0 sm:p-4 transition-all overflow-y-auto">
               <div className="bg-slate-50 dark:bg-[#121212] w-full max-w-4xl rounded-t-3xl sm:rounded-3xl shadow-2xl border border-gray-200 dark:border-white/10 flex flex-col max-h-[95dvh] sm:max-h-[80vh] overflow-hidden animate-in zoom-in-95 duration-200 md:my-0">
                 
-                {/* Modal Header */}
                 <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-white/10 bg-white dark:bg-[#151515] shrink-0">
                   <div>
                     <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -381,10 +373,8 @@ export default function DisciplinaryPage() {
                   </div>
                 </div>
 
-                {/* Modal Body (Scrollable View) */}
                 <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
                   
-                  {/* 1. Admin's Official Notice */}
                   <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl p-6 border border-rose-100 dark:border-rose-500/20 shadow-sm">
                     <h4 className="text-xs font-bold text-rose-500 uppercase tracking-widest mb-4 flex items-center gap-2">
                       <FileText className="w-4 h-4" /> Original Notice to Explain
@@ -394,7 +384,6 @@ export default function DisciplinaryPage() {
                     </div>
                   </div>
 
-                  {/* 2. Employee's Explanation */}
                   <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl p-6 border border-teal-100 dark:border-teal-500/20 shadow-sm">
                     <h4 className="text-xs font-bold text-teal-600 dark:text-teal-400 uppercase tracking-widest mb-4 flex items-center gap-2">
                       <UserX className="w-4 h-4" /> Employee&rsquo;s Explanation
@@ -415,14 +404,12 @@ export default function DisciplinaryPage() {
                     )}
                   </div>
 
-                  {/* 3. Admin Resolution Form */}
                   <div className={`rounded-2xl p-6 border shadow-sm ${selectedCase.status.includes("Resolved") ? "bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/30" : "bg-white dark:bg-[#1a1a1a] border-gray-200 dark:border-white/10"}`}>
                     <h4 className={`text-xs font-bold uppercase tracking-widest mb-4 flex items-center gap-2 ${selectedCase.status.includes("Resolved") ? "text-emerald-600 dark:text-emerald-400" : "text-indigo-600 dark:text-indigo-400"}`}>
                       <Gavel className="w-4 h-4" /> Final Resolution & Verdict
                     </h4>
                     
                     {selectedCase.status.includes("Resolved") ? (
-                      // Read-Only if already resolved
                       <div>
                         <div className="mb-4">
                           <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Verdict Issued</span>
@@ -433,7 +420,6 @@ export default function DisciplinaryPage() {
                         </div>
                       </div>
                     ) : (
-                      // Interactive Action Form
                       <form onSubmit={handleResolveCase} className="space-y-4">
                         <div className="space-y-1.5">
                           <label className="text-xs font-bold text-gray-500 uppercase">Final Verdict</label>

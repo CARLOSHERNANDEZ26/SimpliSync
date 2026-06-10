@@ -328,7 +328,7 @@ export default function MemoGeneratorPage() {
             <div>
               <h1 className="text-4xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
                 <Bot className="w-10 h-10 text-indigo-500" />
-                Policy & Memo Creator
+                Automated Policy Creator
               </h1>
               <p className="text-gray-500 dark:text-gray-400 mt-2">Manage and categorize DOLE-compliant company guidelines.</p>
             </div>

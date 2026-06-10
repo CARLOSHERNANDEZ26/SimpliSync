@@ -9,7 +9,7 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie } from "recharts";
-import { Users, Activity, ShieldAlert, TrendingUp, PieChart as PieIcon, Calendar, RefreshCw, FileText } from "lucide-react";
+import { Users, Activity, ShieldAlert, TrendingUp, PieChart as PieIcon, Calendar, RefreshCw, FileText, CalendarDays } from "lucide-react";
 
 interface AuditLog {
   id: string;
@@ -18,10 +18,12 @@ interface AuditLog {
   details: string;
   timestamp: { seconds: number } | null;
 }
+
 interface EmployeeProfile {
   id: string;
   role: string;
   department?: string;
+  status?: string; 
 }
 
 interface EvaluationData {
@@ -36,14 +38,24 @@ export default function AdminCommandCenter() {
   const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>(""); 
   const [hasMore, setHasMore] = useState(true);
-  
-  const [stats, setStats] = useState({ totalEmployees: 0, avgPerformance: 0, activePolicies: 0 });
+  const [stats, setStats] = useState({ totalEmployees: 0, avgPerformance: 0, activePolicies: 0, cutoffLabel: "" });
   const [deptData, setDeptData] = useState<{name: string, value: number, fill: string}[]>([]);
   const [perfData, setPerfData] = useState<{name: string, score: number}[]>([]);
-
-  // Internal states for the Client-Side Join
   const [employees, setEmployees] = useState<EmployeeProfile[]>([]);
   const [evaluations, setEvaluations] = useState<EvaluationData[]>([]);
+
+  useEffect(() => {
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const monthName = today.toLocaleString(undefined, { month: 'short' });
+    const lastDay = new Date(currentYear, today.getMonth() + 1, 0).getDate();
+    
+    const label = today.getDate() <= 15 
+      ? `${monthName} 1 - 15, ${currentYear}`
+      : `${monthName} 16 - ${lastDay}, ${currentYear}`;
+      
+    setStats(prev => ({ ...prev, cutoffLabel: label }));
+  }, []);
 
   const formatTargetText = (text: string) => {
     if (!text) return "";
@@ -94,11 +106,18 @@ export default function AdminCommandCenter() {
     fetchLogs(true, null);
   }, [fetchLogs]);
 
-
   useEffect(() => {  
     const qUsers = query(collection(db, "users"), where("role", "==", "employee"));
     const unsubUsers = onSnapshot(qUsers, (snap) => {
-      setEmployees(snap.docs.map(d => ({ id: d.id, ...d.data() } as EmployeeProfile)));
+      setEmployees(snap.docs.map(d => {
+        const data = d.data();
+        return {
+          id: d.id,
+          role: data.role || "employee",
+          department: data.department,
+          status: data.status || "active"
+        } as EmployeeProfile;
+      }));
     });
 
     const qEvals = query(collection(db, "evaluations"));
@@ -116,12 +135,16 @@ export default function AdminCommandCenter() {
 
   useEffect(() => {
     if (!employees.length) return;
+    const activeEmployees = employees.filter(emp => 
+      !["inactive", "Resigned", "Terminated", "End of Contract"].includes(emp.status || "")
+    );
 
+    const activeEmpIds = new Set(activeEmployees.map(e => e.id));
     const empDeptMap: Record<string, string> = {};
     const deptCounts: Record<string, number> = {};
 
-    // Map departments
-    employees.forEach(emp => {
+    // Map active departments
+    activeEmployees.forEach(emp => {
       const dept = emp.department || "Unassigned";
       empDeptMap[emp.id] = dept;
       deptCounts[dept] = (deptCounts[dept] || 0) + 1;
@@ -132,12 +155,15 @@ export default function AdminCommandCenter() {
       name, value: count, fill: COLORS[i % COLORS.length]
     }));
 
-    // Aggregate true Evaluation Scores
+    // Aggregate Evaluation Scores exclusively for active team structures
     const deptScores: Record<string, { total: number, count: number }> = {};
     let totalOrgScore = 0;
     let totalEvalsCount = 0;
 
     evaluations.forEach(ev => {
+      // Ignore evaluation logs tied to offboarded accounts
+      if (!activeEmpIds.has(ev.employeeId)) return;
+
       const dept = empDeptMap[ev.employeeId] || "Unassigned";
       if (!deptScores[dept]) deptScores[dept] = { total: 0, count: 0 };
 
@@ -157,7 +183,7 @@ export default function AdminCommandCenter() {
 
     setDeptData(newDeptData);
     setPerfData(newPerfData);
-    setStats(prev => ({ ...prev, totalEmployees: employees.length, avgPerformance: trueOrgAvg }));
+    setStats(prev => ({ ...prev, totalEmployees: activeEmployees.length, avgPerformance: trueOrgAvg }));
 
   }, [employees, evaluations]);
 
@@ -170,16 +196,16 @@ export default function AdminCommandCenter() {
           <div className="mb-10">
             <h1 className="text-4xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
               <Activity className="w-10 h-10 text-indigo-500" />
-              Command Center
+              Company Performance Center
             </h1>
-            <p className="text-gray-500 mt-2">Real-time HR analytics and system audit trails.</p>
+            <p className="text-gray-500 mt-2">Real-time HR analytics and system audit logs.</p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <div className="bg-white dark:bg-white/5 p-6 rounded-3xl border border-gray-200 dark:border-white/10 shadow-sm">
               <Users className="text-indigo-500 mb-2" />
               <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalEmployees}</div>
-              <div className="text-xs text-gray-400 uppercase font-bold tracking-wider">Total Headcount</div>
+              <div className="text-xs text-gray-400 uppercase font-bold tracking-wider">Active Headcount</div>
             </div>
             
             <div className="bg-white dark:bg-white/5 p-6 rounded-3xl border border-gray-200 dark:border-white/10 shadow-sm relative group overflow-hidden">
@@ -190,7 +216,7 @@ export default function AdminCommandCenter() {
                   {stats.avgPerformance > 0 ? stats.avgPerformance.toFixed(1) : "-"} 
                   <span className="text-sm font-medium text-gray-400">/ 5.0</span>
                 </div>
-                <div className="text-xs text-gray-400 uppercase font-bold tracking-wider mt-0.5">Org Performance</div>
+                <div className="text-xs text-gray-400 uppercase font-bold tracking-wider mt-0.5">Team Performance</div>
               </div>
             </div>
 
@@ -200,18 +226,23 @@ export default function AdminCommandCenter() {
               <div className="text-xs text-gray-400 uppercase font-bold tracking-wider">Active Policies</div>
             </div>
 
-            <div className="bg-white dark:bg-white/5 p-6 rounded-3xl border border-gray-200 dark:border-white/10 shadow-sm">
-              <ShieldAlert className="text-rose-500 mb-2" />
-              <div className="text-2xl font-bold text-emerald-500 dark:text-emerald-400">Active</div>
-              <div className="text-xs text-gray-400 uppercase font-bold tracking-wider">Audit Monitoring</div>
+            {/* Current Cutoff Date window tracking */}
+            <div className="bg-white dark:bg-white/5 p-6 rounded-3xl border border-gray-200 dark:border-white/10 shadow-sm relative group overflow-hidden">
+              <div className="absolute -right-6 -top-6 w-24 h-24 bg-teal-50 dark:bg-teal-500/10 rounded-full group-hover:scale-150 transition-transform duration-500 ease-out"></div>
+              <div className="relative z-10">
+                <CalendarDays className="text-teal-500 mb-2" />
+                <div className="text-lg font-black text-gray-900 dark:text-white font-mono truncate tracking-tight py-0.5">
+                  {stats.cutoffLabel || "Calculating..."}
+                </div>
+                <div className="text-xs text-gray-400 uppercase font-bold tracking-wider mt-1">Current Cutoff Window</div>
+              </div>
             </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-            {/* Diversity Pie Chart */}
             <div className="bg-white dark:bg-white/5 p-8 rounded-3xl border border-gray-200 dark:border-white/10 shadow-xl flex flex-col">
               <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-                <PieIcon className="w-5 h-5 text-indigo-500" /> Department Diversity
+                <PieIcon className="w-5 h-5 text-indigo-500" /> Active Department Diversity
               </h3>
               <div className="flex-1 min-h-[250px]">
                 {deptData.length > 0 ? (
@@ -227,10 +258,9 @@ export default function AdminCommandCenter() {
               </div>
             </div>
 
-            {/* Dynamic Performance Bar Chart */}
             <div className="bg-white dark:bg-white/5 p-8 rounded-3xl border border-gray-200 dark:border-white/10 shadow-xl flex flex-col">
               <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-emerald-500" /> Org Performance by Dept
+                <TrendingUp className="w-5 h-5 text-emerald-500" /> Active Performance by Dept
               </h3>
               <div className="flex-1 min-h-[250px]">
                 {perfData.length > 0 ? (
@@ -244,17 +274,16 @@ export default function AdminCommandCenter() {
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (
-                  <div className="flex items-center justify-center h-full text-sm text-gray-400 italic">Submit an evaluation to generate chart.</div>
+                  <div className="flex items-center justify-center h-full text-sm text-gray-400 italic">Submit an active evaluation to generate chart.</div>
                 )}
               </div>
             </div>
           </div>
 
-          {/* Audit Logs Section */}
           <div className="bg-white dark:bg-white/5 p-8 rounded-3xl border border-gray-200 dark:border-white/10 shadow-xl">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
               <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                <ShieldAlert className="w-5 h-5 text-rose-500" /> System Audit Trail
+                <ShieldAlert className="w-5 h-5 text-rose-500" /> System Audit Logs
               </h3>
               
               <div className="flex items-center gap-3">
@@ -317,7 +346,6 @@ export default function AdminCommandCenter() {
               </div>
             )}
           </div>
-
         </div>
       </main>
     </ProtectedRoute>

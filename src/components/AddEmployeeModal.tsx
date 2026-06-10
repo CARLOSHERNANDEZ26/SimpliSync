@@ -7,16 +7,14 @@ import { X, ShieldAlert, CalendarClock } from "lucide-react";
 
 export default function AddEmployeeModal({ onClose }: { onClose: () => void }) {
   const [fullname, setName] = useState("");
-  const [position, setPosition] = useState("");
-  const [department, setDepartment] = useState("");
+  const [position, setPosition] = useState("IT Staff");
+  const [department, setDepartment] = useState("IT");
   const [birthDate, setBirthDate] = useState("");
   const [password, setPassword] = useState("");
   
-  // 🔥 NEW: State for the System Role
   const [role, setRole] = useState("employee"); 
   const [isLoading, setIsLoading] = useState(false);
 
-  // 🔥 NEW: Schedule States
   const [scheduleDays, setScheduleDays] = useState<string[]>(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]);
   const [scheduleHours, setScheduleHours] = useState({ start: "09:00", end: "17:00" });
 
@@ -73,28 +71,34 @@ export default function AddEmployeeModal({ onClose }: { onClose: () => void }) {
           </div>
 
           <div className="flex gap-4">
+            {/* position dropdown layout */}
             <div className="flex flex-col gap-1.5 w-1/2">
               <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider ml-1">Position / Job Title</label>
-              <input
-                type="text"
-                placeholder="e.g. Developer"
+              <select
                 value={position}
                 onChange={(e) => setPosition(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all font-medium"
+                className="w-full bg-slate-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all font-medium appearance-none cursor-pointer"
                 required
-              />
+              >
+                <option value="Accounting Staff">Accounting Staff</option>
+                <option value="IT Staff">IT Staff</option>
+                <option value="Managing Supervisor">Managing Supervisor</option>
+              </select>
             </div>
 
+            {/* department dropdown layout */}
             <div className="flex flex-col gap-1.5 w-1/2">
               <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider ml-1">Department</label>
-              <input
-                type="text"
-                placeholder="e.g. IT"
+              <select
                 value={department}
                 onChange={(e) => setDepartment(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all font-medium"
+                className="w-full bg-slate-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all font-medium appearance-none cursor-pointer"
                 required
-              />
+              >
+                <option value="IT">IT</option>
+                <option value="Accounting">Accounting</option>
+                <option value="Supervisor">Supervisor</option>
+              </select>
             </div>
           </div>
 
@@ -109,7 +113,6 @@ export default function AddEmployeeModal({ onClose }: { onClose: () => void }) {
             />
           </div>
 
-          {/* 🔥 NEW: Schedule Assignment */}
           <div className="flex flex-col gap-3 p-4 bg-teal-50/50 dark:bg-teal-500/5 border border-teal-100 dark:border-teal-500/20 rounded-xl mt-2">
             <label className="text-xs font-bold text-teal-800 dark:text-teal-400 uppercase tracking-wider flex items-center gap-1.5">
               <CalendarClock className="w-4 h-4" />
@@ -160,7 +163,6 @@ export default function AddEmployeeModal({ onClose }: { onClose: () => void }) {
             </div>
           </div>
 
-          {/* 🔥 NEW: System Role Dropdown */}
           <div className="flex flex-col gap-1.5 p-3 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-xl mt-2">
             <label className="text-xs font-bold text-amber-800 dark:text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
               <ShieldAlert className="w-4 h-4" />

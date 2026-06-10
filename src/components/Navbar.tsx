@@ -70,7 +70,12 @@ export default function Navbar() {
           <Link href="/dashboard" className={getLinkClass("app/dashboard")} aria-label="Dashboard" title="Dashboard">
             <LayoutDashboard className="w-5 h-5 transition-transform duration-300 group-hover:scale-110" />
           </Link>
-          <Link href="/employees" className={getLinkClass("/employees")} aria-label="Directory" title="Employee Directory">
+          <Link 
+            href="/employees" 
+            className={getLinkClass("/employees")} 
+            aria-label="Directory" 
+            title={isAdmin ? "Employee Directories" : "My Profile"}
+          >
             <Users className="w-5 h-5 transition-transform duration-300 group-hover:scale-110" />
           </Link>
           <Link href="/timesheets" className={getLinkClass("/timesheets")} aria-label="Timesheets" title="Timesheets">
@@ -143,7 +148,7 @@ export default function Navbar() {
             <LayoutDashboard className="w-5 h-5" /> Dashboard
           </Link>
           <Link href="/employees" onClick={() => setIsMobileMenuOpen(false)} className={getLinkClass("/employees", true)}>
-            <Users className="w-5 h-5" /> Directory
+            <Users className="w-5 h-5" /> {isAdmin ? "Employee Directories" : "My Profile"}
           </Link>
           <Link href="/timesheets" onClick={() => setIsMobileMenuOpen(false)} className={getLinkClass("/timesheets", true)}>
             <Clock className="w-5 h-5" /> Timesheets

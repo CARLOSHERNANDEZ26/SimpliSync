@@ -321,7 +321,7 @@ export default function BenefitsPage() {
                   <div>
                     <h3 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
                       <Calculator className="w-5 h-5 text-indigo-500" />
-                      Pending Roster ({currentYear})
+                      Pending Distribution ({currentYear})
                     </h3>
                     <p className="text-xs text-gray-500 mt-1">Eligible Employees: {employees.length}</p>
                   </div>

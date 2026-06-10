@@ -6,10 +6,12 @@ import Navbar from "@/components/Navbar";
 import { collection, query, where, orderBy, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/hooks/useAuth";
-import { Clock, ArrowLeft, Download, ShieldCheck } from "lucide-react";
+import { Clock, ArrowLeft, Download, ShieldCheck, FileText } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import toast from "react-hot-toast";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 interface AttendanceLog {
   id: string;
@@ -22,6 +24,18 @@ interface AttendanceLog {
   lateReason?: string;
   isLateExcused?: boolean;
 }
+
+interface CustomPDFCell {
+  content: string;
+  colSpan?: number;
+  styles?: {
+    fontStyle?: "normal" | "bold" | "italic" | "bolditalic";
+    fillColor?: [number, number, number];
+    textColor?: [number, number, number];
+  };
+}
+
+type PDFRowInput = (string | CustomPDFCell)[];
 
 export default function TimesheetsPage() {
   return (
@@ -51,7 +65,6 @@ function TimesheetsContent() {
 
     const [year, month] = selectedMonth.split('-').map(Number);
     
-    // Calculate DOLE Cutoff Dates
     let startOfPeriod: Date;
     let endOfPeriod: Date;
 
@@ -79,7 +92,6 @@ function TimesheetsContent() {
         const data = doc.data();
         const timeInDate = data.timeIn?.toDate ? data.timeIn.toDate() : null;
         
-        // Filter exactly by the cutoff period
         if (timeInDate && timeInDate >= startOfPeriod && timeInDate <= endOfPeriod) {
           fetchedLogs.push({
             id: doc.id,
@@ -101,7 +113,6 @@ function TimesheetsContent() {
     return () => unsubscribe();
   }, [user, isAdmin, filterEmployeeId, selectedMonth, cutoff]);
 
-  // --- Dynamic Math Helpers ---
   const calculateActualLateMins = (timeIn: Date | null) => {
     if (!timeIn) return 0;
     const targetTime = new Date(timeIn);
@@ -119,18 +130,16 @@ function TimesheetsContent() {
     if (s.includes("present")) return "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300";
     if (s.includes("working")) return "bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-300";
     if (s.includes("late")) return "bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-300";
-    if (s.includes("admin") || s.includes("force")) return "bg-purple-100 text-purple-800 dark:bg-purple-500/20 dark:text-purple-300";
+    if (s.includes("admin") || s.includes("force") || s.includes("resolved")) return "bg-purple-100 text-purple-800 dark:bg-purple-500/20 dark:text-purple-300";
     return "bg-gray-100 text-gray-800 dark:bg-white/10 dark:text-gray-300";
   };
 
-  // Calculate Period Totals
   let totalMsWorked = 0;
   let totalLateMinsAccumulated = 0;
   
   logs.forEach(log => {
     const lateMins = calculateActualLateMins(log.timeIn);
     if (!log.isLateExcused) totalLateMinsAccumulated += lateMins;
-    
     if (log.timeIn && log.timeOut) {
       totalMsWorked += log.timeOut.getTime() - log.timeIn.getTime();
     }
@@ -139,47 +148,165 @@ function TimesheetsContent() {
   const totalHrs = Math.floor(totalMsWorked / (1000 * 60 * 60));
   const totalMins = Math.floor((totalMsWorked % (1000 * 60 * 60)) / (1000 * 60));
 
-  // CSV Export Engine
-  const handleExportCSV = () => {
+  const getSortedLogs = () => {
+    return [...logs].sort((a, b) => {
+      const nameA = (a.fullName || "").trim().toLowerCase();
+      const nameB = (b.fullName || "").trim().toLowerCase();
+      if (nameA !== nameB) return nameA.localeCompare(nameB);
+      const dateA = a.timeIn ? a.timeIn.getTime() : 0;
+      const dateB = b.timeIn ? b.timeIn.getTime() : 0;
+      return dateA - dateB;
+    });
+  };
+
+  // PDF Export Engine 
+  const handleExportPDF = () => {
     if (logs.length === 0) return toast.error("No data to export.");
+    const doc = new jsPDF("landscape");
     
-    const headers = ["Employee", "Date", "Time In", "Time Out", "Late (Mins)", "Duration (Hrs)", "Status", "Remarks"];
+    doc.setFontSize(18);
+    doc.text(`SimpliSync Timesheet Report`, 14, 15);
+    doc.setFontSize(11);
+    doc.text(`Period: ${selectedMonth} | Cutoff: ${cutoff === "1" ? "1st - 15th" : "16th - End"}`, 14, 23);
+
+    const formattedExportLogs = getSortedLogs();
+    const tableData: PDFRowInput[] = [];
     
-    const rows = logs.map(log => {
+    let currentEmployeeName = formattedExportLogs[0]?.fullName || "Unknown Employee";
+    let empLateMins = 0;
+    let empMsWorked = 0;
+
+    const appendSubtotalRow = (employeeName: string, lateMinsSum: number, msWorkedSum: number) => {
+      const subHrs = Math.floor(msWorkedSum / (1000 * 60 * 60));
+      const subMins = Math.floor((msWorkedSum % (1000 * 60 * 60)) / (1000 * 60));
+      tableData.push([
+        { content: `SUBTOTAL: ${employeeName}`, colSpan: 4, styles: { fontStyle: 'bold', fillColor: [240, 240, 240] } },
+        { content: `${lateMinsSum} mins`, styles: { fontStyle: 'bold', fillColor: [240, 240, 240], textColor: lateMinsSum > 0 ? [200, 0, 0] : [0, 150, 0] } },
+        { content: `${subHrs}h ${subMins}m`, colSpan: 3, styles: { fontStyle: 'bold', fillColor: [240, 240, 240] } }
+      ]);
+    };
+
+    formattedExportLogs.forEach((log, index) => {
+      const logEmployeeName = log.fullName || "Unknown Employee";
+
+      if (logEmployeeName !== currentEmployeeName) {
+        appendSubtotalRow(currentEmployeeName, empLateMins, empMsWorked);
+        empLateMins = 0;
+        empMsWorked = 0;
+        currentEmployeeName = logEmployeeName;
+      }
+
       const lateMins = calculateActualLateMins(log.timeIn);
       const durationMs = (log.timeIn && log.timeOut) ? log.timeOut.getTime() - log.timeIn.getTime() : 0;
       const durHrs = (durationMs / (1000 * 60 * 60)).toFixed(2);
-      
-      const remarks = [];
-      if (log.lateReason) remarks.push(`Late Reason: ${log.lateReason}`);
-      if (log.earlyOutReason) remarks.push(`Early Out: ${log.earlyOutReason}`);
-      if (log.isLateExcused) remarks.push("Lateness Excused by Admin");
 
-      return [
-        log.fullName || "N/A",
+      if (!log.isLateExcused) empLateMins += lateMins;
+      empMsWorked += durationMs;
+
+      const cleanStatus = log.isLateExcused ? "Admin Resolved" : log.status;
+
+      tableData.push([
+        logEmployeeName,
         formatDate(log.timeIn),
         formatTime(log.timeIn),
         formatTime(log.timeOut),
-        lateMins,
+        log.isLateExcused ? "0 (Excused)" : lateMins.toString(),
         durHrs,
-        log.status,
-        remarks.join(" | ") || "None"
-      ].map(val => `"${val}"`).join(","); // Wrap in quotes to prevent comma breaking
+        cleanStatus,
+        log.earlyOutReason || log.lateReason || ""
+      ]);
+
+      if (index === formattedExportLogs.length - 1) {
+        appendSubtotalRow(currentEmployeeName, empLateMins, empMsWorked);
+      }
     });
 
-    // Add Totals to bottom of CSV
-    rows.push(["", "", "", "TOTALS:", `"${totalLateMinsAccumulated} mins"`, `"${totalHrs}h ${totalMins}m"`, "", ""].join(","));
+    // Directly invoking configuration using explicit strict typing matrix inputs
+    autoTable(doc, {
+      head: [["Employee", "Date", "Time In", "Time Out", "Late", "Duration (Hrs)", "Status", "Remarks"]],
+      body: tableData,
+      startY: 30,
+      theme: 'grid',
+      headStyles: { fillColor: [13, 148, 136] }, 
+      styles: { fontSize: 8 },
+    });
 
-    const csvContent = [headers.join(","), ...rows].join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    doc.save(`Timesheet_PDF_${selectedMonth}_Cutoff_${cutoff}.pdf`);
+    toast.success("PDF Visualizer Downloaded!");
+  };
+
+  const handleExportCSV = () => {
+    if (logs.length === 0) return toast.error("No data to export.");
+    const headers = ["Employee", "Date", "Time In", "Time Out", "Late (Mins)", "Duration (Hrs)", "Status", "Remarks"];
+    const formattedExportLogs = getSortedLogs();
+    const csvLines: string[] = [headers.join(",")];
+    
+    let currentEmployeeName = formattedExportLogs[0]?.fullName || "Unknown Employee";
+    let empLateMins = 0;
+    let empMsWorked = 0;
+    let grandLateMins = 0;
+    let grandMsWorked = 0;
+
+    const appendSubtotalRow = (employeeName: string, lateMinsSum: number, msWorkedSum: number) => {
+      const subHrs = Math.floor(msWorkedSum / (1000 * 60 * 60));
+      const subMins = Math.floor((msWorkedSum % (1000 * 60 * 60)) / (1000 * 60));
+      csvLines.push([`"SUBTOTAL: ${employeeName}"`, `""`, `""`, `""`, `"${lateMinsSum} mins"`, `"${subHrs}h ${subMins}m"`, `""`, `""`].join(","));
+      csvLines.push(",,,,,,,");
+    };
+
+    formattedExportLogs.forEach((log, index) => {
+      const logEmployeeName = log.fullName || "Unknown Employee";
+
+      if (logEmployeeName !== currentEmployeeName) {
+        appendSubtotalRow(currentEmployeeName, empLateMins, empMsWorked);
+        empLateMins = 0;
+        empMsWorked = 0;
+        currentEmployeeName = logEmployeeName;
+      }
+
+      const lateMins = calculateActualLateMins(log.timeIn);
+      const durationMs = (log.timeIn && log.timeOut) ? log.timeOut.getTime() - log.timeIn.getTime() : 0;
+      const durHrs = (durationMs / (1000 * 60 * 60)).toFixed(2);
+
+      if (!log.isLateExcused) {
+        empLateMins += lateMins;
+        grandLateMins += lateMins;
+      }
+      empMsWorked += durationMs;
+      grandMsWorked += durationMs;
+
+      const remarks = [];
+      if (log.lateReason) remarks.push(`Late Reason: ${log.lateReason}`);
+      if (log.earlyOutReason) remarks.push(`Admin: ${log.earlyOutReason}`);
+      if (log.isLateExcused) remarks.push("Excused Late");
+
+      csvLines.push([
+        logEmployeeName,
+        formatDate(log.timeIn),
+        formatTime(log.timeIn),
+        formatTime(log.timeOut),
+        log.isLateExcused ? 0 : lateMins,
+        durHrs,
+        log.isLateExcused ? "Admin Resolved" : log.status,
+        remarks.join(" | ") || "None"
+      ].map(val => `"${val}"`).join(","));
+
+      if (index === formattedExportLogs.length - 1) appendSubtotalRow(currentEmployeeName, empLateMins, empMsWorked);
+    });
+
+    const grandHrs = Math.floor(grandMsWorked / (1000 * 60 * 60));
+    const grandMins = Math.floor((grandMsWorked % (1000 * 60 * 60)) / (1000 * 60));
+
+    csvLines.push(",,,,,,,"); 
+    csvLines.push([`"GRAND TOTALS"`, `""`, `""`, `""`, `"${grandLateMins} mins"`, `"${grandHrs}h ${grandMins}m"`, `""`, `""`].join(","));
+
+    const blob = new Blob([csvLines.join("\n")], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", `Timesheet_${selectedMonth}_Cutoff${cutoff}.csv`);
+    link.setAttribute("href", URL.createObjectURL(blob));
+    link.setAttribute("download", `Timesheet_Report_${selectedMonth}_Cutoff_${cutoff}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    toast.success("CSV Exported Successfully!");
   };
 
   return (
@@ -206,27 +333,32 @@ function TimesheetsContent() {
               </p>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
-              {/* 15-Day Cutoff Selectors */}
+            <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
               <input 
                 type="month" 
                 value={selectedMonth} 
                 onChange={(e) => setSelectedMonth(e.target.value)} 
-                className="w-full sm:w-auto bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm font-medium text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-teal-500 shadow-sm"
+                className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm font-medium text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-teal-500 shadow-sm"
               />
               <select 
                 value={cutoff}
                 onChange={(e) => setCutoff(e.target.value as "1" | "2")}
-                className="w-full sm:w-auto bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm font-medium text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-teal-500 shadow-sm cursor-pointer"
+                className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm font-medium text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-teal-500 shadow-sm cursor-pointer"
               >
-                <option value="1" >1st Half (1st - 15th)</option>
+                <option value="1">1st Half (1st - 15th)</option>
                 <option value="2">2nd Half (16th - End)</option>
               </select>
 
               <button 
+                onClick={handleExportPDF}
+                className="bg-rose-600 hover:bg-rose-500 text-white border border-rose-600 px-4 py-2.5 rounded-xl transition-colors shadow-sm flex items-center justify-center gap-2 font-bold active:scale-95" 
+              >
+                <FileText className="w-4 h-4" /> Export PDF
+              </button>
+
+              <button 
                 onClick={handleExportCSV}
-                className="w-full sm:w-auto bg-teal-600 hover:bg-teal-500 text-white border border-teal-600 px-4 py-2.5 rounded-xl transition-colors shadow-sm flex items-center justify-center gap-2 font-bold active:scale-95" 
-                title="Export CSV"
+                className="bg-teal-600 hover:bg-teal-500 text-white border border-teal-600 px-4 py-2.5 rounded-xl transition-colors shadow-sm flex items-center justify-center gap-2 font-bold active:scale-95" 
               >
                 <Download className="w-4 h-4" /> Export CSV
               </button>
@@ -255,11 +387,14 @@ function TimesheetsContent() {
                       ) : logs.length > 0 ? (
                           logs.map((log) => {
                               const actualLateMins = calculateActualLateMins(log.timeIn);
-                              let cleanStatus = log.status || "Present";
-                              if (cleanStatus.toLowerCase().includes("force")) cleanStatus = "Admin Resolved";
-                              else if (cleanStatus.toLowerCase().includes("late")) cleanStatus = "Late";
-                              else if (actualLateMins > 0 && cleanStatus === "Working") cleanStatus = "Working";
-                              else if (actualLateMins > 0 && cleanStatus === "Present") cleanStatus = "Late";
+                              let cleanStatus = log.isLateExcused ? "Admin Resolved" : (log.status || "Present");
+
+                              if (!log.isLateExcused) {
+                                if (cleanStatus.toLowerCase().includes("force")) cleanStatus = "Force Clocked Out";
+                                else if (cleanStatus.toLowerCase().includes("late")) cleanStatus = "Late";
+                                else if (actualLateMins > 0 && cleanStatus === "Working") cleanStatus = "Working";
+                                else if (actualLateMins > 0 && cleanStatus === "Present") cleanStatus = "Late";
+                              }
 
                               return (
                                 <tr key={log.id} className="block lg:table-row bg-white dark:bg-transparent border lg:border-none border-gray-100 dark:border-white/5 mb-4 lg:mb-0 rounded-2xl p-4 lg:p-0 hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-colors">
@@ -296,10 +431,10 @@ function TimesheetsContent() {
                                           <span className="text-emerald-600 font-bold">0</span>
                                         )}
                                         {log.isLateExcused && (
-  <span title="Excused by Admin">
-    <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
-  </span>
-)}
+                                          <span title="Excused by Admin">
+                                            <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+                                          </span>
+                                        )}
                                       </div>
                                     </td>
                                     <td className="block lg:table-cell py-2 lg:py-4 px-2 lg:px-4 lg:text-center">

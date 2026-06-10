@@ -40,7 +40,7 @@ export default function EmployeeProfileView({ userId }: { userId: string }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState<EmployeeProfile>({
-    fullName: "", email: "", personalEmail: "", contactNumber: "", position: "", department: "", joinDate: "", birthDate: "", status: "active",
+    fullName: "", email: "", personalEmail: "", contactNumber: "", position: "IT Staff", department: "IT", joinDate: "", birthDate: "", status: "active",
     emergencyContactName: "", emergencyContactRelation: "", emergencyContactPhone: ""
   });
 
@@ -61,8 +61,8 @@ export default function EmployeeProfileView({ userId }: { userId: string }) {
             email: data.email || "",
             personalEmail: data.personalEmail || "",
             contactNumber: data.contactNumber || "",
-            position: data.position || "",
-            department: data.department || "",
+            position: data.position || "IT Staff",
+            department: data.department || "IT",
             joinDate: data.joinDate || "",
             birthDate: data.birthDate || "",
             status: data.status || "active",
@@ -158,7 +158,6 @@ export default function EmployeeProfileView({ userId }: { userId: string }) {
     }
   };
 
-  // 🔥 NEW: API Call to force the password reset
   const handleForcePasswordReset = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     if (newPassword.length < 6) {
@@ -190,7 +189,6 @@ export default function EmployeeProfileView({ userId }: { userId: string }) {
       setIsResetting(false);
     }
   };
-
 
   if (isLoading) {
     return (
@@ -269,10 +267,7 @@ export default function EmployeeProfileView({ userId }: { userId: string }) {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        
-        {/* Left Col: Main Details */}
         <div className="lg:col-span-2 xl:col-span-3 space-y-6">
-          
           <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl sm:rounded-3xl p-5 sm:p-8 shadow-xl">
             <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
               <Building2 className="w-5 h-5 text-teal-500" />
@@ -312,19 +307,39 @@ export default function EmployeeProfileView({ userId }: { userId: string }) {
                 )}
               </div>
 
+              {/* Job Title Dropdown Field */}
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Job Title</label>
                 {isEditing ? (
-                  <input name="position" value={formData.position} onChange={handleChange} className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-teal-500 text-gray-900 dark:text-white" />
+                  <select 
+                    name="position" 
+                    value={formData.position} 
+                    onChange={handleChange} 
+                    className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-teal-500 text-gray-900 dark:text-white outline-none cursor-pointer appearance-none"
+                  >
+                    <option value="Accounting Staff">Accounting Staff</option>
+                    <option value="IT Staff">IT Staff</option>
+                    <option value="Managing Supervisor">Managing Supervisor</option>
+                  </select>
                 ) : (
                   <div className="text-gray-900 dark:text-white font-medium py-2.5">{profile?.position || "—"}</div>
                 )}
               </div>
 
+              {/* Department Dropdown Field */}
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Department</label>
                 {isEditing ? (
-                  <input name="department" value={formData.department} onChange={handleChange} className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-teal-500 text-gray-900 dark:text-white" />
+                  <select 
+                    name="department" 
+                    value={formData.department} 
+                    onChange={handleChange} 
+                    className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-teal-500 text-gray-900 dark:text-white outline-none cursor-pointer appearance-none"
+                  >
+                    <option value="IT">IT</option>
+                    <option value="Accounting">Accounting</option>
+                    <option value="Supervisor">Supervisor</option>
+                  </select>
                 ) : (
                   <div className="text-gray-900 dark:text-white font-medium py-2.5">{profile?.department || "—"}</div>
                 )}
@@ -367,12 +382,9 @@ export default function EmployeeProfileView({ userId }: { userId: string }) {
               </div>
             </div>
           </div>
-
         </div>
 
-        {/* Right Col: Dates & Status */}
         <div className="space-y-6">
-          
           <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl">
             <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-5 flex items-center gap-2">
               <Calendar className="w-5 h-5 text-teal-500" />
@@ -416,8 +428,6 @@ export default function EmployeeProfileView({ userId }: { userId: string }) {
             
             <div className="space-y-1">
               <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 block">Current Status</label>
-              
-              {/* 🔥 FIX: Rendered status as read-only. We force Admins to use the DOLE-compliant directory offboard tool. */}
               <div className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${["inactive", "Resigned", "Terminated", "End of Contract"].includes(profile?.status || "") ? 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400'}`}>
                 {profile?.status === 'active' ? 'Active' : profile?.status || 'Active'}
               </div>
@@ -431,7 +441,6 @@ export default function EmployeeProfileView({ userId }: { userId: string }) {
             </div>
           </div>
 
-          {/* 🔥 NEW: Admin Security Override Card */}
           {isAdmin && (
             <div className="bg-rose-50 dark:bg-rose-500/5 border border-rose-200 dark:border-rose-500/20 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl">
               <h3 className="text-lg font-bold text-rose-700 dark:text-rose-400 mb-2 flex items-center gap-2">
@@ -450,11 +459,9 @@ export default function EmployeeProfileView({ userId }: { userId: string }) {
               </button>
             </div>
           )}
-
         </div>
       </div>
 
-      {/* 🔥 NEW: Password Reset Modal */}
       {isResetModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in-up">
           <form onSubmit={handleForcePasswordReset} className="bg-white dark:bg-[#1a1a1a] rounded-3xl shadow-2xl max-w-sm w-full border border-gray-200 dark:border-white/10 overflow-hidden">
@@ -497,7 +504,6 @@ export default function EmployeeProfileView({ userId }: { userId: string }) {
           </form>
         </div>
       )}
-
     </div>
   );
 }

@@ -3,21 +3,33 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { clockInEmployee } from "@/services/attendance"; 
-import { collection, query, where, onSnapshot } from "firebase/firestore";
+import { collection, query, where, onSnapshot, doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import toast from "react-hot-toast";
-import { AlertTriangle, Send, X } from "lucide-react";
+import { AlertTriangle, Send, X, MapPin } from "lucide-react";
+import { isWithinSmartZone } from "@/utils/geo";
 
 interface Coordinates {
   lat: number;
   lng: number;
 }
 
+interface CompanySettings {
+  officeLat?: number;
+  officeLng?: number;
+  allowedRadius?: number;
+  shiftStartTime?: string;
+}
+
 export default function ClockInButton() {
   const { user, isClockedIn } = useAuth();
   const [statusMsg, setStatusMsg] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Modal tracking states
   const [isLateModalOpen, setIsLateModalOpen] = useState(false);
+  const [isOutOfBoundsModalOpen, setIsOutOfBoundsModalOpen] = useState(false);
+  
   const [lateReason, setLateReason] = useState("");
   const [pendingCoords, setPendingCoords] = useState<Coordinates | null>(null);
   const [hasLoggedToday, setHasLoggedToday] = useState<boolean | null>(null);
@@ -44,7 +56,6 @@ export default function ClockInButton() {
       where("timeIn", "<=", endOfToday)
     );
 
-    // Asynchronous listener callback (Highly optimized & completely safe for state setting)
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setHasLoggedToday(!snapshot.empty);
     }, (error) => {
@@ -56,59 +67,92 @@ export default function ClockInButton() {
   }, [user?.uid]);
 
   const handleClockInClick = () => {
-    if (!user || isClockedIn || hasLoggedToday === true || isCheckingToday) return; 
+    // Pre-flight checks: Halt immediately if user isn't authenticated or already logged
+    if (!user?.uid || isClockedIn || hasLoggedToday === true || isCheckingToday) return; 
 
     setIsLoading(true);
-    setStatusMsg(""); 
+    setStatusMsg("Acquiring GPS satellite link..."); 
     
-    setTimeout(() => {
-      setStatusMsg("Acquiring satellite lock...");
-      
-      if (!navigator.geolocation) {
-        const errorMsg = "Geolocation is not supported by your browser.";
+    if (!navigator.geolocation) {
+      const errorMsg = "Geolocation is not supported by your browser.";
+      setStatusMsg(errorMsg);
+      toast.error(errorMsg);
+      setIsLoading(false);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        //Whole asynchronous operation is wrapped in a dedicated error-defensive container
+        try {
+          const { latitude, longitude } = position.coords;
+          setStatusMsg("Verifying geofence boundaries...");
+          
+          // Fetch company parameters
+          const settingsSnap = await getDoc(doc(db, "settings", "company"));
+          const settingsData = settingsSnap.exists() ? (settingsSnap.data() as CompanySettings) : null;
+
+          const officeLat = settingsData?.officeLat || 14.942155;
+          const officeLng = settingsData?.officeLng || 120.217151;
+          const allowedRadius = settingsData?.allowedRadius || 50;
+          const shiftStartTime = settingsData?.shiftStartTime || "08:00";
+
+          // Calculate location authorization metrics
+          const isValidLocation = isWithinSmartZone(latitude, longitude, officeLat, officeLng, allowedRadius);
+          
+          if (!isValidLocation) {
+            setPendingCoords({ lat: latitude, lng: longitude });
+            setIsOutOfBoundsModalOpen(true);
+            setStatusMsg("");
+            setIsLoading(false); // Disengage loading spinner safely
+            return;
+          }
+
+          // Evaluate timeliness metrics
+          const now = new Date();
+          const [hourStr, minuteStr] = shiftStartTime.split(':');
+          const targetTime = new Date();
+          targetTime.setHours(parseInt(hourStr, 10), parseInt(minuteStr, 10), 0, 0);
+
+          setPendingCoords({ lat: latitude, lng: longitude });
+
+          if (now > targetTime) {
+            // Inside boundaries but tardy -> open modal description entry prompt
+            setIsLateModalOpen(true);
+            setStatusMsg("");
+            setIsLoading(false);
+          } else {
+            // In bounds and on time -> fire direct server commit
+            await executeClockIn(latitude, longitude);
+          }
+
+        } catch (err) {
+          console.error("Geofence Verification Failure:", err);
+          setStatusMsg("Verification service error. Please try again.");
+          toast.error("Network sync issue. Failed to pull geofence metadata.");
+          setIsLoading(false); // Break the loading loop if firestore queries timeout
+        }
+      },
+      (error) => {
+        let errorMsg = "Failed to acquire location telemetry.";
+        if (error.code === error.PERMISSION_DENIED) {
+          errorMsg = "Location permissions denied. Please enable GPS access.";
+        }
         setStatusMsg(errorMsg);
         toast.error(errorMsg);
         setIsLoading(false);
-        return;
-      }
-
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-
-          const now = new Date();
-          const currentHour = now.getHours();
-          const currentMinute = now.getMinutes();
-          
-          const isLate = currentHour > 8 || (currentHour === 8 && currentMinute > 0);
-
-          if (isLate) {
-            setPendingCoords({ lat: latitude, lng: longitude });
-            setIsLateModalOpen(true);
-            setIsLoading(false);
-            setStatusMsg("");
-          } else {
-            executeClockIn(latitude, longitude);
-          }
-        },
-        (error) => {
-          let errorMsg = "Failed to get location.";
-          if (error.code === error.PERMISSION_DENIED) errorMsg = "Location access denied.";
-          setStatusMsg(errorMsg);
-          toast.error(errorMsg);
-          setIsLoading(false);
-        },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-      );
-    }, 800); 
+      },
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
+    );
   };
 
   const executeClockIn = async (lat: number, lng: number, reason?: string) => {
+    if (!user?.uid) return;
     setIsLoading(true);
-    setStatusMsg("Connecting to server...");
+    setStatusMsg("Committing records to secure cloud ledger...");
     
     try {
-      await clockInEmployee(user?.uid || "", lat, lng, reason); 
+      await clockInEmployee(user.uid, lat, lng, reason); 
       setStatusMsg("Ika'y nakapag Clock In na!"); 
       toast.success("Successfully clocked in.");
       
@@ -116,10 +160,11 @@ export default function ClockInButton() {
       setLateReason("");
       setPendingCoords(null);
     } catch (error) {
-      console.error("Clock-in failed:", error);
-      const errorMsg = "Clock-in failed. Please try again.";
-      setStatusMsg(errorMsg);
-      toast.error(errorMsg);
+      console.error("Clock-in execution failed:", error);
+      setStatusMsg("Clock-in failed. Please try again.");
+      toast.error("Database connection failure. Please retry clocking in.");
+    } finally {
+      // Guaranteed fallback to clean loading spinner frames regardless of operational success
       setIsLoading(false);
     }
   };
@@ -152,7 +197,7 @@ export default function ClockInButton() {
       >
         {isLoading || isCheckingToday ? (
           <>
-            <svg className="animate-spin w-10 h-10 mb-2 opacity-90" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <svg className="animate-spin w-10 h-10 mb-2 opacity-90 text-white" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
@@ -189,6 +234,42 @@ export default function ClockInButton() {
         </div>
       )}
 
+      {/* Out of Bounds Rejection Modal */}
+      {isOutOfBoundsModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in-up">
+          <div className="bg-white dark:bg-[#1a1a1a] rounded-3xl shadow-2xl max-w-sm w-full border border-gray-200 dark:border-white/10 overflow-hidden">
+            <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-white/10 bg-rose-50 dark:bg-rose-500/10">
+              <h3 className="text-lg font-bold text-rose-700 dark:text-rose-400 flex items-center gap-2">
+                <MapPin className="w-5 h-5" /> Clock-In Restricted
+              </h3>
+              <button 
+                type="button" 
+                onClick={() => { setIsOutOfBoundsModalOpen(false); setPendingCoords(null); }} 
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6 flex flex-col gap-5 text-center">
+              <div className="w-14 h-14 bg-rose-100 dark:bg-rose-500/10 rounded-full flex items-center justify-center mx-auto text-rose-600 dark:text-rose-400">
+                <MapPin className="w-7 h-7" />
+              </div>
+              <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+                You are currently <strong className="text-rose-500">outside the allowed workspace boundaries</strong>. Please move closer to the office building to connect to the smart geofence perimeter.
+              </p>
+              <button 
+                type="button"
+                onClick={() => { setIsOutOfBoundsModalOpen(false); setPendingCoords(null); }}
+                className="w-full bg-rose-600 hover:bg-rose-500 text-white font-bold py-3 rounded-xl transition-all shadow-md shadow-rose-500/20 active:scale-95 text-sm"
+              >
+                Understood
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Late Explanation Modal */}
       {isLateModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in-up">
@@ -199,7 +280,7 @@ export default function ClockInButton() {
               </h3>
               <button 
                 type="button" 
-                onClick={() => { setIsLateModalOpen(false); setIsLoading(false); }} 
+                onClick={() => { setIsLateModalOpen(false); setPendingCoords(null); }} 
                 className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
               >
                 <X className="w-5 h-5" />
@@ -208,7 +289,7 @@ export default function ClockInButton() {
             
             <div className="p-6 flex flex-col gap-4">
               <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
-                It is past <strong>08:00 AM</strong>. You are currently registering as late. Please provide a brief explanation for HR review.
+                It is past **08:00 AM**. You are currently registering as late. Please provide a brief explanation for HR review.
               </p>
 
               <div className="flex flex-col gap-1.5">
@@ -220,14 +301,14 @@ export default function ClockInButton() {
                   placeholder="e.g., Heavy traffic, ISP Outage"
                   required
                   autoFocus
-                  className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 outline-none text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-rose-500 transition-all"
+                  className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 outline-none text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-rose-500 transition-all font-medium"
                 />
               </div>
 
               <button 
                 type="submit"
                 disabled={!lateReason.trim() || isLoading}
-                className="w-full mt-2 bg-rose-600 hover:bg-rose-500 text-white font-bold py-3.5 rounded-xl transition-all flex justify-center items-center gap-2 shadow-lg shadow-rose-500/30 disabled:opacity-50 active:scale-95"
+                className="w-full mt-2 bg-rose-600 hover:bg-rose-500 text-white font-bold py-3.5 rounded-xl transition-all flex justify-center items-center gap-2 shadow-lg shadow-rose-500/30 disabled:opacity-50 active:scale-95 text-sm"
               >
                 {isLoading ? "Syncing..." : <><Send className="w-4 h-4" /> Submit & Clock In</>}
               </button>
