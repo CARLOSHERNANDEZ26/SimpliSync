@@ -390,8 +390,8 @@ export default function DisciplinaryPage() {
                     </h4>
                     {selectedCase.employeeExplanation ? (
                       <div>
-                        <div className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed italic bg-slate-50 dark:bg-black/20 p-4 rounded-xl border border-gray-100 dark:border-white/5 mb-2">
-                          &apos;{selectedCase.employeeExplanation}&apos;
+                        <div className="text-sm text-gray-700 dark:text-white whitespace-pre-wrap leading-relaxed italic bg-slate-50 dark:bg-black/20 p-4 rounded-xl border border-gray-100 dark:border-white/5 mb-2">
+                          {selectedCase.employeeExplanation}
                         </div>
                         <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
                           Submitted on: {selectedCase.explanationDate ? new Date(selectedCase.explanationDate.seconds * 1000).toLocaleString() : "Unknown"}
@@ -415,7 +415,7 @@ export default function DisciplinaryPage() {
                           <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Verdict Issued</span>
                           <p className="text-base font-bold text-emerald-600 dark:text-emerald-400 mt-1">{selectedCase.verdict}</p>
                         </div>
-                        <div className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed bg-white dark:bg-black/20 p-4 rounded-xl border border-gray-100 dark:border-white/5">
+                        <div className="text-sm text-gray-700 dark:text-white whitespace-pre-wrap leading-relaxed bg-white dark:bg-black/20 p-4 rounded-xl border border-gray-100 dark:border-white/5">
                           {selectedCase.adminResolution}
                         </div>
                       </div>
@@ -430,12 +430,12 @@ export default function DisciplinaryPage() {
                               onChange={(e) => setVerdict(e.target.value)} 
                               className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 outline-none text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer"
                             >
-                              <option value="" className="text-gray-900">-- Select Final Action --</option>
-                              <option value="Cleared / Exonerated" className="text-gray-900">Cleared / Exonerated</option>
-                              <option value="Verbal Warning Documented" className="text-gray-900">Verbal Warning Documented</option>
-                              <option value="Written Warning" className="text-gray-900">Written Warning</option>
-                              <option value="Suspension" className="text-gray-900">Suspension</option>
-                              <option value="Termination" className="text-gray-900">Termination</option>
+                              <option value="" className="text-gray-900 dark:text-white">-- Select Final Action --</option>
+                              <option value="Cleared / Exonerated" className="text-gray-900 dark:text-white">Cleared / Exonerated</option>
+                              <option value="Verbal Warning Documented" className="text-gray-900 dark:text-white">Verbal Warning Documented</option>
+                              <option value="Written Warning" className="text-gray-900 dark:text-white">Written Warning</option>
+                              <option value="Suspension" className="text-gray-900 dark:text-white">Suspension</option>
+                              <option value="Termination" className="text-gray-900 dark:text-white">Termination</option>
                             </select>
                             <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                           </div>
