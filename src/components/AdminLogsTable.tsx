@@ -8,7 +8,18 @@ import toast from "react-hot-toast";
 import ConfirmModal from "@/components/ConfirmModal";
 import { Search, Calendar, Edit, X, Save, ShieldAlert, ChevronLeft, ChevronRight, Layers } from "lucide-react";
 
-interface AttendanceLog { id: string; userId: string; fullName: string; role: string; timeIn: Date | null; timeOut: Date | null; status: string; earlyOutReason?: string; lateReason?: string; isLateExcused?: boolean; }
+interface AttendanceLog { 
+  id: string; 
+  userId: string; 
+  fullName: string; 
+  role: string; 
+  timeIn: Date | null; 
+  timeOut: Date | null; 
+  status: string; 
+  earlyOutReason?: string; 
+  lateReason?: string; 
+  isLateExcused?: boolean; 
+}
 
 export default function AdminLogsTable() {
   const [logs, setLogs] = useState<AttendanceLog[]>([]);
@@ -21,7 +32,9 @@ export default function AdminLogsTable() {
   const [isForceOutModalOpen, setIsForceOutModalOpen] = useState(false);
   const [selectedLog, setSelectedLog] = useState<AttendanceLog | null>(null);
   const [isForceOutLoading, setIsForceOutLoading] = useState(false);
+
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editTimeIn, setEditTimeIn] = useState(""); 
   const [editTimeOut, setEditTimeOut] = useState("");
   const [editReason, setEditReason] = useState("");
   const [editExcuseLate, setEditExcuseLate] = useState(false);
@@ -62,7 +75,6 @@ export default function AdminLogsTable() {
           const data = doc.data();
           const timeInDate = data.timeIn?.toDate ? data.timeIn.toDate() : null;
           
-          // Apply strict cutoff bounding inside live synchronization hook
           if (timeInDate && timeInDate >= startDate && timeInDate <= endDate) {
             fetchedLogs.push({
               id: doc.id,
@@ -109,22 +121,28 @@ export default function AdminLogsTable() {
 
   const openEditModal = (log: AttendanceLog) => {
     setSelectedLog(log);
-    const targetDate = log.timeOut || new Date();
-    const tzOffset = targetDate.getTimezoneOffset() * 60000;
-    const localISOTime = new Date(targetDate.getTime() - tzOffset).toISOString().slice(0, 16);
     
-    setEditTimeOut(localISOTime);
-    setEditReason(log.earlyOutReason || "Admin Resolution: Power Outage");
+    // Formatting local ISO strings securely to populate the HTML5 datetime-local inputs
+    const formatForInput = (dateObj: Date | null) => {
+      if (!dateObj) return "";
+      const tzOffset = dateObj.getTimezoneOffset() * 60000;
+      return new Date(dateObj.getTime() - tzOffset).toISOString().slice(0, 16);
+    };
+
+    setEditTimeIn(formatForInput(log.timeIn));
+    setEditTimeOut(formatForInput(log.timeOut || new Date()));
+    setEditReason(log.earlyOutReason || "Admin Resolution: Corrected System Log");
     setEditExcuseLate(log.isLateExcused || false);
     setIsEditModalOpen(true);
   };
 
   const handleSaveManualEdit = async (e: React.SyntheticEvent) => {
     e.preventDefault();
-    if (!selectedLog || !editTimeOut) return;
+    if (!selectedLog || !editTimeIn || !editTimeOut) return;
     
     setIsSavingEdit(true);
     try {
+      const manualTimeInDate = new Date(editTimeIn);
       const manualTimeOutDate = new Date(editTimeOut);
       const logRef = doc(db, "attendanceLogs", selectedLog.id);
       
@@ -134,6 +152,7 @@ export default function AdminLogsTable() {
       }
 
       await updateDoc(logRef, {
+        timeIn: manualTimeInDate,
         timeOut: manualTimeOutDate,
         earlyOutReason: editReason,
         isLateExcused: editExcuseLate,
@@ -158,7 +177,6 @@ export default function AdminLogsTable() {
   const formatTime = (date: Date | null) => date ? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "---";
   const formatDate = (date: Date | null) => date ? date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : "---";
 
-  // --- Search Filtering and Pagination Processing ---
   const filteredLogs = logs.filter(log => log.fullName.toLowerCase().includes(searchTerm.toLowerCase()));
   
   const totalPages = Math.ceil(filteredLogs.length / rowsPerPage);
@@ -175,7 +193,6 @@ export default function AdminLogsTable() {
       <div className="px-6 py-6 border-b border-gray-200 dark:border-white/10 flex flex-col xl:flex-row justify-between items-center gap-4">
         <h3 className="text-xl font-bold text-gray-900 dark:text-white">Attendance Logs</h3>
         
-        {/* Responsive Toolbar Filters */}
         <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
           <div className="relative flex-1 min-w-[180px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -285,7 +302,6 @@ export default function AdminLogsTable() {
         )}
       </div>
 
-      {/* Navigation Controls Footer */}
       {totalPages > 1 && (
         <div className="px-6 py-4 border-t border-gray-100 dark:border-white/5 flex items-center justify-between bg-slate-50/50 dark:bg-white/[0.01]">
           <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
@@ -324,7 +340,7 @@ export default function AdminLogsTable() {
 
       {isEditModalOpen && selectedLog && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in-up">
-          <form onSubmit={handleSaveManualEdit} className="bg-white dark:bg-[#1a1a1a] rounded-3xl shadow-2xl max-w-md w-full border border-gray-200 dark:border-white/10 overflow-hidden">
+          <form onSubmit={handleSaveManualEdit} className="bg-white dark:bg-[#1a1a1a] rounded-3xl shadow-2xl max-w-lg w-full border border-gray-200 dark:border-white/10 overflow-hidden">
             <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-white/10 bg-amber-50 dark:bg-amber-500/10">
               <h3 className="text-lg font-bold text-amber-900 dark:text-amber-400 flex items-center gap-2">
                 <Edit className="w-5 h-5" /> Resolve Shift Record
@@ -335,19 +351,32 @@ export default function AdminLogsTable() {
             </div>
             
             <div className="p-6 flex flex-col gap-5">
-              <p className="text-sm text-gray-600 dark:text-gray-300">
-                You are manually resolving the log for <strong>{selectedLog.fullName}</strong>.
+              <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+                You are manually resolving the attendance log for <strong>{selectedLog.fullName}</strong>. Please ensure accuracy for payroll compliance.
               </p>
 
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-gray-500 uppercase">Correct Time Out</label>
-                <input 
-                  type="datetime-local" 
-                  value={editTimeOut}
-                  onChange={(e) => setEditTimeOut(e.target.value)}
-                  required
-                  className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 outline-none text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500"
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-gray-500 uppercase">Correct Time In</label>
+                  <input 
+                    type="datetime-local" 
+                    value={editTimeIn}
+                    onChange={(e) => setEditTimeIn(e.target.value)}
+                    required
+                    className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 outline-none text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 transition-colors"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-gray-500 uppercase">Correct Time Out</label>
+                  <input 
+                    type="datetime-local" 
+                    value={editTimeOut}
+                    onChange={(e) => setEditTimeOut(e.target.value)}
+                    required
+                    className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 outline-none text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-rose-500 transition-colors"
+                  />
+                </div>
               </div>
 
               <div className="flex flex-col gap-1.5">
@@ -356,9 +385,9 @@ export default function AdminLogsTable() {
                   type="text" 
                   value={editReason}
                   onChange={(e) => setEditReason(e.target.value)}
-                  placeholder="e.g., Admin Resolution: Power Outage"
+                  placeholder="e.g., Admin Resolution: Clock-in system failure"
                   required
-                  className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 outline-none text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500"
+                  className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 outline-none text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500 transition-colors"
                 />
               </div>
 
@@ -383,7 +412,7 @@ export default function AdminLogsTable() {
 
               <button 
                 type="submit"
-                disabled={isSavingEdit || !editTimeOut || !editReason}
+                disabled={isSavingEdit || !editTimeIn || !editTimeOut || !editReason}
                 className="w-full mt-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white font-bold py-3.5 rounded-xl transition-all flex justify-center items-center gap-2 shadow-lg shadow-amber-500/30 disabled:opacity-50 active:scale-95"
               >
                 {isSavingEdit ? "Saving..." : <><Save className="w-4 h-4" /> Save & Resolve</>}
