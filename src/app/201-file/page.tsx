@@ -6,7 +6,7 @@ import Navbar from "@/components/Navbar";
 import { useAuth } from "@/hooks/useAuth";
 import { collection, query, where, onSnapshot, orderBy, doc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { FolderOpen, User, Award, ShieldCheck, AlertTriangle, Gift, Banknote, Printer, ArrowLeft, ChevronLeft, ChevronRight, Eye, X, Send, CheckCircle } from "lucide-react";
+import { FolderOpen, User, Award, ShieldCheck, AlertTriangle, Gift, Banknote, Printer, ArrowLeft, ChevronLeft, ChevronRight, Eye, X, Send, CheckCircle, Calendar } from "lucide-react";
 import toast from "react-hot-toast";
 
 interface Evaluation { id: string; quarter: string; year: number; evaluator: string; averageScore: number; feedback: string; metrics: { quality: number; punctuality: number; teamwork: number; }; }
@@ -58,9 +58,18 @@ export default function Employee201FilePage() {
   const [explanationText, setExplanationText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Minimal Year Filter State
+  const currentYear = new Date().getFullYear();
+  const [filterYear, setFilterYear] = useState<number>(currentYear);
+
   // Pagination states
   const [payslipPage, setPayslipPage] = useState(1);
   const payslipsPerPage = 5;
+
+  // Reset pagination when year changes
+  useEffect(() => {
+    setPayslipPage(1);
+  }, [filterYear]);
 
   useEffect(() => {
     if (!user?.uid) return;
@@ -77,12 +86,10 @@ export default function Employee201FilePage() {
       }));
     });
 
-    const currentYear = new Date().getFullYear();
     const unsubBonus = onSnapshot(query(collection(db, "benefitDistributions"), where("userId", "==", user.uid)), (snap) => {
-      setBonuses(snap.docs.map(d => ({ id: d.id, ...d.data() } as Bonus)).filter(b => b.year === currentYear));
+      setBonuses(snap.docs.map(d => ({ id: d.id, ...d.data() } as Bonus)));
     });
 
-    // Sync distributed payslips securely
     const unsubPayslips = onSnapshot(query(collection(db, "payslips"), where("userId", "==", user.uid), orderBy("year", "desc"), orderBy("month", "desc"), orderBy("cutoffPeriod", "desc")), (snap) => {
       setPayslips(snap.docs.map(d => ({ id: d.id, ...d.data() } as DistributedPayslip)));
     });
@@ -109,9 +116,22 @@ export default function Employee201FilePage() {
   const formatPeso = (amount: number) => `₱ ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   const getMonthName = (m: number) => new Date(0, m - 1).toLocaleString('default', { month: 'long' });
 
+  // Minimal Filter Logic
+  const filteredEvals = evaluations.filter(e => e.year === filterYear);
+  const filteredNotices = disciplinaryActions.filter(n => n.createdAt ? new Date(n.createdAt.seconds * 1000).getFullYear() === filterYear : true);
+  const filteredBonuses = bonuses.filter(b => b.year === filterYear);
+  const filteredPayslips = payslips.filter(p => p.year === filterYear);
+
+  // 13th Month Calculation based on filtered year
+  const totalBasicEarned = filteredPayslips.reduce((sum, p) => sum + p.metrics.semiMonthlyBase, 0);
+  const estimated13thMonth = totalBasicEarned / 12;
+
+  // Generate Year Options
+  const availableYears = Array.from({ length: 5 }, (_, i) => currentYear - i);
+
   // Pagination processing
-  const totalPayslipPages = Math.ceil(payslips.length / payslipsPerPage);
-  const currentPayslips = payslips.slice((payslipPage - 1) * payslipsPerPage, payslipPage * payslipsPerPage);
+  const totalPayslipPages = Math.ceil(filteredPayslips.length / payslipsPerPage);
+  const currentPayslips = filteredPayslips.slice((payslipPage - 1) * payslipsPerPage, payslipPage * payslipsPerPage);
 
   return (
     <ProtectedRoute>
@@ -126,9 +146,24 @@ export default function Employee201FilePage() {
               <p className="text-gray-500 dark:text-gray-400 mt-2">Your official credentials, historical reviews, and compensation ledger.</p>
             </div>
             
-            <div className="bg-gray-200/60 dark:bg-white/5 p-1 rounded-2xl flex gap-1 self-start md:self-auto shadow-sm">
-              <button onClick={() => setActiveTab("records")} className={`px-4 py-2 text-xs font-bold rounded-xl transition-all ${activeTab === "records" ? "bg-white dark:bg-white/10 text-gray-900 dark:text-white shadow" : "text-gray-500 dark:text-gray-400 hover:text-gray-700"}`}>Records & Appraisals</button>
-              <button onClick={() => setActiveTab("payslips")} className={`px-4 py-2 text-xs font-bold rounded-xl transition-all ${activeTab === "payslips" ? "bg-white dark:bg-white/10 text-gray-900 dark:text-white shadow" : "text-gray-500 dark:text-gray-400 hover:text-gray-700"}`}>My Payslips</button>
+            <div className="flex items-center gap-3 self-start md:self-auto">
+              {/* Minimal Year Sorter */}
+              <div className="relative flex items-center bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl px-3 py-1.5 shadow-sm">
+                <Calendar className="w-4 h-4 text-gray-400 mr-2" />
+                <select 
+                  value={filterYear} 
+                  onChange={(e) => setFilterYear(Number(e.target.value))}
+                  className="bg-transparent text-xs font-bold text-gray-700 dark:text-gray-300 outline-none cursor-pointer appearance-none pr-4"
+                >
+                  {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
+                </select>
+              </div>
+
+              {/* Existing Tabs */}
+              <div className="bg-gray-200/60 dark:bg-white/5 p-1 rounded-2xl flex gap-1 shadow-sm">
+                <button onClick={() => setActiveTab("records")} className={`px-4 py-2 text-xs font-bold rounded-xl transition-all ${activeTab === "records" ? "bg-white dark:bg-white/10 text-gray-900 dark:text-white shadow" : "text-gray-500 dark:text-gray-400 hover:text-gray-700"}`}>Records & Appraisals</button>
+                <button onClick={() => setActiveTab("payslips")} className={`px-4 py-2 text-xs font-bold rounded-xl transition-all ${activeTab === "payslips" ? "bg-white dark:bg-white/10 text-gray-900 dark:text-white shadow" : "text-gray-500 dark:text-gray-400 hover:text-gray-700"}`}>My Payslips</button>
+              </div>
             </div>
           </div>
 
@@ -148,43 +183,50 @@ export default function Employee201FilePage() {
 
                 <div className="bg-gradient-to-br from-teal-500/10 to-emerald-500/10 border border-teal-200 rounded-3xl p-6 shadow-xl">
                   <h3 className="text-lg font-bold text-teal-900 dark:text-teal-400 mb-4 flex items-center gap-2"><Gift className="w-5 h-5" /> Incentives & Bonuses</h3>
-                  {bonuses.length > 0 ? (
+                  
+                  {/* Subtle 13th Month Tracker */}
+                  <div className="bg-white/60 dark:bg-black/20 p-3 rounded-xl border border-teal-100 dark:border-white/5 flex items-center justify-between mb-4">
+                    <span className="text-xs font-bold text-gray-700 dark:text-gray-300">13th Month Accrual</span>
+                    <span className="text-sm font-mono font-black text-emerald-600 dark:text-emerald-400">{formatPeso(estimated13thMonth)}</span>
+                  </div>
+
+                  {filteredBonuses.length > 0 ? (
                     <div className="space-y-3">
-                      {bonuses.map(b => (
+                      {filteredBonuses.map(b => (
                         <div key={b.id} className="bg-white dark:bg-black/40 p-4 rounded-2xl border border-teal-100 flex items-center justify-between">
                           <div><div className="text-sm font-bold text-gray-900 dark:text-white">{b.type}</div><div className="text-[10px] text-gray-500 uppercase tracking-wider">{b.year} • Processed</div></div>
                           <div className="text-lg font-mono font-bold text-emerald-600">+{formatPeso(b.amount)}</div>
                         </div>
                       ))}
                     </div>
-                  ) : <div className="text-center py-6 bg-white/50 dark:bg-black/20 rounded-2xl border border-dashed"><p className="text-sm text-gray-500 italic">No additional compensation logged.</p></div>}
+                  ) : <div className="text-center py-6 bg-white/50 dark:bg-black/20 rounded-2xl border border-dashed"><p className="text-sm text-gray-500 italic">No additional compensation logged for {filterYear}.</p></div>}
                 </div>
               </div>
 
               <div className="lg:col-span-2 space-y-8">
                 <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl">
                   <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2"><Award className="w-5 h-5 text-teal-500" /> Quarterly Appraisals</h3>
-                  {isLoading ? <div className="text-center py-10 text-gray-500">Syncing records...</div> : evaluations.length > 0 ? (
+                  {isLoading ? <div className="text-center py-10 text-gray-500">Syncing records...</div> : filteredEvals.length > 0 ? (
                     <div className="space-y-4 overflow-y-auto max-h-[500px] pr-2 custom-scrollbar">
-                      {evaluations.map(ev => (
+                      {filteredEvals.map(ev => (
                         <div key={ev.id} className="p-5 bg-slate-50 dark:bg-black/20 rounded-2xl border border-gray-100">
                           <div className="flex justify-between border-b pb-4 mb-4"><h4 className="text-lg font-bold">{ev.quarter} {ev.year} Review</h4><span className="px-3 py-1 bg-teal-100 text-teal-700 font-bold text-sm rounded-lg">{ev.averageScore.toFixed(1)} / 5.0</span></div>
                           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed bg-white dark:bg-black/40 p-4 rounded-xl border">&quot;{ev.feedback}&quot;</p>
                         </div>
                       ))}
                     </div>
-                  ) : <div className="text-center text-gray-500 py-10 bg-slate-50 dark:bg-black/10 rounded-2xl border border-dashed">No reviews on record yet.</div>}
+                  ) : <div className="text-center text-gray-500 py-10 bg-slate-50 dark:bg-black/10 rounded-2xl border border-dashed">No reviews on record for {filterYear}.</div>}
                 </div>
 
                 <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl">
                   <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2"><AlertTriangle className="w-5 h-5 text-rose-500" /> Official HR Notices</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {disciplinaryActions.length > 0 ? disciplinaryActions.map(act => (
+                    {filteredNotices.length > 0 ? filteredNotices.map(act => (
                       <div key={act.id} onClick={() => setSelectedNotice(act)} className="cursor-pointer p-4 bg-rose-50/40 dark:bg-rose-500/5 border border-rose-100 rounded-2xl hover:border-rose-400 transition-all flex flex-col justify-between">
                         <div><div className="flex justify-between text-[10px] font-bold text-gray-400"><span>{act.offenseType}</span><span>{act.createdAt ? new Date(act.createdAt.seconds * 1000).toLocaleDateString() : ""}</span></div><h4 className="text-sm font-bold mt-2">Notice to Explain</h4><p className="text-xs text-gray-500 mt-1 line-clamp-2">{act.formalNotice}</p></div>
                         <div className="text-[10px] font-bold mt-4 uppercase text-rose-600 tracking-wider flex items-center gap-1">{act.status}</div>
                       </div>
-                    )) : <div className="col-span-full text-center text-gray-500 py-8 bg-slate-50 dark:bg-black/10 rounded-2xl border border-dashed">No issues on file. Excellent!</div>}
+                    )) : <div className="col-span-full text-center text-gray-500 py-8 bg-slate-50 dark:bg-black/10 rounded-2xl border border-dashed">No issues on file for {filterYear}. Excellent!</div>}
                   </div>
                 </div>
               </div>
@@ -217,8 +259,8 @@ export default function Employee201FilePage() {
                         </td>
                       </tr>
                     ))}
-                    {payslips.length === 0 && (
-                      <tr><td colSpan={5} className="py-12 text-center text-gray-500 italic">No statement ledgers have been distributed to your account yet.</td></tr>
+                    {filteredPayslips.length === 0 && (
+                      <tr><td colSpan={5} className="py-12 text-center text-gray-500 italic">No statement ledgers found for {filterYear}.</td></tr>
                     )}
                   </tbody>
                 </table>
@@ -258,8 +300,8 @@ export default function Employee201FilePage() {
                 <div className="grid grid-cols-2 gap-4 text-xs mb-6 border-b pb-4">
                   <div><span className="text-gray-400 font-bold uppercase tracking-wider block text-[10px]">Employee Name</span><span className="font-bold text-sm">{selectedPayslip.fullName}</span></div>
                   <div><span className="text-gray-400 font-bold uppercase tracking-wider block text-[10px]">Department Allocation</span><span className="font-bold text-sm">{selectedPayslip.department}</span></div>
-                  <div><span className="text-gray-400 font-bold uppercase tracking-wider block text-[10px]">Base Compensation</span><span>{formatPeso(selectedPayslip.baseSalary)} / {selectedPayslip.salaryType}</span></div>
-                  <div><span className="text-gray-400 font-bold uppercase tracking-wider block text-[10px]">Hourly Derived Rate</span><span>{formatPeso(selectedPayslip.metrics.hourlyRate)}</span></div>
+                  <div><span className="text-gray-400 font-bold uppercase tracking-wider block text-[10px]">Base Compensation</span><span className="font-medium">{formatPeso(selectedPayslip.baseSalary)} / {selectedPayslip.salaryType}</span></div>
+                  <div><span className="text-gray-400 font-bold uppercase tracking-wider block text-[10px]">Hourly Derived Rate</span><span className="font-medium">{formatPeso(selectedPayslip.metrics.hourlyRate)}</span></div>
                 </div>
 
                 <div className="border rounded-xl overflow-hidden flex flex-col sm:flex-row mb-6 text-xs">
@@ -292,7 +334,6 @@ export default function Employee201FilePage() {
           <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 print:hidden animate-fade-in">
             <div className="bg-white dark:bg-[#151515] w-full max-w-5xl h-[85vh] max-h-[750px] rounded-3xl shadow-2xl border border-gray-200 dark:border-white/10 flex flex-col overflow-hidden animate-zoom-in">
               
-              {/* Header */}
               <div className="flex justify-between items-center p-5 bg-slate-50 dark:bg-white/[0.02] border-b border-gray-100 dark:border-white/5 shrink-0">
                 <div>
                   <h3 className="text-lg font-bold flex items-center gap-2 text-gray-900 dark:text-white">
@@ -310,23 +351,19 @@ export default function Employee201FilePage() {
                 </button>
               </div>
 
-              {/* Multi-Panel Body Container */}
               <div className="flex-1 flex flex-col lg:flex-row overflow-hidden min-h-0">
                 
-                {/* LEFT SIDE PANEL: Clean Scannable Memorandum Reader View */}
                 <div className="w-full lg:w-1/2 p-6 overflow-y-auto border-b lg:border-b-0 lg:border-r border-gray-100 dark:border-white/5 custom-scrollbar bg-slate-50/30 dark:bg-transparent">
                   <div className="mb-4">
                     <span className="text-[10px] font-black tracking-widest text-gray-400 uppercase">Issued Notice Context</span>
                   </div>
                   
                   <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl p-5 border border-gray-100 dark:border-white/5 text-sm text-gray-700 dark:text-gray-300 leading-relaxed shadow-sm whitespace-pre-wrap font-sans space-y-4">
-                    {/* Clean parsing mapping helper out of block strings */}
                     {selectedNotice.formalNotice
                       .split("\n")
                       .map((line, idx) => {
                         const cleanLine = line.replace(/###/g, "").trim();
                         
-                        // Bold format inline conversions
                         const boldSegments: React.ReactNode[] = [];
                         let keyIdx = 0;
                         const parts = cleanLine.split(/\*\*(.*?)\*\*/g);
@@ -350,7 +387,6 @@ export default function Employee201FilePage() {
                   </div>
                 </div>
 
-                {/* RIGHT SIDE PANEL: Responsive Employee Response Editor Grid */}
                 <div className="w-full lg:w-1/2 p-6 overflow-y-auto custom-scrollbar flex flex-col bg-white dark:bg-[#151515]">
                   <div className="mb-4 flex flex-col">
                     <span className="text-[10px] font-black tracking-widest text-gray-400 uppercase">Written Explanation Response</span>
@@ -371,7 +407,6 @@ export default function Employee201FilePage() {
                     </div>
                   ) : (
                     <div className="flex-1 flex flex-col gap-4">
-                      {/* Fixed theme styling container */}
                       <textarea 
                         value={explanationText} 
                         onChange={(e) => setExplanationText(e.target.value)} 
@@ -392,7 +427,6 @@ export default function Employee201FilePage() {
                     </div>
                   )}
 
-                  {/* Operational HR Resolution Block (Shows up if Admin closed the file case) */}
                   {selectedNotice.status.includes("Resolved") && selectedNotice.verdict && (
                     <div className="bg-emerald-50 dark:bg-emerald-500/10 rounded-2xl p-5 border border-emerald-200 dark:border-emerald-500/30 shadow-sm mt-5 shrink-0">
                       <span className="text-[9px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400 block mb-1">HR Case Resolution Verdict</span>
@@ -406,7 +440,6 @@ export default function Employee201FilePage() {
                 </div>
               </div>
 
-              {/* Footer Audit Stamp */}
               <div className="p-3 bg-slate-50 dark:bg-white/[0.01] border-t border-gray-100 dark:border-white/5 text-center text-[10px] uppercase font-bold tracking-widest text-gray-400 shrink-0">
                 SimpliSync Compliance Management Engine • Due Process Protocol
               </div>

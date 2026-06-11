@@ -191,7 +191,7 @@ export default function PerformancePage() {
             <div>
               <h1 className="text-4xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
                 <TrendingUp className="w-10 h-10 text-indigo-500" />
-                Performance Appraisals
+                Employee Performance Appraisals
               </h1>
               <p className="text-gray-500 dark:text-gray-400 mt-2">
                 Manage quarterly evaluations, track KPIs, and log employee growth.

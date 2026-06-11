@@ -3,7 +3,7 @@ import { getAuth, createUserWithEmailAndPassword, updateProfile, signInWithEmail
 import { serverTimestamp, doc, setDoc } from "firebase/firestore";
 import { firebaseConfig, db, auth } from "../lib/firebase";
 
-// ✅ Login Employee Function
+
 export const loginEmployee = async (email: string, password: string) => {
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
@@ -14,7 +14,7 @@ export const loginEmployee = async (email: string, password: string) => {
   }
 };
 
-// ✅ Add Employee Function (With Leave Credits Initialized)
+
 export const addEmployee = async (
   fullName: string, 
   position: string, 
