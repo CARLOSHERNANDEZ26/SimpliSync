@@ -6,7 +6,7 @@ import Navbar from "@/components/Navbar";
 import { collection, query, orderBy, onSnapshot, addDoc, deleteDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/hooks/useAuth";
-import { Calendar as CalendarIcon, Plus, Trash2, AlertTriangle, ChevronLeft, ChevronRight, Tag, HelpCircle, Info, X } from "lucide-react";
+import { Calendar as CalendarIcon, Plus, Trash2, ChevronLeft, ChevronRight, Tag, HelpCircle, Info, X } from "lucide-react";
 import toast from "react-hot-toast";
 
 interface Holiday {
@@ -28,6 +28,7 @@ export default function CompanyCalendarPage() {
   const [isAdding, setIsAdding] = useState(false);
   const [activeInspectionHoliday, setActiveInspectionHoliday] = useState<Holiday | null>(null);
   const [currentNavDate, setCurrentNavDate] = useState(new Date());
+  
   const navYear = currentNavDate.getFullYear();
   const navMonth = currentNavDate.getMonth(); 
 
@@ -37,6 +38,7 @@ export default function CompanyCalendarPage() {
   ];
 
   useEffect(() => {
+    // 🔥 We listen to all events ordered by date. This allows multiple docs to share the same date string safely.
     const q = query(collection(db, "holidays"), orderBy("date", "asc"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setHolidays(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Holiday)));
@@ -58,7 +60,7 @@ export default function CompanyCalendarPage() {
   };
 
   const handleDayClick = (day: number) => {
-    if (!isAdmin) return; // Block staff from picking dates to alter form targets
+    if (!isAdmin) return; 
     const paddedMonth = String(navMonth + 1).padStart(2, "0");
     const paddedDay = String(day).padStart(2, "0");
     setDate(`${navYear}-${paddedMonth}-${paddedDay}`);
@@ -70,8 +72,9 @@ export default function CompanyCalendarPage() {
     
     setIsAdding(true);
     try {
+      // 🔥 Multiple addDoc executions for the exact same date string are natively supported and encouraged
       await addDoc(collection(db, "holidays"), { holidayName, date, type, description });
-      toast.success("Holiday locked into organizational schedule!");
+      toast.success("Event locked into organizational schedule!");
       setName(""); setDate(""); setDescription(""); 
     } catch (error) {
       console.error(error);
@@ -84,7 +87,7 @@ export default function CompanyCalendarPage() {
   const executeDelete = async (id: string) => {
     try {
       await deleteDoc(doc(db, "holidays", id));
-      toast.success("Holiday de-allocated successfully.");
+      toast.success("Event de-allocated successfully.");
       setActiveInspectionHoliday(null);
     } catch (error) {
       console.error(error);
@@ -114,7 +117,6 @@ export default function CompanyCalendarPage() {
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Configure workspace cycles, leaves, and calendar adjustments.</p>
           </div>
 
-          {/* Adaptive layout based on employee vs admin credentials */}
           <div className={`grid grid-cols-1 ${isAdmin ? "lg:grid-cols-3" : "max-w-4xl mx-auto"} gap-8 items-start`}>
             
             <div className={`${isAdmin ? "lg:col-span-2" : "w-full"} bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl backdrop-blur-md flex flex-col`}>
@@ -141,13 +143,15 @@ export default function CompanyCalendarPage() {
                   const paddedMonth = String(navMonth + 1).padStart(2, "0");
                   const paddedDay = String(day).padStart(2, "0");
                   const matchingIsoString = `${navYear}-${paddedMonth}-${paddedDay}`;
+                  
+                  // 🔥 MULTI-MATCH: Filters ALL events for this day instead of breaking after finding one
                   const dayHolidays = holidays.filter(h => h.date === matchingIsoString);
 
                   return (
                     <div 
                       key={`day-${day}`}
                       onClick={() => handleDayClick(day)}
-                      className={`aspect-square p-2 bg-slate-50 dark:bg-black/10 border border-gray-200/60 dark:border-white/5 rounded-2xl flex flex-col justify-between items-start transition-all select-none relative overflow-hidden ${
+                      className={`aspect-square p-2 bg-slate-50 dark:bg-black/10 border border-gray-200/60 dark:border-white/5 rounded-2xl flex flex-col items-start transition-all select-none relative overflow-y-auto custom-scrollbar ${
                         isAdmin ? 'cursor-pointer' : 'cursor-default'
                       } ${
                         date === matchingIsoString && isAdmin 
@@ -155,19 +159,20 @@ export default function CompanyCalendarPage() {
                           : 'hover:bg-slate-100/70 dark:hover:bg-white/5'
                       }`}
                     >
-                      <span className={`text-xs font-bold font-mono ${date === matchingIsoString && isAdmin ? 'text-teal-500' : 'text-gray-700 dark:text-gray-400'}`}>
+                      <span className={`text-xs font-bold font-mono ${date === matchingIsoString && isAdmin ? 'text-teal-500' : 'text-gray-700 dark:text-gray-400'} mb-1`}>
                         {day}
                       </span>
 
-                      <div className="w-full flex flex-col gap-1 mt-1 z-10 max-h-[70%] overflow-hidden">
+                      {/* 🔥 STACK CONTAINER: Holds an unlimited number of event block tags */}
+                      <div className="w-full flex flex-col gap-1 z-10 overflow-y-auto">
                         {dayHolidays.map(h => (
                           <div 
                             key={h.id}
                             onClick={(e) => { e.stopPropagation(); setActiveInspectionHoliday(h); }}
-                            className={`w-full truncate text-[9px] font-bold px-1.5 py-0.5 rounded cursor-pointer border border-transparent transition-all uppercase tracking-wider flex items-center justify-between ${getTypeStyle(h.type)}`}
+                            className={`w-full text-left text-[9px] font-bold px-1.5 py-0.5 rounded cursor-pointer border border-transparent transition-all uppercase tracking-wider flex items-center justify-between ${getTypeStyle(h.type)}`}
                             title={`Inspect details for ${h.holidayName}`}
                           >
-                            <span className="truncate">{h.holidayName}</span>
+                            <span className="truncate w-full block">{h.holidayName}</span>
                           </div>
                         ))}
                       </div>
@@ -183,15 +188,15 @@ export default function CompanyCalendarPage() {
                   <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
                     <Tag className="w-4 h-4 text-teal-500" /> Allocation Control
                   </h3>
-                  <p className="text-xs text-gray-400 mt-1">Assign an event block or click empty cells inside the month canvas to auto-populate target parameters.</p>
+                  <p className="text-xs text-gray-400 mt-1">Assign an event block or click empty cells inside the month canvas to auto-populate target parameters. You can add multiple events to the same day.</p>
                 </div>
 
                 <form onSubmit={handleAdd} className="flex flex-col gap-4">
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Event Name</label>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Event Name & Time</label>
                     <input
                       type="text"
-                      placeholder="e.g. Subic Fiesta"
+                      placeholder="e.g. 9:00AM Sync Meeting"
                       value={holidayName}
                       onChange={(e) => setName(e.target.value)}
                       className="bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 focus:ring-2 focus:ring-teal-500 focus:outline-none transition-all dark:text-white text-sm font-medium"
@@ -213,7 +218,7 @@ export default function CompanyCalendarPage() {
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Short Description Rule</label>
                     <textarea
-                      placeholder="e.g. Regular non-working holiday compensation adjustments..."
+                      placeholder="e.g. Mandatory attendance for all department heads."
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
                       className="bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 focus:ring-2 focus:ring-teal-500 focus:outline-none transition-all dark:text-white text-sm resize-none h-16 leading-relaxed"
@@ -294,7 +299,6 @@ export default function CompanyCalendarPage() {
                   &ldquo;{activeInspectionHoliday.description || "No description provided for this calendar entry."}&rdquo;
                 </div>
 
-                {/* Secure Deletion Trigger Option: Restricted to Admins exclusively */}
                 {isAdmin && (
                   <button
                     type="button"
