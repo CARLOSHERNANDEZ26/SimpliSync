@@ -6,10 +6,11 @@ import Navbar from "@/components/Navbar";
 import { collection, query, where, onSnapshot, addDoc, updateDoc, doc, serverTimestamp, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/hooks/useAuth";
-import { Calendar as CalendarIcon, Clock, CheckCircle, XCircle, ExternalLink, Info, MessageSquare } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, CheckCircle, XCircle, ExternalLink, Info, MessageSquare, X, Printer, ArrowLeft, Edit2 } from "lucide-react";
 import toast from "react-hot-toast";
 
-interface LeaveRequest { id: string;
+interface LeaveRequest { 
+  id: string;
   userId: string;
   userName: string;
   type: "vl" | "sl" | "sil" | "lwop";
@@ -19,7 +20,7 @@ interface LeaveRequest { id: string;
   attachmentUrl?: string;
   status: "pending" | "approved" | "rejected";
   adminRemarks?: string; 
-  statusDate?: string; // Tracks the formal final resolution date marker
+  statusDate?: string; 
   createdAt: { seconds: number; nanoseconds: number } | null;
 }
 
@@ -40,6 +41,10 @@ export default function LeavePage() {
   const [inspectedRequest, setInspectedRequest] = useState<LeaveRequest | null>(null);
   const todayString = new Date().toISOString().split("T")[0];
 
+  // 🔥 NEW: Editable Signatory States
+  const [authorizedBy, setAuthorizedBy] = useState("Human Resources Dept.");
+  const [isEditingAuth, setIsEditingAuth] = useState(false);
+
   useEffect(() => {
     if (!user?.uid) return;
 
@@ -48,9 +53,9 @@ export default function LeavePage() {
       : query(collection(db, "leaveRequests"), where("userId", "==", user.uid));
 
     const unsubscribe = onSnapshot(baseQuery, (snapshot) => {
-      const fetched = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
+      const fetched = snapshot.docs.map(docSnap => ({
+        id: docSnap.id,
+        ...docSnap.data()
       } as LeaveRequest));
 
       fetched.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
@@ -106,6 +111,13 @@ export default function LeavePage() {
     const end = new Date(endDate);
     if (start > end) return toast.error("Check your dates.");
 
+    const diffDays = Math.ceil(Math.abs(end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+
+    // DOLE 5-Day Continuous Maximum Ceiling Validation Block for Vacation Leaves
+    if (type === "vl" && diffDays > 5) {
+      return toast.error("Under DOLE standard company provisions, continuous Vacation Leave cannot exceed 5 continuous days.");
+    }
+
     const hasOverlapCollision = requests.some(req => {
       if (req.userId !== user?.uid || req.status === "rejected") return false;
       
@@ -118,8 +130,6 @@ export default function LeavePage() {
     if (hasOverlapCollision) {
       return toast.error("Schedule conflict! You have already submitted or have an approved leave request covering these exact dates.");
     }
-
-    const diffDays = Math.ceil(Math.abs(end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
     
     if (type !== "lwop") {
       const { available, locked } = getTrueBalance(type);
@@ -179,7 +189,6 @@ export default function LeavePage() {
         }
       }
 
-      // Generate localized date timestamp string for administrative logging 
       const localizedActionDate = new Date().toLocaleDateString(undefined, { 
         month: 'short', day: 'numeric', year: 'numeric' 
       });
@@ -220,21 +229,31 @@ export default function LeavePage() {
     }
   };
 
+  const getFullLeaveTypeName = (typeCode: string) => {
+    switch(typeCode) {
+      case 'vl': return "Vacation Leave (VL)";
+      case 'sl': return "Sick Leave (SL)";
+      case 'sil': return "Service Incentive Leave (SIL)";
+      case 'lwop': return "Leave Without Pay (LWOP)";
+      default: return "Official Leave";
+    }
+  };
+
   return (
     <ProtectedRoute>
-      <main className="min-h-screen w-full relative overflow-hidden pt-[73px] bg-slate-50 dark:bg-[#0a0a0a]">
-        <Navbar />
+      <main className="min-h-screen w-full relative overflow-hidden pt-[73px] bg-slate-50 dark:bg-[#0a0a0a] print:bg-white print:pt-0">
+        <div className="print:hidden"><Navbar /></div>
         
-        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
+        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-12 print:p-0">
           
-          <div className="mb-10">
+          <div className="mb-10 print:hidden">
             <h1 className="text-4xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
               <CalendarIcon className="w-10 h-10 text-teal-500" />
               Leave Management
             </h1>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 print:hidden">
             <div className="lg:col-span-1 space-y-8">
               
               {!isAdmin && (
@@ -265,30 +284,29 @@ export default function LeavePage() {
 
                   <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl">
                     <form onSubmit={handleSubmitRequest} className="space-y-4">
-                        <select value={type} onChange={(e) => setType(e.target.value as "vl" | "sl" | "sil" | "lwop")} className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500">
+                        <select value={type} onChange={(e) => setType(e.target.value as "vl" | "sl" | "sil" | "lwop")} className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer">
                           <option value="vl">Vacation Leave (VL)</option>
                           <option value="sl">Sick Leave (SL)</option>
                           <option value="sil">Incentive Leave (SIL)</option>
                           <option value="lwop">Leave Without Pay (LWOP)</option>
                         </select>
                         
-                        {/* min input threshold constraints restricting choices from passing dates back into the timeline */}
                         <div className="grid grid-cols-2 gap-3">
-                          <input type="date" required min={todayString} value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
-                          <input type="date" required min={startDate || todayString} value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
+                          <input type="date" required min={todayString} value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer" />
+                          <input type="date" required min={startDate || todayString} value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer" />
                         </div>
-                        <textarea required value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Reason for leave..." className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white h-24 resize-none focus:outline-none focus:ring-2 focus:ring-teal-500"></textarea>
+                        <textarea required value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Detailed reason for leave..." className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white h-24 resize-none focus:outline-none focus:ring-2 focus:ring-teal-500"></textarea>
                         
                         <input 
                           type="url" 
                           value={attachmentUrl} 
                           onChange={(e) => setAttachmentUrl(e.target.value)} 
-                          placeholder="Doc Link (G-Drive, Dropbox) - Optional" 
+                          placeholder="Supporting Doc Link (G-Drive) - Optional" 
                           className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 placeholder-gray-500" 
                         />
 
-                        <button type="submit" disabled={isSubmitting} className="w-full bg-teal-600 hover:bg-teal-500 py-3 rounded-xl font-bold text-white transition-all shadow-lg shadow-teal-500/20 active:scale-95 disabled:opacity-50 flex justify-center items-center gap-2">
-                          {isSubmitting ? "Submitting..." : "Submit Request"}
+                        <button type="submit" disabled={isSubmitting} className="w-full bg-teal-600 hover:bg-teal-500 py-3.5 rounded-xl font-bold text-white transition-all shadow-lg shadow-teal-500/20 active:scale-95 disabled:opacity-50 flex justify-center items-center gap-2">
+                          {isSubmitting ? "Submitting..." : "Submit Formal Request"}
                         </button>
                     </form>
                   </div>
@@ -330,7 +348,6 @@ export default function LeavePage() {
               )}
             </div>
 
-            {/*  History Table */}
             <div className="lg:col-span-2">
                <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl overflow-hidden">
                 <table className="w-full text-left border-collapse">
@@ -340,7 +357,7 @@ export default function LeavePage() {
                       <th className="pb-4">Type</th>
                       <th className="pb-4 hidden sm:table-cell">Dates</th>
                       <th className="pb-4">Status & Action Date</th>
-                      <th className="pb-4 text-center">Inspect</th>
+                      <th className="pb-4 text-center">Form</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-white/5">
@@ -356,11 +373,6 @@ export default function LeavePage() {
                         <td className="py-4 align-middle">
                           <div className="flex flex-col gap-1">
                             {getStatusBadge(req.status)}
-                            {req.statusDate && (
-                              <span className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">
-                                Processed: {req.statusDate}
-                              </span>
-                            )}
                           </div>
                         </td>
                         <td className="py-4 text-center align-middle">
@@ -368,7 +380,7 @@ export default function LeavePage() {
                             type="button"
                             onClick={() => setInspectedRequest(req)}
                             className="p-2 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 rounded-xl text-gray-500 dark:text-gray-300 transition-colors inline-flex items-center"
-                            title="Inspect Remarks & Input Reasons"
+                            title="Inspect & Print Official Form"
                           >
                             <Info className="w-4 h-4" />
                           </button>
@@ -388,56 +400,132 @@ export default function LeavePage() {
           </div>
         </div>
 
-        {/*  NEW: Continuous Interactive Inspection Popover Modal Viewport */}
+        {/* Printable Official DOLE-Compliant Leave Form Modal */}
         {inspectedRequest && (
-          <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-            <div className="bg-white dark:bg-[#151515] w-full max-w-md rounded-3xl shadow-2xl border border-gray-200 dark:border-white/10 overflow-hidden animate-in zoom-in-95 duration-200">
-              <div className="flex justify-between items-center p-5 border-b border-gray-100 dark:border-white/5 bg-slate-50 dark:bg-white/[0.02]">
-                <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                  <MessageSquare className="w-4 h-4 text-teal-500" /> Leave Record Details
-                </h3>
-                <button 
-                  onClick={() => setInspectedRequest(null)}
-                  className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
-                >
-                  <XCircle className="w-5 h-5" />
+          <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 overflow-y-auto print:bg-white print:overflow-visible">
+            <div className="bg-white text-gray-900 rounded-3xl w-full max-w-2xl mt-10 p-8 shadow-2xl print:m-0 print:shadow-none print:max-w-none relative animate-zoom-in">
+              
+              <div className="flex justify-between items-center border-b pb-4 mb-6 print:hidden">
+                <button onClick={() => setInspectedRequest(null)} className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-xl text-xs font-bold flex items-center gap-1 shadow-sm transition-colors">
+                  <ArrowLeft className="w-3.5 h-3.5" /> Close
+                </button>
+                <button onClick={() => window.print()} className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-md shadow-indigo-600/20 transition-all">
+                  <Printer className="w-4 h-4" /> Save as PDF
                 </button>
               </div>
-              
-              <div className="p-6 space-y-4 text-sm">
-                <div>
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Employee Input Reason</label>
-                  <div className="p-3.5 bg-slate-50 dark:bg-black/20 rounded-xl border border-gray-100 dark:border-white/5 text-gray-700 dark:text-gray-300 italic">
-                    &quot;{inspectedRequest.reason}&quot;
+
+              <div className="text-center border-b-2 border-gray-900 pb-4 mb-6">
+                <h1 className="text-2xl font-black uppercase tracking-widest text-gray-900 print:text-black">SimplifV Business Consulting Corp.</h1>
+                <p className="text-xs text-gray-600 font-medium mt-1">Subic City, Zambales • &quot;Let&apos;s SimplifV your Business&quot;</p>
+                <h2 className="text-lg font-bold mt-5 uppercase tracking-widest bg-slate-100 print:bg-transparent py-1 rounded border print:border-none border-gray-200">Official Leave of Absence Form</h2>
+              </div>
+
+              <div className="grid grid-cols-2 gap-y-6 gap-x-4 text-sm mb-6 border-b border-gray-200 pb-6">
+                <div className="col-span-2 sm:col-span-1">
+                  <span className="text-gray-500 font-bold uppercase tracking-wider block text-[10px] mb-1">Employee Name</span>
+                  <span className="font-bold text-base border-b border-gray-300 w-full block pb-1">{inspectedRequest.userName}</span>
+                </div>
+                <div className="col-span-2 sm:col-span-1">
+                  <span className="text-gray-500 font-bold uppercase tracking-wider block text-[10px] mb-1">Date Filed</span>
+                  <span className="font-bold text-base border-b border-gray-300 w-full block pb-1">
+                    {inspectedRequest.createdAt ? new Date(inspectedRequest.createdAt.seconds * 1000).toLocaleDateString() : "System Pending"}
+                  </span>
+                </div>
+                <div className="col-span-2">
+                  <span className="text-gray-500 font-bold uppercase tracking-wider block text-[10px] mb-1">Type of Leave Requested</span>
+                  <span className="font-bold text-sm bg-gray-100 print:bg-transparent px-3 py-1 rounded block w-fit border border-gray-200 print:border-none">
+                    {getFullLeaveTypeName(inspectedRequest.type)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 bg-slate-50 print:bg-transparent p-3 rounded-lg border border-gray-200 print:border-none">
+                  <div>
+                    <span className="text-gray-500 font-bold uppercase tracking-wider block text-[10px]">Inclusive Dates</span>
+                    <span className="font-bold text-sm">{inspectedRequest.startDate} <span className="text-gray-400 mx-2">to</span> {inspectedRequest.endDate}</span>
                   </div>
+                  <div className="mt-2 sm:mt-0">
+                    <span className="text-gray-500 font-bold uppercase tracking-wider block text-[10px]">Total Calendar Days</span>
+                    <span className="font-bold text-sm">
+                      {Math.ceil(Math.abs(new Date(inspectedRequest.endDate).getTime() - new Date(inspectedRequest.startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1} Day(s)
+                    </span>
+                  </div>
+                </div>
+
+                <span className="text-gray-500 font-bold uppercase tracking-wider block text-[10px] mb-2">Detailed Reason for Absence</span>
+                <div className="p-4 bg-white border border-gray-300 rounded-xl min-h-[100px] text-sm text-gray-800 leading-relaxed italic">
+                  &quot;{inspectedRequest.reason}&quot;
+                </div>
+                {inspectedRequest.attachmentUrl && (
+                  <div className="mt-2 print:hidden">
+                    <a href={inspectedRequest.attachmentUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded inline-flex items-center gap-1">
+                      <ExternalLink className="w-3 h-3" /> External Medical/Support Document Attached
+                    </a>
+                  </div>
+                )}
+              </div>
+
+              <div className="border-t-2 border-gray-900 pt-4 mt-6">
+                <span className="text-gray-900 font-black uppercase tracking-widest block text-xs mb-4">Human Resources Disposition</span>
+                
+                <div className="flex items-center gap-4 mb-4">
+                  <div className={`px-4 py-1.5 border-2 font-bold uppercase tracking-widest text-xs rounded-sm transform -rotate-2 ${
+                    inspectedRequest.status === "approved" ? "border-emerald-600 text-emerald-600" :
+                    inspectedRequest.status === "rejected" ? "border-rose-600 text-rose-600" :
+                    "border-amber-500 text-amber-500"
+                  }`}>
+                    {inspectedRequest.status}
+                  </div>
+                  {inspectedRequest.statusDate && (
+                    <span className="text-xs text-gray-500 font-medium">Processed on: {inspectedRequest.statusDate}</span>
+                  )}
                 </div>
 
                 {inspectedRequest.status !== "pending" && (
                   <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">
-                      HR Management Remarks ({inspectedRequest.status === "approved" ? "Approval" : "Decline"} Reason)
-                    </label>
-                    <div className={`p-3.5 rounded-xl border font-medium ${
-                      inspectedRequest.status === "approved" 
-                        ? "bg-emerald-50 dark:bg-emerald-500/10 border-emerald-100 dark:border-emerald-500/20 text-emerald-800 dark:text-emerald-400"
-                        : "bg-rose-50 dark:bg-rose-500/10 border-rose-100 dark:border-rose-500/20 text-rose-800 dark:text-rose-400"
-                    }`}>
-                      &quot;{inspectedRequest.adminRemarks || "No remarks provided."}&quot;
+                    <span className="text-gray-500 font-bold uppercase tracking-wider block text-[10px] mb-1">HR Admin Remarks</span>
+                    <div className="p-3 bg-gray-50 print:bg-transparent border border-gray-200 rounded text-sm text-gray-800">
+                      {inspectedRequest.adminRemarks || "No additional remarks."}
                     </div>
                   </div>
                 )}
-                
-                {inspectedRequest.attachmentUrl && (
-                  <a 
-                    href={inspectedRequest.attachmentUrl} 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    className="w-full flex items-center justify-center gap-2 text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 py-3 rounded-xl transition-colors"
-                  >
-                    <ExternalLink className="w-4 h-4" /> View Associated Verification Doc
-                  </a>
-                )}
               </div>
+
+              <div className="flex justify-between items-end gap-8 pt-12 px-4 mt-8">
+                <div className="text-center w-48 border-t border-gray-800 pt-1 font-semibold text-xs group relative">
+                  <span className="text-gray-900">{inspectedRequest.userName}</span>
+                  <div className="text-[9px] text-gray-500 uppercase font-bold tracking-wider mt-0.5">Employee Signature</div>
+                </div>
+                
+                {/* 🔥 NEW: Editable Signatory for HR Admin */}
+                <div className="text-center w-48 border-t border-gray-800 pt-1 font-semibold text-xs group relative">
+                  {isEditingAuth ? (
+                    <input 
+                      type="text" 
+                      value={authorizedBy} 
+                      onChange={(e) => setAuthorizedBy(e.target.value)} 
+                      onBlur={() => setIsEditingAuth(false)} 
+                      onKeyDown={(e) => e.key === 'Enter' && setIsEditingAuth(false)} 
+                      className="w-full text-center outline-none bg-slate-50 print:bg-transparent text-gray-900" 
+                      autoFocus 
+                    />
+                  ) : (
+                    <div className="flex justify-center items-center gap-1 text-gray-900">
+                      <span>{authorizedBy}</span>
+                      <button 
+                        onClick={() => setIsEditingAuth(true)} 
+                        className="opacity-0 group-hover:opacity-100 transition-opacity print:hidden text-gray-400 hover:text-indigo-600"
+                        title="Edit Signatory"
+                      >
+                        <Edit2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  )}
+                  <div className="text-[9px] text-gray-500 uppercase font-bold tracking-wider mt-0.5">Authorized Signatory</div>
+                </div>
+              </div>
+
             </div>
           </div>
         )}
