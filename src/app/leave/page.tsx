@@ -6,7 +6,7 @@ import Navbar from "@/components/Navbar";
 import { collection, query, where, onSnapshot, addDoc, updateDoc, doc, serverTimestamp, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/hooks/useAuth";
-import { Calendar as CalendarIcon, Clock, CheckCircle, XCircle, ExternalLink, Info, MessageSquare, X, Printer, ArrowLeft, Edit2 } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, CheckCircle, XCircle, ExternalLink, Info, MessageSquare, X, Printer, ArrowLeft, Edit2, Eye } from "lucide-react";
 import toast from "react-hot-toast";
 
 interface LeaveRequest { 
@@ -41,7 +41,6 @@ export default function LeavePage() {
   const [inspectedRequest, setInspectedRequest] = useState<LeaveRequest | null>(null);
   const todayString = new Date().toISOString().split("T")[0];
 
-  // 🔥 NEW: Editable Signatory States
   const [authorizedBy, setAuthorizedBy] = useState("Human Resources Dept.");
   const [isEditingAuth, setIsEditingAuth] = useState(false);
 
@@ -113,17 +112,14 @@ export default function LeavePage() {
 
     const diffDays = Math.ceil(Math.abs(end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
-    // DOLE 5-Day Continuous Maximum Ceiling Validation Block for Vacation Leaves
     if (type === "vl" && diffDays > 5) {
       return toast.error("Under DOLE standard company provisions, continuous Vacation Leave cannot exceed 5 continuous days.");
     }
 
     const hasOverlapCollision = requests.some(req => {
       if (req.userId !== user?.uid || req.status === "rejected") return false;
-      
       const existingStart = new Date(req.startDate);
       const existingEnd = new Date(req.endDate);
-      
       return start <= existingEnd && end >= existingStart;
     });
 
@@ -133,11 +129,8 @@ export default function LeavePage() {
     
     if (type !== "lwop") {
       const { available, locked } = getTrueBalance(type);
-
       if (available < diffDays) {
-        if (locked > 0) {
-          return toast.error(`Insufficient true balance. You have ${locked} day(s) currently locked in pending requests.`);
-        }
+        if (locked > 0) return toast.error(`Insufficient true balance. You have ${locked} day(s) currently locked in pending requests.`);
         return toast.error(`Insufficient balance. You only have ${available} days available.`);
       }
     }
@@ -155,7 +148,6 @@ export default function LeavePage() {
         status: "pending",
         createdAt: serverTimestamp()
       });
-      
       toast.success("Leave request submitted!");
       setStartDate(""); setEndDate(""); setReason(""); setAttachmentUrl(""); 
     } catch (error: unknown) {
@@ -181,25 +173,19 @@ export default function LeavePage() {
           const creditKey = `${request.type}Credits`; 
           const currentCredits = userData[creditKey] || 0;
 
-          if (currentCredits < diffDays) {
-            return toast.error("Insufficient user balance to approve.");
-          }
+          if (currentCredits < diffDays) return toast.error("Insufficient user balance to approve.");
 
           await updateDoc(userRef, { [creditKey]: currentCredits - diffDays });
         }
       }
 
-      const localizedActionDate = new Date().toLocaleDateString(undefined, { 
-        month: 'short', day: 'numeric', year: 'numeric' 
-      });
+      const localizedActionDate = new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 
-      const updatePayload: Partial<LeaveRequest> = { 
+      await updateDoc(doc(db, "leaveRequests", id), { 
         status: newStatus,
         statusDate: localizedActionDate,
         adminRemarks: remarks || (newStatus === "approved" ? "Approved by HR Admin" : "Declined by HR Admin")
-      };
-
-      await updateDoc(doc(db, "leaveRequests", id), updatePayload);
+      });
       toast.success(`Request ${newStatus}!`);
     } catch (error: unknown) {
       console.error("Status update error:", error);
@@ -212,7 +198,6 @@ export default function LeavePage() {
     if (!declineReason.trim()) return toast.error("Please provide a reason for declining.");
     
     await handleUpdateStatus(requestToDecline.id, "rejected", requestToDecline, declineReason);
-    
     setRequestToDecline(null);
     setDeclineReason("");
   };
@@ -334,9 +319,17 @@ export default function LeavePage() {
                             )}
                           </div>
 
+                          {/* Added a "View Form" button */}
                           <div className="flex gap-2 pt-2">
-                            <button onClick={() => handleUpdateStatus(req.id, "approved", req)} className="flex-1 py-2 bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-500/20 dark:hover:bg-emerald-500/30 text-emerald-700 dark:text-emerald-400 rounded-lg text-xs font-bold active:scale-95 transition-all">Approve</button>
-                            <button onClick={() => setRequestToDecline(req)} className="flex-1 py-2 bg-rose-100 hover:bg-rose-200 dark:bg-rose-500/20 dark:hover:bg-rose-500/30 text-rose-700 dark:text-rose-400 rounded-lg text-xs font-bold active:scale-95 transition-all">Decline</button>
+                            <button onClick={() => setInspectedRequest(req)} className="flex-[0.5] py-2 bg-slate-200 hover:bg-slate-300 dark:bg-white/5 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-bold active:scale-95 transition-all flex items-center justify-center gap-1">
+                              <Eye className="w-4 h-4" /> 
+                            </button>
+                            <button onClick={() => handleUpdateStatus(req.id, "approved", req)} className="flex-1 py-2 bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-500/20 dark:hover:bg-emerald-500/30 text-emerald-700 dark:text-emerald-400 rounded-lg text-xs font-bold active:scale-95 transition-all">
+                              Approve
+                            </button>
+                            <button onClick={() => setRequestToDecline(req)} className="flex-1 py-2 bg-rose-100 hover:bg-rose-200 dark:bg-rose-500/20 dark:hover:bg-rose-500/30 text-rose-700 dark:text-rose-400 rounded-lg text-xs font-bold active:scale-95 transition-all">
+                              Decline
+                            </button>
                           </div>
                         </div>
                       ))}
@@ -400,7 +393,7 @@ export default function LeavePage() {
           </div>
         </div>
 
-        {/* Printable Official DOLE-Compliant Leave Form Modal */}
+        {/* Printable Leave Form Modal */}
         {inspectedRequest && (
           <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 overflow-y-auto print:bg-white print:overflow-visible">
             <div className="bg-white text-gray-900 rounded-3xl w-full max-w-2xl mt-10 p-8 shadow-2xl print:m-0 print:shadow-none print:max-w-none relative animate-zoom-in">
@@ -417,8 +410,12 @@ export default function LeavePage() {
               <div className="text-center border-b-2 border-gray-900 pb-4 mb-6">
                 <h1 className="text-2xl font-black uppercase tracking-widest text-gray-900 print:text-black">SimplifV Business Consulting Corp.</h1>
                 <p className="text-xs text-gray-600 font-medium mt-1">Subic City, Zambales • &quot;Let&apos;s SimplifV your Business&quot;</p>
-                <h2 className="text-lg font-bold mt-5 uppercase tracking-widest bg-slate-100 print:bg-transparent py-1 rounded border print:border-none border-gray-200">Official Leave of Absence Form</h2>
-              </div>
+                
+                <h2 className="text-lg font-bold mt-5 uppercase tracking-widest bg-slate-100 print:bg-transparent py-1 rounded border print:border-none border-gray-200">
+                  {inspectedRequest.status === "pending" ? "Leave Application (Pending Slip)" : "Official Leave of Absence Form"}
+                </h2>
+                
+                </div>
 
               <div className="grid grid-cols-2 gap-y-6 gap-x-4 text-sm mb-6 border-b border-gray-200 pb-6">
                 <div className="col-span-2 sm:col-span-1">
@@ -471,12 +468,14 @@ export default function LeavePage() {
                 
                 <div className="flex items-center gap-4 mb-4">
                   <div className={`px-4 py-1.5 border-2 font-bold uppercase tracking-widest text-xs rounded-sm transform -rotate-2 ${
+                    inspectedRequest.status === "pending" ? "border-gray-400 text-gray-500 border-dashed bg-gray-50 print:bg-transparent" :
                     inspectedRequest.status === "approved" ? "border-emerald-600 text-emerald-600" :
                     inspectedRequest.status === "rejected" ? "border-rose-600 text-rose-600" :
                     "border-amber-500 text-amber-500"
                   }`}>
-                    {inspectedRequest.status}
+                    {inspectedRequest.status === "pending" ? "[ FOR HR REVIEW ]" : inspectedRequest.status}
                   </div>
+
                   {inspectedRequest.statusDate && (
                     <span className="text-xs text-gray-500 font-medium">Processed on: {inspectedRequest.statusDate}</span>
                   )}
@@ -498,7 +497,6 @@ export default function LeavePage() {
                   <div className="text-[9px] text-gray-500 uppercase font-bold tracking-wider mt-0.5">Employee Signature</div>
                 </div>
                 
-                {/* 🔥 NEW: Editable Signatory for HR Admin */}
                 <div className="text-center w-48 border-t border-gray-800 pt-1 font-semibold text-xs group relative">
                   {isEditingAuth ? (
                     <input 
@@ -523,6 +521,12 @@ export default function LeavePage() {
                     </div>
                   )}
                   <div className="text-[9px] text-gray-500 uppercase font-bold tracking-wider mt-0.5">Authorized Signatory</div>
+                  
+                  {inspectedRequest.status === "pending" && (
+                    <div className="text-[8px] text-gray-400 italic mt-1 normal-case leading-tight">
+                      (Valid for pending requests only;<br/>not an authorization of absence)
+                    </div>
+                  )}
                 </div>
               </div>
 
