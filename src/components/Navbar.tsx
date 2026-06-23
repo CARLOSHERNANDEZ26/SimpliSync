@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"; 
 import Link from "next/link";
+import Image from "next/image";
 import { useAuth } from "@/hooks/useAuth";
 import { usePathname } from "next/navigation";
 import { 
@@ -40,18 +41,19 @@ export default function Navbar() {
   if (!mounted) return null; 
 
   return (
-    <nav className="fixed top-0 left-0 z-50 w-full border-b border-gray-200 dark:border-white/10 bg-white/90 dark:bg-[#0a0a0a]/90 backdrop-blur-md transition-colors duration-500">
+    <nav className="fixed top-0 left-0 z-50 w-full border-b border-gray-200 dark:border-teal-500/10 bg-white/90 dark:bg-[#0b0f19]/90 backdrop-blur-md transition-colors duration-500">
       <div className="px-6 py-4 flex justify-between items-center max-w-[1600px] mx-auto">
         <div className="flex items-center gap-3">
           {/* Small Logo */}
-          <Link href="/dashboard" className="w-10 h-10 flex items-center justify-center">
-            <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-md" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M25 65C15 65 10 55 15 45C18 38 25 35 30 35C35 20 55 15 65 25C75 20 85 25 90 35C95 45 90 60 75 60"
-                stroke="#0f766e" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" />
-              <rect x="42" y="30" width="15" height="40" fill="#ffffff" />
-              <polygon points="42,30 49.5,20 57,30" fill="#ffffff" />
-              <path d="M20 55 C 30 75, 55 75, 65 55 L 75 55 L 60 35 L 55 50" fill="#14b8a6" />
-            </svg>
+          <Link href="/dashboard" className="relative w-10 h-10 flex items-center justify-center">
+            <Image 
+              src="/simplifvlogo.png" 
+              alt="SimplifV Logo" 
+              fill 
+              priority 
+              className="object-contain" 
+              sizes="40px" 
+            />
           </Link>
           <Link href="/dashboard">
             <h1 className="text-xl font-light tracking-wider hidden sm:block text-gray-900 dark:text-gray-100 transition-colors">
@@ -92,22 +94,22 @@ export default function Navbar() {
           {isAdmin && (
             <div className="flex items-center gap-2 ml-2 pl-2 border-l border-gray-200 dark:border-white/10">
               <Link href="/admin/dashboard" className={getLinkClass("/admin/dashboard")} aria-label="Command Center" title="Command Center">
-                <Activity className="w-5 h-5 text-indigo-500 transition-transform duration-300 group-hover:scale-110" />
+                <Activity className="w-5 h-5 text-indigo-500 dark:text-current transition-transform duration-300 group-hover:scale-110" />
               </Link>
               <Link href="/admin/memo-generator" className={getLinkClass("/admin/memo-generator")} aria-label="AI Policy Lab" title="Policy and Memo Lab">
-                <Sparkles className="w-5 h-5 text-indigo-400 transition-transform duration-300 group-hover:scale-110" />
+                <Sparkles className="w-5 h-5 text-indigo-400 dark:text-current transition-transform duration-300 group-hover:scale-110" />
               </Link>
               <Link href="/admin/payroll" className={getLinkClass("/admin/payroll")} aria-label="Payroll" title="Payroll & Compensation">
-                <Banknote className="w-5 h-5 text-emerald-500 transition-transform duration-300 group-hover:scale-110" />
+                <Banknote className="w-5 h-5 text-emerald-500 dark:text-current transition-transform duration-300 group-hover:scale-110" />
               </Link>
               <Link href="/admin/benefits" className={getLinkClass("/admin/benefits")} aria-label="Benefits" title="Benefits Administration">
-                <Gift className="w-5 h-5 text-rose-500 transition-transform duration-300 group-hover:scale-110" />
+                <Gift className="w-5 h-5 text-rose-500 dark:text-current transition-transform duration-300 group-hover:scale-110" />
               </Link>
               <Link href="/admin/disciplinary" className={getLinkClass("/admin/disciplinary")} aria-label="Disciplinary Advisor" title="Disciplinary Advisor">
-                <Gavel className="w-5 h-5 text-rose-500 transition-transform duration-300 group-hover:scale-110" />
+                <Gavel className="w-5 h-5 text-rose-500 dark:text-current transition-transform duration-300 group-hover:scale-110" />
               </Link>
               <Link href="/admin/performance" className={getLinkClass("/admin/performance")} aria-label="Performance" title="Performance Management">
-                <TrendingUp className="w-5 h-5 text-indigo-500 transition-transform duration-300 group-hover:scale-110" />
+                <TrendingUp className="w-5 h-5 text-indigo-500 dark:text-current transition-transform duration-300 group-hover:scale-110" />
               </Link>
             </div>
           )}
@@ -115,7 +117,7 @@ export default function Navbar() {
           {/* Employee Tool */}
           {user && !isAdmin && (
             <Link href="/201-file" className={getLinkClass("/201-file")} aria-label="My 201 File" title="My 201 File">
-              <FolderOpen className="w-5 h-5 text-teal-500 transition-transform duration-300 group-hover:scale-110" />
+              <FolderOpen className="w-5 h-5 text-teal-500 dark:text-current transition-transform duration-300 group-hover:scale-110" />
             </Link>
           )}
 
@@ -137,7 +139,7 @@ export default function Navbar() {
 
       {/* --- MOBILE ACCORDION MENU --- */}
       {isMobileMenuOpen && (
-        <div className="lg:hidden absolute top-[73px] left-0 w-full max-h-[80vh] overflow-y-auto bg-white dark:bg-[#0a0a0a] border-b border-gray-200 dark:border-white/10 shadow-2xl px-6 py-4 flex flex-col gap-2">
+        <div className="lg:hidden absolute top-[73px] left-0 w-full max-h-[80vh] overflow-y-auto bg-white dark:bg-[#0b0f19] border-b border-gray-200 dark:border-teal-500/10 shadow-2xl px-6 py-4 flex flex-col gap-2">
           <div className="mb-4 pb-4 border-b border-gray-100 dark:border-white/5">
             <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Account</p>
             <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{user?.email}</p>
@@ -159,7 +161,7 @@ export default function Navbar() {
           
           {user && !isAdmin && (
             <Link href="/201-file" onClick={() => setIsMobileMenuOpen(false)} className={getLinkClass("/201-file", true)}>
-              <FolderOpen className="w-5 h-5 text-teal-500" /> My 201 File
+              <FolderOpen className="w-5 h-5 text-teal-500 dark:text-current" /> My 201 File
             </Link>
           )}
 
@@ -167,22 +169,22 @@ export default function Navbar() {
             <>
               <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mt-4">Administration</p>
               <Link href="/admin/dashboard" onClick={() => setIsMobileMenuOpen(false)} className={getLinkClass("/admin/dashboard", true)}>
-                <Activity className="w-5 h-5 text-indigo-500" /> Command Center
+                <Activity className="w-5 h-5 text-indigo-500 dark:text-current" /> Command Center
               </Link>
               <Link href="/admin/payroll" onClick={() => setIsMobileMenuOpen(false)} className={getLinkClass("/admin/payroll", true)}>
-                <Banknote className="w-5 h-5 text-emerald-500" /> Payroll & Compensation
+                <Banknote className="w-5 h-5 text-emerald-500 dark:text-current" /> Payroll & Compensation
               </Link>
               <Link href="/admin/benefits" onClick={() => setIsMobileMenuOpen(false)} className={getLinkClass("/admin/benefits", true)}>
-                <Gift className="w-5 h-5 text-rose-500" /> Benefits Administration
+                <Gift className="w-5 h-5 text-rose-500 dark:text-current" /> Benefits Administration
               </Link>
               <Link href="/admin/disciplinary" onClick={() => setIsMobileMenuOpen(false)} className={getLinkClass("/admin/disciplinary", true)}>
-                <Gavel className="w-5 h-5 text-rose-500" /> Disciplinary Advisor
+                <Gavel className="w-5 h-5 text-rose-500 dark:text-current" /> Disciplinary Advisor
               </Link>
               <Link href="/admin/performance" onClick={() => setIsMobileMenuOpen(false)} className={getLinkClass("/admin/performance", true)}>
-                <TrendingUp className="w-5 h-5 text-indigo-500" /> Performance Management
+                <TrendingUp className="w-5 h-5 text-indigo-500 dark:text-current" /> Performance Management
               </Link>
               <Link href="/admin/memo-generator" onClick={() => setIsMobileMenuOpen(false)} className={getLinkClass("/admin/memo-generator", true)}>
-                <Sparkles className="w-5 h-5 text-indigo-400" /> AI Policy Lab
+                <Sparkles className="w-5 h-5 text-indigo-400 dark:text-current" /> AI Policy Lab
               </Link>
             </>
           )}
