@@ -193,7 +193,7 @@ export default function DisciplinaryPage() {
   return (
     <ProtectedRoute>
       <main className="min-h-screen w-full relative overflow-x-hidden pt-[73px] bg-slate-50 dark:bg-[#0a0a0a]">
-        <div className="absolute top-0 right-0 w-[40rem] h-[40rem] bg-rose-500/10 rounded-full blur-[150px] pointer-events-none"></div>
+        <div className="absolute top-0 right-0 w-[40rem] h-[40rem] bg-emerald-500/10 rounded-full blur-[150px] pointer-events-none"></div>
         <Navbar />
         
         <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
@@ -201,7 +201,7 @@ export default function DisciplinaryPage() {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10">
             <div>
               <h1 className="text-4xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
-                <Gavel className="w-10 h-10 text-rose-500" />
+                <Gavel className="w-10 h-10 text-emerald-500" />
                 Disciplinary Action Advisor
               </h1>
               <p className="text-gray-500 dark:text-gray-400 mt-2">
@@ -210,7 +210,7 @@ export default function DisciplinaryPage() {
             </div>
             <button 
               onClick={() => setIsModalOpen(true)}
-              className="flex items-center justify-center gap-2 bg-rose-600 hover:bg-rose-500 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg animate-fade-in"
+              className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg animate-fade-in cursor-pointer"
             >
               <AlertTriangle className="w-5 h-5" /> Log Incident
             </button>
@@ -243,8 +243,8 @@ export default function DisciplinaryPage() {
                     onClick={() => handleOpenCaseModal(record)}
                     className="text-sm hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-colors cursor-pointer group"
                   >
-                    <td className="py-4 pl-4 font-bold text-gray-900 dark:text-white flex items-center gap-2 group-hover:text-rose-500 transition-colors">
-                      <UserX className="w-4 h-4 text-gray-400 group-hover:text-rose-400" /> {record.employeeName}
+                    <td className="py-4 pl-4 font-bold text-gray-900 dark:text-white flex items-center gap-2 group-hover:text-emerald-500 transition-colors">
+                      <UserX className="w-4 h-4 text-gray-400 group-hover:text-emerald-400" /> {record.employeeName}
                     </td>
                     <td className="py-4 text-gray-700 dark:text-gray-300 font-medium">{record.offenseType}</td>
                     <td className="py-4 text-gray-500">{record.createdAt ? new Date(record.createdAt.seconds * 1000).toLocaleDateString() : 'Just now'}</td>
@@ -262,8 +262,8 @@ export default function DisciplinaryPage() {
               <div className="bg-white dark:bg-[#151515] w-full max-w-4xl h-full sm:h-auto max-h-[95dvh] sm:max-h-[80vh] rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col animate-fade-in-up md:my-0">
                 
                 <div className="flex justify-between items-center p-5 sm:p-6 border-b border-gray-200 dark:border-white/10 shrink-0 bg-white dark:bg-[#151515] z-[110] sticky top-0">
-                  <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2"><AlertTriangle className="w-6 h-6 text-rose-500" /> Log New Incident</h3>
-                  <button onClick={() => setIsModalOpen(false)} className="p-2 -mr-2 text-gray-400 hover:text-rose-500 transition-colors rounded-full hover:bg-rose-50 dark:hover:bg-rose-500/10">
+                  <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2"><AlertTriangle className="w-6 h-6 text-emerald-500" /> Log New Incident</h3>
+                  <button onClick={() => setIsModalOpen(false)} className="p-2 -mr-2 text-gray-400 hover:text-emerald-500 transition-colors rounded-full hover:bg-emerald-50 dark:hover:bg-emerald-500/10 cursor-pointer">
                     <XCircle className="w-7 h-7" />
                   </button>
                 </div>
@@ -280,7 +280,7 @@ export default function DisciplinaryPage() {
                             required 
                             value={selectedEmp} 
                             onChange={(e) => setSelectedEmp(e.target.value)} 
-                            className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 outline-none text-sm text-gray-900 dark:text-white appearance-none focus:ring-2 focus:ring-rose-500 cursor-pointer"
+                             className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 outline-none text-sm text-gray-900 dark:text-white appearance-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
                           >
                             <option value="" className="text-gray-900">-- Choose Employee --</option>
                             {employees.map(emp => (<option key={emp.id} value={emp.id} className="text-gray-900 dark:text-white">{emp.fullName} ({emp.department || "No Dept"})</option>))}
@@ -296,7 +296,7 @@ export default function DisciplinaryPage() {
                             required 
                             value={offenseType} 
                             onChange={(e) => setOffenseType(e.target.value)} 
-                            className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 outline-none text-sm text-gray-900 dark:text-white appearance-none focus:ring-2 focus:ring-rose-500 cursor-pointer"
+                            className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 outline-none text-sm text-gray-900 dark:text-white appearance-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
                           >
                             <option value="" className="text-gray-900 dark:text-white">-- Select Offense Category --</option>
                             <option value="Chronic Tardiness" className="text-gray-900 dark:text-white">Chronic Tardiness</option>
@@ -314,7 +314,7 @@ export default function DisciplinaryPage() {
                         <textarea required value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Provide specific dates, facts, and previous verbal warnings if applicable..." className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 min-h-[120px] resize-none outline-none text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 focus:ring-2 focus:ring-rose-500"></textarea>
                       </div>
 
-                      <button type="submit" disabled={isGenerating} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-3 rounded-xl font-bold transition-all shadow-lg flex justify-center items-center gap-2 disabled:opacity-50 mt-2">
+                      <button type="submit" disabled={isGenerating} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded-xl font-bold transition-all shadow-lg flex justify-center items-center gap-2 disabled:opacity-50 mt-2 cursor-pointer">
                         {isGenerating ? "Consulting AI Advisor..." : <><Send className="w-4 h-4" /> Ask AI Advisor</>}
                       </button>
                     </form>
@@ -337,7 +337,7 @@ export default function DisciplinaryPage() {
                       <button 
                         onClick={handleSaveRecord} 
                         disabled={isSaving || !aiDraft.trim() || !selectedEmp || !offenseType} 
-                        className="w-full bg-teal-600 hover:bg-teal-500 text-white py-3 rounded-xl font-bold transition-all shadow-lg disabled:opacity-50"
+                        className="w-full bg-teal-600 hover:bg-teal-500 text-white py-3 rounded-xl font-bold transition-all shadow-lg disabled:opacity-50 cursor-pointer"
                       >
                         {isSaving ? "Saving..." : "Save Official Record"}
                       </button>
@@ -366,7 +366,7 @@ export default function DisciplinaryPage() {
                     {getStatusBadge(selectedCase.status)}
                     <button 
                       onClick={handleCloseCaseModal} 
-                      className="text-gray-400 hover:text-rose-500 transition-colors bg-gray-100 dark:bg-white/5 hover:bg-rose-50 dark:hover:bg-rose-500/10 p-2 rounded-full"
+                      className="text-gray-400 hover:text-emerald-500 transition-colors bg-gray-100 dark:bg-white/5 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 p-2 rounded-full cursor-pointer"
                     >
                       <XCircle className="w-6 h-6" />
                     </button>
@@ -375,8 +375,8 @@ export default function DisciplinaryPage() {
 
                 <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
                   
-                  <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl p-6 border border-rose-100 dark:border-rose-500/20 shadow-sm">
-                    <h4 className="text-xs font-bold text-rose-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                  <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl p-6 border border-emerald-100 dark:border-emerald-500/20 shadow-sm">
+                    <h4 className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-4 flex items-center gap-2">
                       <FileText className="w-4 h-4" /> Original Notice to Explain
                     </h4>
                     <div className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
@@ -405,7 +405,7 @@ export default function DisciplinaryPage() {
                   </div>
 
                   <div className={`rounded-2xl p-6 border shadow-sm ${selectedCase.status.includes("Resolved") ? "bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/30" : "bg-white dark:bg-[#1a1a1a] border-gray-200 dark:border-white/10"}`}>
-                    <h4 className={`text-xs font-bold uppercase tracking-widest mb-4 flex items-center gap-2 ${selectedCase.status.includes("Resolved") ? "text-emerald-600 dark:text-emerald-400" : "text-indigo-600 dark:text-indigo-400"}`}>
+                    <h4 className={`text-xs font-bold uppercase tracking-widest mb-4 flex items-center gap-2 text-emerald-600 dark:text-emerald-400`}>
                       <Gavel className="w-4 h-4" /> Final Resolution & Verdict
                     </h4>
                     
@@ -428,7 +428,7 @@ export default function DisciplinaryPage() {
                               required 
                               value={verdict} 
                               onChange={(e) => setVerdict(e.target.value)} 
-                              className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 outline-none text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer"
+                              className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 outline-none text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 appearance-none cursor-pointer"
                             >
                               <option value="" className="text-gray-900 dark:text-white">-- Select Final Action --</option>
                               <option value="Cleared / Exonerated" className="text-gray-900 dark:text-white">Cleared / Exonerated</option>
@@ -448,14 +448,14 @@ export default function DisciplinaryPage() {
                             value={resolutionText} 
                             onChange={(e) => setResolutionText(e.target.value)} 
                             placeholder="Detail the reasoning behind the verdict based on the employee's explanation and company policy..." 
-                            className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 min-h-[120px] resize-none outline-none text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 focus:ring-2 focus:ring-indigo-500 custom-scrollbar"
+                            className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 min-h-[120px] resize-none outline-none text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 focus:ring-2 focus:ring-emerald-500 custom-scrollbar"
                           />
                         </div>
 
                         <button 
                           type="submit" 
                           disabled={isResolving || !verdict || !resolutionText.trim()} 
-                          className="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-3 rounded-xl font-bold transition-all shadow-md disabled:opacity-50 flex justify-center items-center gap-2 mt-2"
+                          className="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded-xl font-bold transition-all shadow-md disabled:opacity-50 flex justify-center items-center gap-2 mt-2 cursor-pointer"
                         >
                           {isResolving ? "Closing Case..." : <><CheckCircle className="w-4 h-4" /> Officially Resolve Case</>}
                         </button>

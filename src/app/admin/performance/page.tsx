@@ -173,7 +173,7 @@ export default function PerformancePage() {
 
   const getScoreColor = (score: number) => {
     if (score >= 4.5) return "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30";
-    if (score >= 3.0) return "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-400 border-indigo-200 dark:border-indigo-500/30";
+    if (score >= 3.0) return "bg-teal-100 text-teal-700 dark:bg-teal-500/20 dark:text-teal-400 border-teal-200 dark:border-teal-500/30";
     return "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400 border-rose-200 dark:border-rose-500/30";
   };
 
@@ -182,7 +182,7 @@ export default function PerformancePage() {
   return (
     <ProtectedRoute>
       <main className="min-h-screen w-full relative overflow-x-hidden pt-[73px] bg-slate-50 dark:bg-[#0a0a0a]">
-        <div className="absolute top-0 right-0 w-[40rem] h-[40rem] bg-indigo-500/10 rounded-full blur-[150px] pointer-events-none"></div>
+        <div className="absolute top-0 right-0 w-[40rem] h-[40rem] bg-emerald-500/10 rounded-full blur-[150px] pointer-events-none"></div>
         <Navbar />
         
         <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
@@ -190,7 +190,7 @@ export default function PerformancePage() {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10">
             <div>
               <h1 className="text-4xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
-                <TrendingUp className="w-10 h-10 text-indigo-500" />
+                <TrendingUp className="w-10 h-10 text-emerald-500" />
                 Employee Performance Appraisals
               </h1>
               <p className="text-gray-500 dark:text-gray-400 mt-2">
@@ -201,9 +201,9 @@ export default function PerformancePage() {
             <div className="flex items-center gap-4">
               <div className="relative w-full md:w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input type="text" placeholder="Search records..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full bg-white dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" />
+                <input type="text" placeholder="Search records..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full bg-white dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500" />
               </div>
-              <button onClick={openNewEvaluation} className="flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2.5 rounded-xl font-bold transition-all shadow-lg whitespace-nowrap">
+              <button onClick={openNewEvaluation} className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-2.5 rounded-xl font-bold transition-all shadow-lg whitespace-nowrap cursor-pointer">
                 <Award className="w-5 h-5" /> New Evaluation
               </button>
             </div>
@@ -237,10 +237,10 @@ export default function PerformancePage() {
                     </td>
                     <td className="py-4 text-right pr-2 opacity-0 group-hover:opacity-100 transition-opacity">
                       <div className="flex justify-end gap-2">
-                        <button onClick={() => openEditEvaluation(evalRecord)} className="p-2 text-gray-400 hover:text-indigo-500 bg-gray-100 dark:bg-white/5 rounded-lg transition-colors" title="Edit Record">
+                        <button onClick={() => openEditEvaluation(evalRecord)} className="p-2 text-gray-400 hover:text-emerald-500 bg-gray-100 dark:bg-white/5 rounded-lg transition-colors cursor-pointer" title="Edit Record">
                           <Edit2 className="w-4 h-4" />
                         </button>
-                        <button onClick={() => handleDeleteEvaluation(evalRecord.id, evalRecord.employeeName)} className="p-2 text-gray-400 hover:text-rose-500 bg-gray-100 dark:bg-white/5 rounded-lg transition-colors" title="Delete Record">
+                        <button onClick={() => handleDeleteEvaluation(evalRecord.id, evalRecord.employeeName)} className="p-2 text-gray-400 hover:text-rose-500 bg-gray-100 dark:bg-white/5 rounded-lg transition-colors cursor-pointer" title="Delete Record">
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
@@ -259,12 +259,12 @@ export default function PerformancePage() {
                 
                 <div className="flex justify-between items-center p-5 sm:p-6 border-b border-gray-200 dark:border-white/10 shrink-0 bg-white dark:bg-[#151515]">
                   <div className="flex items-center gap-2">
-                    <Award className="w-6 h-6 text-indigo-500" />
+                    <Award className="w-6 h-6 text-emerald-500" />
                     <h3 className="text-xl font-bold text-gray-900 dark:text-white">
                       {editingEvalId ? "Edit Evaluation" : "New Evaluation"}
                     </h3>
                   </div>
-                  <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-rose-500 transition-colors p-1">
+                  <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-rose-500 transition-colors p-1 cursor-pointer">
                     <XCircle className="w-7 h-7" />
                   </button>
                 </div>
@@ -281,7 +281,7 @@ export default function PerformancePage() {
                             value={selectedEmp} 
                             onChange={(e) => setSelectedEmp(e.target.value)} 
                             disabled={!!editingEvalId} 
-                            className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl pl-4 pr-10 py-3 outline-none text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer disabled:opacity-50"
+                            className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl pl-4 pr-10 py-3 outline-none text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 appearance-none cursor-pointer disabled:opacity-50"
                           >
                             <option value="" disabled>-- Choose Employee --</option>
                             {employees.map(emp => (<option key={emp.id} value={emp.id} className="text-gray-900 dark:text-white">{emp.fullName} ({emp.department || "No Dept"})</option>))}
@@ -298,7 +298,7 @@ export default function PerformancePage() {
                             value={quarter} 
                             onChange={(e) => setQuarter(e.target.value)} 
                             disabled={!!editingEvalId}
-                            className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl pl-4 pr-10 py-3 outline-none text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer disabled:opacity-50"
+                            className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl pl-4 pr-10 py-3 outline-none text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 appearance-none cursor-pointer disabled:opacity-50"
                           >
                             <option value="Q1" className="text-gray-900 dark:text-white">Q1 (Jan - Mar)</option>
                             <option value="Q2" className="text-gray-900 dark:text-white">Q2 (Apr - Jun)</option>
@@ -314,18 +314,18 @@ export default function PerformancePage() {
                       <h4 className="text-sm font-bold text-gray-900 dark:text-white border-b border-gray-200 dark:border-white/10 pb-2">KPI Ratings (1 = Poor, 5 = Excellent)</h4>
                       
                       <div className="space-y-2">
-                        <div className="flex justify-between text-sm"><span className="font-medium text-gray-700 dark:text-gray-300">Quality of Work</span><span className="font-bold text-indigo-500">{quality} / 5</span></div>
-                        <input type="range" min="1" max="5" step="1" value={quality} onChange={(e) => setQuality(Number(e.target.value))} className="w-full accent-indigo-500 cursor-pointer" />
+                        <div className="flex justify-between text-sm"><span className="font-medium text-gray-700 dark:text-gray-300">Quality of Work</span><span className="font-bold text-emerald-500">{quality} / 5</span></div>
+                        <input type="range" min="1" max="5" step="1" value={quality} onChange={(e) => setQuality(Number(e.target.value))} className="w-full accent-emerald-500 cursor-pointer" />
                       </div>
 
                       <div className="space-y-2">
-                        <div className="flex justify-between text-sm"><span className="font-medium text-gray-700 dark:text-gray-300">Punctuality & Attendance</span><span className="font-bold text-indigo-500">{punctuality} / 5</span></div>
-                        <input type="range" min="1" max="5" step="1" value={punctuality} onChange={(e) => setPunctuality(Number(e.target.value))} className="w-full accent-indigo-500 cursor-pointer" />
+                        <div className="flex justify-between text-sm"><span className="font-medium text-gray-700 dark:text-gray-300">Punctuality & Attendance</span><span className="font-bold text-emerald-500">{punctuality} / 5</span></div>
+                        <input type="range" min="1" max="5" step="1" value={punctuality} onChange={(e) => setPunctuality(Number(e.target.value))} className="w-full accent-emerald-500 cursor-pointer" />
                       </div>
 
                       <div className="space-y-2">
-                        <div className="flex justify-between text-sm"><span className="font-medium text-gray-700 dark:text-gray-300">Teamwork & Collaboration</span><span className="font-bold text-indigo-500">{teamwork} / 5</span></div>
-                        <input type="range" min="1" max="5" step="1" value={teamwork} onChange={(e) => setTeamwork(Number(e.target.value))} className="w-full accent-indigo-500 cursor-pointer" />
+                        <div className="flex justify-between text-sm"><span className="font-medium text-gray-700 dark:text-gray-300">Teamwork & Collaboration</span><span className="font-bold text-emerald-500">{teamwork} / 5</span></div>
+                        <input type="range" min="1" max="5" step="1" value={teamwork} onChange={(e) => setTeamwork(Number(e.target.value))} className="w-full accent-emerald-500 cursor-pointer" />
                       </div>
                     </div>
 
@@ -336,14 +336,14 @@ export default function PerformancePage() {
                         value={feedback} 
                         onChange={(e) => setFeedback(e.target.value)} 
                         placeholder="Provide actionable feedback, accomplishments, or areas for improvement..." 
-                        className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 min-h-[120px] resize-none outline-none text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 focus:ring-2 focus:ring-indigo-500"
+                        className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 min-h-[120px] resize-none outline-none text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 focus:ring-2 focus:ring-emerald-500"
                       ></textarea>
                     </div>
                   </form>
                 </div>
 
                 <div className="p-4 sm:p-6 border-t border-gray-200 dark:border-white/10 shrink-0 bg-white dark:bg-[#151515]">
-                  <button form="evaluation-form" type="submit" disabled={isSaving} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-3.5 rounded-xl font-bold transition-all shadow-lg flex justify-center items-center gap-2 disabled:opacity-50">
+                  <button form="evaluation-form" type="submit" disabled={isSaving} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-3.5 rounded-xl font-bold transition-all shadow-lg flex justify-center items-center gap-2 disabled:opacity-50 cursor-pointer">
                     {isSaving ? "Saving Record..." : <><CheckCircle2 className="w-5 h-5" /> {editingEvalId ? "Update Evaluation" : "Save Evaluation"}</>}
                   </button>
                 </div>

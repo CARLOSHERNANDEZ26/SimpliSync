@@ -97,10 +97,16 @@ export default function EmployeeHistoryTable() {
 
   const getStatusStyles = (status: string) => {
     const s = status.toLowerCase();
-    if (s.includes("present") || s.includes("time")) return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400';
-    if (s.includes("late")) return 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-400';
-    if (s.includes("working")) return 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400';
-    return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400';
+    if (s.includes("pending") || s.includes("working") || s.includes("ongoing")) {
+      return "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30";
+    }
+    if (s.includes("late") || s.includes("absent") || s.includes("out of bounds")) {
+      return "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400 border border-rose-200 dark:border-rose-500/30";
+    }
+    if (s.includes("present") || s.includes("on time") || s.includes("approved") || s.includes("resolved") || s.includes("force")) {
+      return "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30";
+    }
+    return "bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-gray-400 border border-gray-200 dark:border-white/20";
   };
 
   // Calculate Totals

@@ -195,7 +195,7 @@ export default function AdminCommandCenter() {
         <div className="max-w-7xl mx-auto px-6 py-10">
           <div className="mb-10">
             <h1 className="text-4xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
-              <Activity className="w-10 h-10 text-indigo-500" />
+              <Activity className="w-10 h-10 text-emerald-500" />
               Company Performance Center
             </h1>
             <p className="text-gray-500 mt-2">Real-time HR analytics and system audit logs.</p>
@@ -203,7 +203,7 @@ export default function AdminCommandCenter() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <div className="bg-white dark:bg-white/5 p-6 rounded-3xl border border-gray-200 dark:border-white/10 shadow-sm">
-              <Users className="text-indigo-500 mb-2" />
+              <Users className="text-emerald-500 mb-2" />
               <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalEmployees}</div>
               <div className="text-xs text-gray-400 uppercase font-bold tracking-wider">Active Headcount</div>
             </div>
@@ -242,7 +242,7 @@ export default function AdminCommandCenter() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
             <div className="bg-white dark:bg-white/5 p-8 rounded-3xl border border-gray-200 dark:border-white/10 shadow-xl flex flex-col">
               <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-                <PieIcon className="w-5 h-5 text-indigo-500" /> Active Department Diversity
+                <PieIcon className="w-5 h-5 text-emerald-500" /> Active Department Diversity
               </h3>
               <div className="flex-1 min-h-[250px]">
                 {deptData.length > 0 ? (
@@ -270,7 +270,7 @@ export default function AdminCommandCenter() {
                       <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 10}} interval={0} angle={-15} textAnchor="end" />
                       <YAxis domain={[0, 5]} axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} />
                       <Tooltip cursor={{fill: 'transparent'}} contentStyle={{ borderRadius: '12px', border: 'none', backgroundColor: '#1e293b', color: '#fff' }} />
-                      <Bar dataKey="score" fill="#8b5cf6" radius={[6, 6, 0, 0]} barSize={30} />
+                      <Bar dataKey="score" fill="#10b981" radius={[6, 6, 0, 0]} barSize={30} />
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (
@@ -293,7 +293,7 @@ export default function AdminCommandCenter() {
                     type="date" 
                     value={selectedDate}
                     onChange={(e) => setSelectedDate(e.target.value)}
-                    className="pl-9 pr-4 py-1.5 rounded-xl border border-gray-200 dark:border-white/10 bg-slate-50 dark:bg-black/20 text-xs text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    className="pl-9 pr-4 py-1.5 rounded-xl border border-gray-200 dark:border-white/10 bg-slate-50 dark:bg-black/20 text-xs text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                   />
                 </div>
                 {selectedDate && (
@@ -315,7 +315,7 @@ export default function AdminCommandCenter() {
               {logs.length > 0 ? logs.map(log => (
                 <div key={log.id} className="flex items-start justify-between p-4 bg-slate-50 dark:bg-black/20 rounded-2xl border border-gray-100 dark:border-white/5">
                   <div>
-                    <div className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider mb-0.5">
+                    <div className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider mb-0.5">
                       {log.actionType || "GENERAL"}
                     </div>
                     <div className="text-sm font-medium text-gray-900 dark:text-white leading-snug">
@@ -339,7 +339,7 @@ export default function AdminCommandCenter() {
                 <button
                   onClick={() => fetchLogs(false, lastDoc)}
                   disabled={loadingLogs}
-                  className="px-5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 disabled:bg-gray-400 rounded-xl shadow transition-colors"
+                  className="px-5 py-2 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-400 rounded-xl shadow transition-colors cursor-pointer"
                 >
                   {loadingLogs ? "Loading older entries..." : "Load More Logs"}
                 </button>

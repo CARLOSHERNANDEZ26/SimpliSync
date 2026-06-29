@@ -177,6 +177,20 @@ export default function AdminLogsTable() {
   const formatTime = (date: Date | null) => date ? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "---";
   const formatDate = (date: Date | null) => date ? date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : "---";
 
+  const getStatusStyle = (status: string, isLateExcused = false) => {
+    const s = isLateExcused ? "admin resolved" : status.toLowerCase();
+    if (s.includes("pending") || s.includes("working") || s.includes("ongoing")) {
+      return "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30";
+    }
+    if (s.includes("late") || s.includes("absent") || s.includes("out of bounds")) {
+      return "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400 border border-rose-200 dark:border-rose-500/30";
+    }
+    if (s.includes("resolved") || s.includes("present") || s.includes("on time") || s.includes("approved") || s.includes("force")) {
+      return "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30";
+    }
+    return "bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-gray-400 border border-gray-200 dark:border-white/20";
+  };
+
   const filteredLogs = logs.filter(log => log.fullName.toLowerCase().includes(searchTerm.toLowerCase()));
   
   const totalPages = Math.ceil(filteredLogs.length / rowsPerPage);
@@ -244,7 +258,7 @@ export default function AdminLogsTable() {
               <tr key={log.id} className="hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-colors">
                 <td className="px-6 py-4">
                   <div className="font-bold text-gray-900 dark:text-white">{log.fullName}</div>
-                  <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider ${log.status.includes('Late') ? 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400' : log.status.includes('Resolved') ? 'bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-400' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400'}`}>
+                  <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider ${getStatusStyle(log.status, log.isLateExcused)}`}>
                     {log.isLateExcused ? "Admin Resolved" : log.status}
                   </span>
                 </td>

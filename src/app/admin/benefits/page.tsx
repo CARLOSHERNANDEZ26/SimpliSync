@@ -288,14 +288,14 @@ export default function BenefitsPage() {
   return (
     <ProtectedRoute>
       <main className="min-h-screen w-full relative overflow-x-hidden pt-[73px] bg-slate-50 dark:bg-[#0a0a0a]">
-        <div className="absolute top-0 left-0 w-[40rem] h-[40rem] bg-indigo-500/10 rounded-full blur-[150px] pointer-events-none"></div>
+        <div className="absolute top-0 left-0 w-[40rem] h-[40rem] bg-emerald-500/10 rounded-full blur-[150px] pointer-events-none"></div>
         <Navbar />
         
         <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
           
           <div className="mb-10">
             <h1 className="text-4xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
-              <Gift className="w-10 h-10 text-indigo-500" />
+              <Gift className="w-10 h-10 text-emerald-500" />
               DOLE 13th-Month Generator
             </h1>
             <p className="text-gray-500 dark:text-gray-400 mt-2">
@@ -303,11 +303,11 @@ export default function BenefitsPage() {
             </p>
           </div>
 
-          <div className="bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 p-5 rounded-2xl mb-8 flex items-start gap-4">
-            <AlertTriangle className="w-6 h-6 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
+          <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 p-5 rounded-2xl mb-8 flex items-start gap-4">
+            <AlertTriangle className="w-6 h-6 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
             <div>
-              <h4 className="text-sm font-bold text-indigo-900 dark:text-indigo-300">DOLE Compliance Notice</h4>
-              <p className="text-sm text-indigo-800 dark:text-indigo-200 mt-1 leading-relaxed">
+              <h4 className="text-sm font-bold text-emerald-900 dark:text-emerald-300">DOLE Compliance Notice</h4>
+              <p className="text-sm text-emerald-800 dark:text-emerald-200 mt-1 leading-relaxed">
                 The 13th-month pay is strictly computed as <strong className="font-black">1/12 of the total basic salary actually earned</strong> within the calendar year. Unpaid absences, tardiness, and unworked days directly reduce the total earned basic salary, proportionately lowering the 13th-month pay.
               </p>
             </div>
@@ -320,7 +320,7 @@ export default function BenefitsPage() {
                 <div className="flex justify-between items-center mb-6">
                   <div>
                     <h3 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                      <Calculator className="w-5 h-5 text-indigo-500" />
+                      <Calculator className="w-5 h-5 text-emerald-500" />
                       Pending Distribution ({currentYear})
                     </h3>
                     <p className="text-xs text-gray-500 mt-1">Eligible Employees: {employees.length}</p>
@@ -328,7 +328,7 @@ export default function BenefitsPage() {
                   <button 
                     onClick={handleGenerateRoster}
                     disabled={isGenerating || employees.length === 0}
-                    className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2.5 rounded-xl font-bold transition-all shadow-md disabled:opacity-50 active:scale-95"
+                    className="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-2.5 rounded-xl font-bold transition-all shadow-md disabled:opacity-50 active:scale-95 cursor-pointer"
                   >
                     {isGenerating ? "Scanning Year Logs..." : "Scan & Generate"}
                   </button>

@@ -127,11 +127,16 @@ function TimesheetsContent() {
 
   const getStatusStyle = (status: string) => {
     const s = status.toLowerCase();
-    if (s.includes("present")) return "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300";
-    if (s.includes("working")) return "bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-300";
-    if (s.includes("late")) return "bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-300";
-    if (s.includes("admin") || s.includes("force") || s.includes("resolved")) return "bg-purple-100 text-purple-800 dark:bg-purple-500/20 dark:text-purple-300";
-    return "bg-gray-100 text-gray-800 dark:bg-white/10 dark:text-gray-300";
+    if (s.includes("pending") || s.includes("working") || s.includes("ongoing")) {
+      return "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30";
+    }
+    if (s.includes("late") || s.includes("absent") || s.includes("out of bounds")) {
+      return "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400 border border-rose-200 dark:border-rose-500/30";
+    }
+    if (s.includes("present") || s.includes("on time") || s.includes("approved") || s.includes("resolved") || s.includes("force")) {
+      return "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30";
+    }
+    return "bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-gray-400 border border-gray-200 dark:border-white/20";
   };
 
   let totalMsWorked = 0;

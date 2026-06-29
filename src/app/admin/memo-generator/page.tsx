@@ -319,7 +319,7 @@ export default function MemoGeneratorPage() {
   return (
     <ProtectedRoute>
       <main className="min-h-screen w-full relative overflow-hidden pt-[73px] bg-slate-50 dark:bg-[#0a0a0a]">
-        <div className="absolute top-0 left-0 w-[40rem] h-[40rem] bg-indigo-400/20 dark:bg-indigo-600/10 rounded-full blur-[150px] pointer-events-none"></div>
+        <div className="absolute top-0 left-0 w-[40rem] h-[40rem] bg-emerald-400/20 dark:bg-emerald-600/10 rounded-full blur-[150px] pointer-events-none"></div>
         <Navbar />
         
         <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
@@ -327,7 +327,7 @@ export default function MemoGeneratorPage() {
           <div className="mb-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
               <h1 className="text-4xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
-                <Bot className="w-10 h-10 text-indigo-500" />
+                <Bot className="w-10 h-10 text-emerald-500" />
                 Automated Policy Creator
               </h1>
               <p className="text-gray-500 dark:text-gray-400 mt-2">Manage and categorize DOLE-compliant company guidelines.</p>
@@ -349,16 +349,16 @@ export default function MemoGeneratorPage() {
             
             <div className="lg:col-span-4 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl h-fit">
               <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-indigo-500" />
+                <Sparkles className="w-5 h-5 text-emerald-500" />
                 AI Generation
               </h3>
               <form onSubmit={handleGenerate} className="space-y-4">
                 <textarea 
                   required value={prompt} onChange={(e) => setPrompt(e.target.value)} 
                   placeholder="e.g., Draft a memo reminding employees about the 15-minute lateness penalty..." 
-                  className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white h-40 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white h-40 resize-none focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 ></textarea>
-                <button type="submit" disabled={isGenerating} className="w-full bg-indigo-600 hover:bg-indigo-500 py-3 rounded-xl font-bold text-white transition-all shadow-lg active:scale-95 disabled:opacity-70 flex justify-center items-center gap-2 text-sm">
+                <button type="submit" disabled={isGenerating} className="w-full bg-emerald-600 hover:bg-emerald-500 py-3 rounded-xl font-bold text-white transition-all shadow-lg active:scale-95 disabled:opacity-70 flex justify-center items-center gap-2 text-sm cursor-pointer">
                   {isGenerating ? "Generating Draft..." : <><Send className="w-4 h-4" /> Generate with AI</>}
                 </button>
               </form>
@@ -369,13 +369,13 @@ export default function MemoGeneratorPage() {
               <div className="flex flex-wrap items-center gap-4 mb-6 border-b border-gray-200 dark:border-white/10 pb-2">
                 <button 
                   onClick={() => setActiveTab("draft")}
-                  className={`flex items-center gap-2 pb-2 px-2 text-sm font-bold transition-colors ${activeTab === "draft" ? "text-indigo-500 border-b-2 border-indigo-500" : "text-gray-500 hover:text-gray-300"}`}
+                  className={`flex items-center gap-2 pb-2 px-2 text-sm font-bold transition-colors cursor-pointer ${activeTab === "draft" ? "text-emerald-500 border-b-2 border-emerald-500" : "text-gray-500 hover:text-gray-300"}`}
                 >
                   <FileText className="w-4 h-4" /> {editingMemoId ? "Editing Policy" : "Current Draft"}
                 </button>
                 <button 
                   onClick={() => setActiveTab("live")}
-                  className={`flex items-center gap-2 pb-2 px-2 text-sm font-bold transition-colors ${activeTab === "live" ? "text-teal-500 border-b-2 border-teal-500" : "text-gray-500 hover:text-gray-300"}`}
+                  className={`flex items-center gap-2 pb-2 px-2 text-sm font-bold transition-colors cursor-pointer ${activeTab === "live" ? "text-teal-500 border-b-2 border-teal-500" : "text-gray-500 hover:text-gray-300"}`}
                 >
                   <List className="w-4 h-4" /> Live Dashboard Policies ({filteredMemos.length})
                 </button>
@@ -387,11 +387,11 @@ export default function MemoGeneratorPage() {
                     <input 
                       type="text" value={draftTitle} onChange={(e) => setDraftTitle(e.target.value)} 
                       placeholder="Policy Title..." 
-                      className="flex-1 bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm font-bold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="flex-1 bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm font-bold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     />
                     <select 
                       value={draftCategory} onChange={(e) => setDraftCategory(e.target.value as PolicyCategory)}
-                      className="flex-1 bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                      className="flex-1 bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
                     >
                       <option value="" disabled>Select Category...</option>
                       {POLICY_CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
@@ -401,24 +401,24 @@ export default function MemoGeneratorPage() {
                   <textarea
                     value={generatedMemo} onChange={(e) => setGeneratedMemo(e.target.value)}
                     placeholder="Type your official announcement here, or use the AI Generator to instantly draft a DOLE-compliant memo..."
-                    className="flex-1 min-h-[350px] w-full bg-white dark:bg-black/40 border border-gray-200 dark:border-white/10 rounded-2xl p-6 text-sm text-gray-700 dark:text-gray-300 resize-none outline-none focus:ring-2 focus:ring-indigo-500 custom-scrollbar leading-relaxed"
+                    className="flex-1 min-h-[350px] w-full bg-white dark:bg-black/40 border border-gray-200 dark:border-white/10 rounded-2xl p-6 text-sm text-gray-700 dark:text-gray-300 resize-none outline-none focus:ring-2 focus:ring-emerald-500 custom-scrollbar leading-relaxed"
                   />
                   
                   <div className="flex justify-between items-center mt-2">
                     <div>
                       {editingMemoId && (
-                        <button onClick={handleCancelEdit} className="text-sm font-bold text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors">
+                        <button onClick={handleCancelEdit} className="text-sm font-bold text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors cursor-pointer">
                           Cancel Edit
                         </button>
                       )}
                     </div>
                     <div className="flex gap-3">
                       {generatedMemo && (
-                        <button onClick={handleCopy} className="px-5 py-2.5 text-sm font-bold bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl hover:bg-slate-50 dark:hover:bg-white/10 text-gray-700 dark:text-white transition-colors">
+                        <button onClick={handleCopy} className="px-5 py-2.5 text-sm font-bold bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl hover:bg-slate-50 dark:hover:bg-white/10 text-gray-700 dark:text-white transition-colors cursor-pointer">
                           {isCopied ? "Copied!" : "Copy Text"}
                         </button>
                       )}
-                      <button onClick={handlePublish} disabled={isPublishing || !generatedMemo.trim() || !draftTitle.trim() || !draftCategory} className="px-6 py-2.5 text-sm font-bold bg-indigo-600 rounded-xl hover:bg-indigo-500 text-white disabled:opacity-50 transition-colors shadow-md">
+                      <button onClick={handlePublish} disabled={isPublishing || !generatedMemo.trim() || !draftTitle.trim() || !draftCategory} className="px-6 py-2.5 text-sm font-bold bg-emerald-600 rounded-xl hover:bg-emerald-500 text-white disabled:opacity-50 transition-colors shadow-md cursor-pointer">
                         {isPublishing ? "Saving..." : editingMemoId ? "Update Policy" : "Publish to Dashboard"}
                       </button>
                     </div>
@@ -464,13 +464,13 @@ export default function MemoGeneratorPage() {
                             </div>
                             
                             <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button onClick={() => setSelectedMemo(memo)} className="p-2 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-lg transition-colors shadow-sm" title="Read Full Memo">
+                              <button onClick={() => setSelectedMemo(memo)} className="p-2 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400 rounded-lg transition-colors shadow-sm cursor-pointer" title="Read Full Memo">
                                 <Eye className="w-4 h-4" />
                               </button>
-                              <button onClick={() => handleEditClick(memo)} className="p-2 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400 rounded-lg transition-colors shadow-sm" title="Edit Policy">
+                              <button onClick={() => handleEditClick(memo)} className="p-2 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400 rounded-lg transition-colors shadow-sm cursor-pointer" title="Edit Policy">
                                 <Edit className="w-4 h-4" />
                               </button>
-                              <button onClick={() => handleDeletePolicy(memo.id)} className="p-2 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-300 hover:text-rose-600 dark:hover:text-rose-400 rounded-lg transition-colors shadow-sm" title="Delete Policy">
+                              <button onClick={() => handleDeletePolicy(memo.id)} className="p-2 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-300 hover:text-rose-600 dark:hover:text-rose-400 rounded-lg transition-colors shadow-sm cursor-pointer" title="Delete Policy">
                                 <Trash2 className="w-4 h-4" />
                               </button>
                             </div>

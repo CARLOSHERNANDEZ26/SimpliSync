@@ -108,7 +108,7 @@ export default function EmployeesPage() {
             {isAdmin && (
               <button
                 onClick={() => setShowAddEmployee(true)}
-                className="flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-teal-600 to-emerald-500 hover:from-teal-500 hover:to-emerald-400 text-white rounded-xl font-medium transition-all shadow-lg shadow-teal-500/20 active:scale-95 shrink-0"
+                className="flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-teal-600 to-emerald-500 hover:from-teal-500 hover:to-emerald-400 text-white rounded-xl font-medium transition-all shadow-lg shadow-teal-500/20 active:scale-95 shrink-0 cursor-pointer"
               >
                 <UserPlus className="w-5 h-5" />
                 Add New Employee
@@ -132,7 +132,7 @@ export default function EmployeesPage() {
               <select 
                 value={departmentFilter}
                 onChange={(e) => setDepartmentFilter(e.target.value)}
-                className="w-full px-4 py-2.5 bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all text-gray-900 dark:text-white appearance-none"
+                className="w-full px-4 py-2.5 bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all text-gray-900 dark:text-white appearance-none cursor-pointer"
               >
                 {departments.map((dept, i) => (
                   <option key={i} value={dept as string}>{dept}</option>
@@ -226,7 +226,7 @@ export default function EmployeesPage() {
                            <td className="py-4 px-4 whitespace-nowrap flex justify-end gap-2">
                              <Link 
                                 href={`/timesheets?employeeId=${employee.id}&employeeName=${encodeURIComponent(employee.fullName || employee.name || "Employee")}`}
-                                className="inline-flex items-center justify-center py-2 px-3 bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 border border-indigo-200 dark:border-indigo-500/30 rounded-lg text-indigo-700 dark:text-indigo-400 font-medium text-sm transition-all shadow-sm active:scale-95"
+                                className="inline-flex items-center justify-center py-2 px-3 bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 border border-gray-200 dark:border-white/10 rounded-lg text-gray-700 dark:text-gray-300 font-medium text-sm transition-all shadow-sm active:scale-95 cursor-pointer"
                                 title="View Timesheet"
                              >
                                 <Clock className="w-4 h-4 sm:mr-1.5" />
@@ -236,7 +236,7 @@ export default function EmployeesPage() {
                              <button
                                 onClick={() => setSelectedScheduleEmployee(employee)}
                                 disabled={isOffboarded}
-                                className="inline-flex items-center justify-center py-2 px-3 bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 dark:hover:bg-amber-500/20 border border-amber-200 dark:border-amber-500/30 rounded-lg text-amber-700 dark:text-amber-400 font-medium text-sm transition-all shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="inline-flex items-center justify-center py-2 px-3 bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 border border-gray-200 dark:border-white/10 rounded-lg text-gray-700 dark:text-gray-300 font-medium text-sm transition-all shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                                 title="View Schedule"
                              >
                                 <CalendarDays className="w-4 h-4 sm:mr-1.5" />
@@ -245,7 +245,7 @@ export default function EmployeesPage() {
 
                              <Link 
                                 href={`/employees/${employee.id}`}
-                                className="inline-flex items-center justify-center py-2 px-3 bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 border border-gray-200 dark:border-white/10 rounded-lg text-teal-600 dark:text-teal-400 font-medium text-sm transition-all shadow-sm active:scale-95"
+                                className="inline-flex items-center justify-center py-2 px-3 bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 border border-gray-200 dark:border-white/10 rounded-lg text-gray-700 dark:text-gray-300 font-medium text-sm transition-all shadow-sm active:scale-95 cursor-pointer"
                              >
                                 Profile
                              </Link>
@@ -254,9 +254,9 @@ export default function EmployeesPage() {
                              {!isOffboarded && (
                                <button
                                  onClick={() => setSelectedOffboardEmployee(employee)}
-                                 className="inline-flex items-center justify-center p-2 bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 border border-rose-200 dark:border-rose-500/30 rounded-lg text-rose-600 dark:text-rose-400 transition-all shadow-sm active:scale-95"
+                                 className="inline-flex items-center justify-center p-2 bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 border border-gray-200 dark:border-white/10 rounded-lg text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 transition-all shadow-sm active:scale-95 cursor-pointer"
                                  title="Offboard Employee"
-                               >
+                                >
                                  <UserMinus className="w-4 h-4" />
                                </button>
                              )}
