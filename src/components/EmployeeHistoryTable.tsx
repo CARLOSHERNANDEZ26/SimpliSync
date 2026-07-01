@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { collection, query, where, orderBy, onSnapshot } from "firebase/firestore";
-import { db } from "@/lib/firebase"; 
+import { db } from "@/lib/firebase";
 import { ShieldCheck } from "lucide-react";
 
 interface AttendanceLog {
@@ -20,27 +20,31 @@ export default function EmployeeHistoryTable() {
   const [logs, setLogs] = useState<AttendanceLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
-  
+
   // Cutoff Pagination state
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const today = new Date();
     return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
   });
-  const [cutoff, setCutoff] = useState<"1" | "2">(() => new Date().getDate() <= 15 ? "1" : "2");
+
+  const [cutoff, setCutoff] = useState<"1" | "2">(() => {
+    const day = new Date().getDate();
+    return (day >= 11 && day <= 25) ? "2" : "1";
+  });
 
   useEffect(() => {
-    if (!user?.uid) return; 
+    if (!user?.uid) return;
 
     const [year, month] = selectedMonth.split('-').map(Number);
     let startOfPeriod: Date;
     let endOfPeriod: Date;
 
     if (cutoff === "1") {
-      startOfPeriod = new Date(year, month - 1, 1, 0, 0, 0);
-      endOfPeriod = new Date(year, month - 1, 15, 23, 59, 59, 999);
+      startOfPeriod = new Date(year, month - 2, 26, 0, 0, 0);
+      endOfPeriod = new Date(year, month - 1, 10, 23, 59, 59, 999);
     } else {
-      startOfPeriod = new Date(year, month - 1, 16, 0, 0, 0);
-      endOfPeriod = new Date(year, month, 0, 23, 59, 59, 999);
+      startOfPeriod = new Date(year, month - 1, 11, 0, 0, 0);
+      endOfPeriod = new Date(year, month - 1, 25, 23, 59, 59, 999);
     }
 
     const q = query(
@@ -56,7 +60,7 @@ export default function EmployeeHistoryTable() {
         snapshot.forEach((doc) => {
           const data = doc.data();
           const timeInDate = data.timeIn?.toDate ? data.timeIn.toDate() : null;
-          
+
           if (timeInDate && timeInDate >= startOfPeriod && timeInDate <= endOfPeriod) {
             liveLogs.push({
               id: doc.id,
@@ -68,10 +72,10 @@ export default function EmployeeHistoryTable() {
             });
           }
         });
-        
+
         setLogs(liveLogs);
         setIsLoading(false);
-        setError(""); 
+        setError("");
       },
       (err) => {
         console.error("Firebase Listener Error:", err);
@@ -86,7 +90,7 @@ export default function EmployeeHistoryTable() {
   const calculateActualLateMins = (timeIn: Date | null) => {
     if (!timeIn) return 0;
     const targetTime = new Date(timeIn);
-    targetTime.setHours(8, 0, 0, 0); 
+    targetTime.setHours(8, 0, 0, 0);
     const diffMs = timeIn.getTime() - targetTime.getTime();
     const diffMins = Math.floor(diffMs / 60000);
     return diffMins > 0 ? diffMins : 0;
@@ -112,7 +116,7 @@ export default function EmployeeHistoryTable() {
   // Calculate Totals
   let totalMsWorked = 0;
   let totalLateMinsAccumulated = 0;
-  
+
   logs.forEach(log => {
     const lateMins = calculateActualLateMins(log.timeIn);
     if (!log.isLateExcused) totalLateMinsAccumulated += lateMins;
@@ -127,27 +131,27 @@ export default function EmployeeHistoryTable() {
     <div className="w-full mt-8 bg-white dark:bg-white/5 backdrop-blur-md rounded-2xl shadow-sm border border-gray-200 dark:border-white/10 overflow-hidden transition-all">
       <div className="px-6 py-4 border-b border-gray-200 dark:border-white/10 flex justify-between items-center flex-wrap gap-4">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">My Attendance Logs</h3>
-        
+
         <div className="flex gap-2">
-          <input 
-            type="month" 
-            value={selectedMonth} 
-            onChange={(e) => setSelectedMonth(e.target.value)} 
-            className="bg-gray-50 dark:bg-black/40 border border-gray-200 dark:border-white/10 rounded-xl text-sm px-3 py-2 dark:text-white outline-none focus:ring-2 focus:ring-teal-500 transition-all cursor-pointer" 
+          <input
+            type="month"
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(e.target.value)}
+            className="bg-gray-50 dark:bg-black/40 border border-gray-200 dark:border-white/10 rounded-xl text-sm px-3 py-2 dark:text-white outline-none focus:ring-2 focus:ring-teal-500 transition-all cursor-pointer"
           />
-          <select 
+          <select
             value={cutoff}
             onChange={(e) => setCutoff(e.target.value as "1" | "2")}
             className="bg-gray-50 dark:bg-black/40 border border-gray-200 dark:border-white/10 rounded-xl text-sm px-3 py-2 dark:text-white outline-none focus:ring-2 focus:ring-teal-500 transition-all cursor-pointer"
           >
-            <option value="1">1st Half</option>
-            <option value="2">2nd Half</option>
+            <option value="1">1st Half (26 - 10)</option>
+            <option value="2">2nd Half (11 - 25)</option>
           </select>
         </div>
       </div>
 
       {error && <div className="p-4 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 text-sm font-medium border-b border-amber-200 dark:border-amber-900/50">{error}</div>}
-      
+
       <div className="w-full px-4 md:px-0 max-h-[600px] overflow-y-auto custom-scrollbar">
         <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400 block lg:table">
           <thead className="text-xs text-gray-700 uppercase bg-gray-50/50 dark:bg-white/5 dark:text-gray-300 hidden lg:table-header-group sticky top-0 z-10 backdrop-blur-sm">
@@ -179,12 +183,12 @@ export default function EmployeeHistoryTable() {
                       <span className="lg:hidden text-xs text-gray-500 uppercase tracking-widest font-semibold">Date</span>
                       <span>{formatDate(log.timeIn)}</span>
                     </td>
-                    
+
                     <td className="flex justify-between items-center lg:table-cell px-2 lg:px-6 py-2 lg:py-4 border-b border-gray-100 dark:border-white/5 lg:border-none text-emerald-600 dark:text-emerald-400 font-bold whitespace-nowrap">
                       <span className="lg:hidden text-xs text-gray-500 uppercase tracking-widest font-semibold">Time In</span>
                       <span>{formatTime(log.timeIn)}</span>
                     </td>
-                    
+
                     <td className="flex justify-between items-center lg:table-cell px-2 lg:px-6 py-2 lg:py-4 border-b border-gray-100 dark:border-white/5 lg:border-none font-bold whitespace-nowrap">
                       <span className="lg:hidden text-xs text-gray-500 uppercase tracking-widest font-semibold">Time Out</span>
                       <span className={log.timeOut ? "text-rose-600 dark:text-rose-400" : "text-gray-400"}>
@@ -201,10 +205,10 @@ export default function EmployeeHistoryTable() {
                           <span className="text-emerald-600 font-bold">0</span>
                         )}
                         {log.isLateExcused && (
-  <span title="Excused by Admin">
-    <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
-  </span>
-)}
+                          <span title="Excused by Admin">
+                            <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+                          </span>
+                        )}
                       </div>
                     </td>
 

@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Navbar from "@/components/Navbar";
-import { 
-  collection, query, onSnapshot, orderBy, limit, getDocs, where, startAfter, 
+import {
+  collection, query, onSnapshot, orderBy, limit, getDocs, where, startAfter,
   QueryDocumentSnapshot, DocumentData, QueryConstraint
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -23,7 +23,7 @@ interface EmployeeProfile {
   id: string;
   role: string;
   department?: string;
-  status?: string; 
+  status?: string;
 }
 
 interface EvaluationData {
@@ -36,24 +36,36 @@ export default function AdminCommandCenter() {
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
   const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
-  const [selectedDate, setSelectedDate] = useState<string>(""); 
+  const [selectedDate, setSelectedDate] = useState<string>("");
   const [hasMore, setHasMore] = useState(true);
   const [stats, setStats] = useState({ totalEmployees: 0, avgPerformance: 0, activePolicies: 0, cutoffLabel: "" });
-  const [deptData, setDeptData] = useState<{name: string, value: number, fill: string}[]>([]);
-  const [perfData, setPerfData] = useState<{name: string, score: number}[]>([]);
+  const [deptData, setDeptData] = useState<{ name: string, value: number, fill: string }[]>([]);
+  const [perfData, setPerfData] = useState<{ name: string, score: number }[]>([]);
   const [employees, setEmployees] = useState<EmployeeProfile[]>([]);
   const [evaluations, setEvaluations] = useState<EvaluationData[]>([]);
 
   useEffect(() => {
     const today = new Date();
-    const currentYear = today.getFullYear();
+    const day = today.getDate();
+    const year = today.getFullYear();
     const monthName = today.toLocaleString(undefined, { month: 'short' });
-    const lastDay = new Date(currentYear, today.getMonth() + 1, 0).getDate();
-    
-    const label = today.getDate() <= 15 
-      ? `${monthName} 1 - 15, ${currentYear}`
-      : `${monthName} 16 - ${lastDay}, ${currentYear}`;
-      
+
+    let label = "";
+    if (day >= 11 && day <= 25) {
+      label = `${monthName} 11 - 25, ${year}`;
+    } else {
+      // We're in the 26-10 window
+      const prevMonthDate = new Date(year, today.getMonth() - 1, 1);
+      const prevMonthName = prevMonthDate.toLocaleString(undefined, { month: 'short' });
+      if (day >= 26) {
+        const nextMonthDate = new Date(year, today.getMonth() + 1, 1);
+        const nextMonthName = nextMonthDate.toLocaleString(undefined, { month: 'short' });
+        label = `${monthName} 26 - ${nextMonthName} 10, ${nextMonthDate.getFullYear()}`;
+      } else {
+        label = `${prevMonthName} 26 - ${monthName} 10, ${year}`;
+      }
+    }
+
     setStats(prev => ({ ...prev, cutoffLabel: label }));
   }, []);
 
@@ -106,7 +118,7 @@ export default function AdminCommandCenter() {
     fetchLogs(true, null);
   }, [fetchLogs]);
 
-  useEffect(() => {  
+  useEffect(() => {
     const qUsers = query(collection(db, "users"), where("role", "==", "employee"));
     const unsubUsers = onSnapshot(qUsers, (snap) => {
       setEmployees(snap.docs.map(d => {
@@ -135,7 +147,7 @@ export default function AdminCommandCenter() {
 
   useEffect(() => {
     if (!employees.length) return;
-    const activeEmployees = employees.filter(emp => 
+    const activeEmployees = employees.filter(emp =>
       !["inactive", "Resigned", "Terminated", "End of Contract"].includes(emp.status || "")
     );
 
@@ -169,7 +181,7 @@ export default function AdminCommandCenter() {
 
       deptScores[dept].total += ev.averageScore;
       deptScores[dept].count += 1;
-      
+
       totalOrgScore += ev.averageScore;
       totalEvalsCount += 1;
     });
@@ -191,7 +203,7 @@ export default function AdminCommandCenter() {
     <ProtectedRoute>
       <main className="min-h-screen w-full pt-[73px] bg-slate-50 dark:bg-[#0a0a0a]">
         <Navbar />
-        
+
         <div className="max-w-7xl mx-auto px-6 py-10">
           <div className="mb-10">
             <h1 className="text-4xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
@@ -207,13 +219,13 @@ export default function AdminCommandCenter() {
               <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalEmployees}</div>
               <div className="text-xs text-gray-400 uppercase font-bold tracking-wider">Active Headcount</div>
             </div>
-            
+
             <div className="bg-white dark:bg-white/5 p-6 rounded-3xl border border-gray-200 dark:border-white/10 shadow-sm relative group overflow-hidden">
               <div className="absolute -right-6 -top-6 w-24 h-24 bg-emerald-50 dark:bg-emerald-500/10 rounded-full group-hover:scale-150 transition-transform duration-500 ease-out"></div>
               <div className="relative z-10">
                 <TrendingUp className="text-emerald-500 mb-2" />
                 <div className="text-2xl font-bold text-gray-900 dark:text-white flex items-baseline gap-1">
-                  {stats.avgPerformance > 0 ? stats.avgPerformance.toFixed(1) : "-"} 
+                  {stats.avgPerformance > 0 ? stats.avgPerformance.toFixed(1) : "-"}
                   <span className="text-sm font-medium text-gray-400">/ 5.0</span>
                 </div>
                 <div className="text-xs text-gray-400 uppercase font-bold tracking-wider mt-0.5">Team Performance</div>
@@ -267,9 +279,9 @@ export default function AdminCommandCenter() {
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={perfData} margin={{ bottom: 20 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.1} />
-                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 10}} interval={0} angle={-15} textAnchor="end" />
-                      <YAxis domain={[0, 5]} axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} />
-                      <Tooltip cursor={{fill: 'transparent'}} contentStyle={{ borderRadius: '12px', border: 'none', backgroundColor: '#1e293b', color: '#fff' }} />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} interval={0} angle={-15} textAnchor="end" />
+                      <YAxis domain={[0, 5]} axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
+                      <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ borderRadius: '12px', border: 'none', backgroundColor: '#1e293b', color: '#fff' }} />
                       <Bar dataKey="score" fill="#10b981" radius={[6, 6, 0, 0]} barSize={30} />
                     </BarChart>
                   </ResponsiveContainer>
@@ -285,12 +297,12 @@ export default function AdminCommandCenter() {
               <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
                 <ShieldAlert className="w-5 h-5 text-rose-500" /> System Audit Logs
               </h3>
-              
+
               <div className="flex items-center gap-3">
                 <div className="relative flex items-center">
                   <Calendar className="w-4 h-4 text-gray-400 absolute left-3 pointer-events-none" />
-                  <input 
-                    type="date" 
+                  <input
+                    type="date"
                     value={selectedDate}
                     onChange={(e) => setSelectedDate(e.target.value)}
                     className="pl-9 pr-4 py-1.5 rounded-xl border border-gray-200 dark:border-white/10 bg-slate-50 dark:bg-black/20 text-xs text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-1 focus:ring-emerald-500"
@@ -301,8 +313,8 @@ export default function AdminCommandCenter() {
                     Clear Filter
                   </button>
                 )}
-                <button 
-                  onClick={() => fetchLogs(true, null)} 
+                <button
+                  onClick={() => fetchLogs(true, null)}
                   disabled={loadingLogs}
                   className="p-2 rounded-xl border border-gray-200 dark:border-white/10 bg-slate-50 dark:bg-black/20 text-gray-500 hover:text-gray-900 dark:hover:text-white disabled:opacity-50"
                 >
@@ -310,7 +322,7 @@ export default function AdminCommandCenter() {
                 </button>
               </div>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {logs.length > 0 ? logs.map(log => (
                 <div key={log.id} className="flex items-start justify-between p-4 bg-slate-50 dark:bg-black/20 rounded-2xl border border-gray-100 dark:border-white/5">

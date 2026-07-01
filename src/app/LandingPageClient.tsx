@@ -13,7 +13,7 @@ export default function LandingPageClient() {
       if (savedTheme === "light") return false;
       return window.matchMedia("(prefers-color-scheme: dark)").matches;
     }
-    return true; 
+    return true;
   });
 
   useEffect(() => {
@@ -27,36 +27,37 @@ export default function LandingPageClient() {
   }, [isDark]);
 
   useEffect(() => {
-  function update() {
-    const now = new Date();
-    const ph = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Manila" }));
-    const h = ph.getHours(), m = ph.getMinutes();
-    const ampm = h >= 12 ? "PM" : "AM";
-    const hh = h % 12 || 12;
-    const clockEl = document.getElementById("ph-clock");
-    if (clockEl) clockEl.textContent = `${hh}:${String(m).padStart(2, "0")} ${ampm}`;
+    function update() {
+      const now = new Date();
+      const ph = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Manila" }));
+      const h = ph.getHours(), m = ph.getMinutes();
+      const ampm = h >= 12 ? "PM" : "AM";
+      const hh = h % 12 || 12;
+      const clockEl = document.getElementById("ph-clock");
+      if (clockEl) clockEl.textContent = `${hh}:${String(m).padStart(2, "0")} ${ampm}`;
 
-    const day = ph.getDate(), month = ph.getMonth(), year = ph.getFullYear();
-    const lastDay = new Date(year, month + 1, 0).getDate();
-    let cutoffDay = day <= 15 ? 15 : lastDay;
-    let cutoffDate = new Date(year, month, cutoffDay);
-    if (cutoffDate <= ph) {
-      cutoffDate = cutoffDay === 15
-        ? new Date(year, month, lastDay)
-        : new Date(year, month + 1, 15);
-      cutoffDay = cutoffDate.getDate();
+      const month = ph.getMonth(), year = ph.getFullYear();
+
+      // Cutoffs land on the 10th and the 25th of each month
+      let cutoffDate = new Date(year, month, 10);
+      if (cutoffDate <= ph) {
+        cutoffDate = new Date(year, month, 25);
+      }
+      if (cutoffDate <= ph) {
+        cutoffDate = new Date(year, month + 1, 10);
+      }
+
+      const diff = Math.ceil((cutoffDate.getTime() - ph.getTime()) / (1000 * 60 * 60 * 24));
+      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      const labelEl = document.getElementById("cutoff-label");
+      const daysEl = document.getElementById("cutoff-days");
+      if (labelEl) labelEl.textContent = `${months[cutoffDate.getMonth()]} ${cutoffDate.getDate()}`;
+      if (daysEl) daysEl.textContent = diff === 1 ? "(tomorrow)" : `(${diff} days)`;
     }
-    const diff = Math.ceil((cutoffDate.getTime() - ph.getTime()) / (1000 * 60 * 60 * 24));
-    const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-    const labelEl = document.getElementById("cutoff-label");
-    const daysEl = document.getElementById("cutoff-days");
-    if (labelEl) labelEl.textContent = `${months[cutoffDate.getMonth()]} ${cutoffDay}`;
-    if (daysEl) daysEl.textContent = diff === 1 ? "(tomorrow)" : `(${diff} days)`;
-  }
-  update();
-  const id = setInterval(update, 1000);
-  return () => clearInterval(id);
-}, []);
+    update();
+    const id = setInterval(update, 1000);
+    return () => clearInterval(id);
+  }, []);
 
   return (
     <main className="min-h-screen flex flex-col w-full bg-slate-50 dark:bg-[#0b0f19] selection:bg-teal-500/30 font-sans overflow-x-hidden relative transition-colors duration-300">
@@ -73,9 +74,9 @@ export default function LandingPageClient() {
               Simpli<span className="text-emerald-600 dark:text-emerald-400">Sync</span>
             </span>
           </div>
-          
+
           <div className="flex items-center gap-2 sm:gap-4">
-            <button 
+            <button
               onClick={() => setIsDark(!isDark)}
               className="p-2.5 rounded-xl text-gray-500 hover:text-teal-600 dark:text-slate-400 dark:hover:text-teal-400 bg-gray-100 hover:bg-gray-200 dark:bg-[#131a2e] dark:hover:bg-[#1c2642] transition-colors"
               aria-label="Toggle Theme"

@@ -9,13 +9,13 @@ import { db } from "@/lib/firebase";
 import { Banknote, Edit2, Save, XCircle, Search, Calculator, Calendar, FileText, CheckCircle2, Download, Printer, ArrowLeft, ChevronDown, Send } from "lucide-react";
 import toast from "react-hot-toast";
 
-import { calculateMandatoryDeductions } from "@/lib/deductions";  
-import { 
-  calculateHourlyRate, 
-  calculateLatePenaltyMinutes, 
-  calculateUndertimeMinutes, 
+import { calculateMandatoryDeductions } from "@/lib/deductions";
+import {
+  calculateHourlyRate,
+  calculateLatePenaltyMinutes,
+  calculateUndertimeMinutes,
   calculateTimeDeductionPeso,
-  calculateOvertimePay 
+  calculateOvertimePay
 } from "@/services/payrollEngine";
 
 interface EmployeePayroll {
@@ -31,14 +31,14 @@ interface PayrollResult {
   semiMonthlyBase: number;
   hourlyRate: number;
   daysPresent: number;
-  paidLeaveDays: number; 
-  unpaidAbsences: number; 
-  absenceDeductionPeso: number; 
+  paidLeaveDays: number;
+  unpaidAbsences: number;
+  absenceDeductionPeso: number;
   totalLateMins: number;
   totalUndertimeMins: number;
   timePenaltiesPeso: number;
-  totalOtMinutes: number; 
-  otPayPeso: number;      
+  totalOtMinutes: number;
+  otPayPeso: number;
   sss: number;
   philhealth: number;
   pagibig: number;
@@ -100,24 +100,25 @@ export default function PayrollPage() {
 
   const handleGeneratePayroll = async () => {
     setIsGenerating(true);
-    setPayrollData({}); 
+    setPayrollData({});
 
     const [year, monthStr] = selectedMonth.split('-');
-    const monthIndex = parseInt(monthStr, 10) - 1; 
+    const monthIndex = parseInt(monthStr, 10) - 1;
 
-    const startDate = new Date(parseInt(year, 10), monthIndex, cutoffPeriod === 1 ? 1 : 16, 0, 0, 0);
+    const startDate = cutoffPeriod === 1
+      ? new Date(parseInt(year, 10), monthIndex - 1, 26, 0, 0, 0)
+      : new Date(parseInt(year, 10), monthIndex, 11, 0, 0, 0);
     const endDate = cutoffPeriod === 1
-      ? new Date(parseInt(year, 10), monthIndex, 15, 23, 59, 59)
-      : new Date(parseInt(year, 10), monthIndex + 1, 0, 23, 59, 59);
-
+      ? new Date(parseInt(year, 10), monthIndex, 10, 23, 59, 59)
+      : new Date(parseInt(year, 10), monthIndex, 25, 23, 59, 59);
     const generatedResults: Record<string, PayrollResult> = {};
 
     try {
       for (const emp of employees) {
-        if (!emp.baseSalary) continue; 
+        if (!emp.baseSalary) continue;
 
         const hourlyRate = emp.salaryType === "hourly" ? emp.baseSalary : calculateHourlyRate(emp.baseSalary);
-        const dailyRate = hourlyRate * 8; 
+        const dailyRate = hourlyRate * 8;
 
         const attQuery = query(collection(db, "attendanceLogs"), where("userId", "==", emp.id));
         const attSnap = await getDocs(attQuery);
@@ -138,7 +139,7 @@ export default function PayrollPage() {
           } else if (data.timeIn instanceof Date) {
             logDate = data.timeIn;
           } else {
-            logDate = new Date(data.timeIn); 
+            logDate = new Date(data.timeIn);
           }
 
           if (logDate >= startDate && logDate <= endDate) {
@@ -170,11 +171,11 @@ export default function PayrollPage() {
 
         const leaveQuery = query(collection(db, "leaveRequests"), where("userId", "==", emp.id), where("status", "==", "approved"));
         const leaveSnap = await getDocs(leaveQuery);
-        
+
         let paidLeaveDays = 0;
         leaveSnap.forEach(lDoc => {
           const data = lDoc.data();
-          if (data.type === "lwop") return; 
+          if (data.type === "lwop") return;
 
           const leaveStart = new Date(data.startDate);
           leaveStart.setHours(0, 0, 0, 0);
@@ -190,7 +191,7 @@ export default function PayrollPage() {
           }
         });
 
-        const expectedDaysInCutoff = 11; 
+        const expectedDaysInCutoff = 11;
         let unpaidAbsences = 0;
         let absenceDeductionPeso = 0;
 
@@ -201,8 +202,8 @@ export default function PayrollPage() {
           absenceDeductionPeso = unpaidAbsences * dailyRate;
         }
 
-        const semiMonthlyBase = emp.salaryType === "hourly" 
-          ? ((daysPresent + paidLeaveDays) * 8 * hourlyRate) 
+        const semiMonthlyBase = emp.salaryType === "hourly"
+          ? ((daysPresent + paidLeaveDays) * 8 * hourlyRate)
           : (emp.baseSalary / 2);
 
         const lateDeductionPeso = calculateTimeDeductionPeso(totalLateMins, hourlyRate);
@@ -211,8 +212,8 @@ export default function PayrollPage() {
         const totalAttendanceDeductions = totalTimePenalties + absenceDeductionPeso;
 
         const estimatedMonthlyForGov = emp.salaryType === "hourly" ? (hourlyRate * 8 * 22) : emp.baseSalary;
-        const grossPay = semiMonthlyBase + otPayPeso; 
-        
+        const grossPay = semiMonthlyBase + otPayPeso;
+
         let mandatory = { sss: 0, philhealth: 0, pagibig: 0, totalMandatory: 0 };
         if (applyDeductions) {
           mandatory = calculateMandatoryDeductions(estimatedMonthlyForGov, cutoffPeriod);
@@ -243,7 +244,7 @@ export default function PayrollPage() {
   const handleDistributePayslip = async (emp: EmployeePayroll, result: PayrollResult) => {
     setIsDistributing(prev => ({ ...prev, [emp.id]: true }));
     const [year, monthStr] = selectedMonth.split('-');
-    
+
     // Create a compound identifier key to anchor safety properties
     const deterministicId = `${emp.id}_${year}_${monthStr}_${cutoffPeriod}`;
 
@@ -292,11 +293,11 @@ export default function PayrollPage() {
     const monthName = new Date(0, parseInt(selectedMonth.split('-')[1], 10) - 1).toLocaleString('default', { month: 'long' });
     const year = selectedMonth.split('-')[0];
     const cutoffText = cutoffPeriod === 1 ? "1st-15th" : "16th-End";
-    const titleString = `Payroll_Export_${monthName}_${year}_${cutoffText}`; 
-    
+    const titleString = `Payroll_Export_${monthName}_${year}_${cutoffText}`;
+
     let csvContent = `Company Payroll - ${monthName} ${year} (${cutoffText})\n\n`;
     csvContent += `Employee Name,Department,Base Salary,Type,Semi-Monthly Base,Overtime (Mins),Overtime Pay (PHP),Days Present,Paid Leave (Days),Unpaid Absences,Absence Penalty (PHP),Late/UT (Mins),Time Penalty (PHP),SSS,PhilHealth,Pag-IBIG,Total Gov Deductions,Net Pay\n`;
-    
+
     filteredEmployees.forEach(emp => {
       const result = payrollData[emp.id];
       if (result) {
@@ -320,7 +321,7 @@ export default function PayrollPage() {
   const getCutoffLabel = () => {
     const monthName = new Date(0, parseInt(selectedMonth.split('-')[1], 10) - 1).toLocaleString('default', { month: 'long' });
     const year = selectedMonth.split('-')[0];
-    return `${monthName} ${cutoffPeriod === 1 ? '1-15' : `16-End`}, ${year}`;
+    return `${monthName} ${cutoffPeriod === 1 ? '26-10' : '11-25'}, ${year}`;
   };
 
   if (!isAdmin && user) return <ProtectedRoute><div className="min-h-screen flex items-center justify-center">Access Denied.</div></ProtectedRoute>;
@@ -329,7 +330,7 @@ export default function PayrollPage() {
     <ProtectedRoute>
       <main className="min-h-screen w-full relative overflow-x-hidden pt-[73px] bg-slate-50 dark:bg-[#0a0a0a] print:pt-0 print:bg-white">
         <div className="print:hidden"><Navbar /></div>
-        
+
         <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-12 print:hidden">
           <div className="mb-8">
             <h1 className="text-4xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
@@ -352,8 +353,9 @@ export default function PayrollPage() {
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Cutoff Period</label>
                 <div className="relative">
                   <select value={cutoffPeriod} onChange={(e) => setCutoffPeriod(Number(e.target.value) as 1 | 2)} className="bg-gray-50 dark:bg-black/40 border border-gray-200 dark:border-white/10 rounded-xl pl-4 pr-10 py-2.5 text-sm text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500 w-full cursor-pointer appearance-none">
-                    <option value={1}>1st Cutoff (1st - 15th)</option>
-                    <option value={2}>2nd Cutoff (16th - End)</option>
+                    <option value={1}>1st Cutoff (26th - 10th)</option>
+                    <option value={2}>2nd Cutoff (11th - 25th)</option>
+
                   </select>
                   <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
                 </div>
@@ -370,7 +372,7 @@ export default function PayrollPage() {
 
             <div className="flex flex-col sm:flex-row gap-3 w-full xl:w-auto">
               {Object.keys(payrollData).length > 0 && (
-                 <button onClick={exportPayrollToCSV} className="w-full sm:w-auto bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 px-6 py-3.5 rounded-xl font-bold transition-all shadow-sm flex items-center justify-center gap-2 active:scale-95"><Download className="w-5 h-5" /> Export Data</button>
+                <button onClick={exportPayrollToCSV} className="w-full sm:w-auto bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 px-6 py-3.5 rounded-xl font-bold transition-all shadow-sm flex items-center justify-center gap-2 active:scale-95"><Download className="w-5 h-5" /> Export Data</button>
               )}
               <button onClick={handleGeneratePayroll} disabled={isGenerating || employees.length === 0} className="w-full sm:w-auto bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white px-8 py-3.5 rounded-xl font-bold transition-all shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 active:scale-95">
                 {isGenerating ? <><span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Computing...</> : <><Calculator className="w-5 h-5" /> Calculate</>}
@@ -401,7 +403,7 @@ export default function PayrollPage() {
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-white/5">
                 {filteredEmployees.map(emp => {
-                  const result = payrollData[emp.id]; 
+                  const result = payrollData[emp.id];
                   return (
                     <tr key={emp.id} className="text-sm hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-colors group">
                       <td className="py-4 pl-4">
@@ -507,7 +509,7 @@ export default function PayrollPage() {
                       </div>
                       <div className="p-4 mt-auto border-t border-gray-300 bg-gray-50 flex justify-between font-bold text-gray-800 text-sm"><span>Total Earnings</span><span>{formatPeso(selectedPayslip.result.semiMonthlyBase + selectedPayslip.result.otPayPeso)}</span></div>
                     </div>
-                    
+
                     <div className="w-full md:w-1/2 flex flex-col">
                       <div className="bg-gray-100 p-3 font-bold uppercase text-[10px] border-b border-gray-300 text-gray-700">Deductions</div>
                       <div className="p-4 flex flex-col gap-3 min-h-[140px] text-xs">

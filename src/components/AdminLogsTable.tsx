@@ -1,24 +1,24 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { collection, query, orderBy, onSnapshot, doc, updateDoc } from "firebase/firestore"; 
-import { db } from "@/lib/firebase"; 
+import { collection, query, orderBy, onSnapshot, doc, updateDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import { adminForceClockOut } from "@/services/attendance";
 import toast from "react-hot-toast";
 import ConfirmModal from "@/components/ConfirmModal";
 import { Search, Calendar, Edit, X, Save, ShieldAlert, ChevronLeft, ChevronRight, Layers } from "lucide-react";
 
-interface AttendanceLog { 
-  id: string; 
-  userId: string; 
-  fullName: string; 
-  role: string; 
-  timeIn: Date | null; 
-  timeOut: Date | null; 
-  status: string; 
-  earlyOutReason?: string; 
-  lateReason?: string; 
-  isLateExcused?: boolean; 
+interface AttendanceLog {
+  id: string;
+  userId: string;
+  fullName: string;
+  role: string;
+  timeIn: Date | null;
+  timeOut: Date | null;
+  status: string;
+  earlyOutReason?: string;
+  lateReason?: string;
+  isLateExcused?: boolean;
 }
 
 export default function AdminLogsTable() {
@@ -26,7 +26,12 @@ export default function AdminLogsTable() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [cutoff, setCutoff] = useState<"1" | "2">(() => new Date().getDate() <= 15 ? "1" : "2");
+
+  const [cutoff, setCutoff] = useState<"1" | "2">(() => {
+    const day = new Date().getDate();
+    return (day >= 11 && day <= 25) ? "2" : "1";
+  });
+
   const [currentPage, setCurrentPage] = useState(1);
   const rowsPerPage = 6;
   const [isForceOutModalOpen, setIsForceOutModalOpen] = useState(false);
@@ -34,7 +39,7 @@ export default function AdminLogsTable() {
   const [isForceOutLoading, setIsForceOutLoading] = useState(false);
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editTimeIn, setEditTimeIn] = useState(""); 
+  const [editTimeIn, setEditTimeIn] = useState("");
   const [editTimeOut, setEditTimeOut] = useState("");
   const [editReason, setEditReason] = useState("");
   const [editExcuseLate, setEditExcuseLate] = useState(false);
@@ -52,16 +57,16 @@ export default function AdminLogsTable() {
 
   useEffect(() => {
     const [year, month] = selectedMonth.split('-').map(Number);
-    
+
     let startDate: Date;
     let endDate: Date;
 
     if (cutoff === "1") {
-      startDate = new Date(year, month - 1, 1, 0, 0, 0);
-      endDate = new Date(year, month - 1, 15, 23, 59, 59, 999);
+      startDate = new Date(year, month - 2, 26, 0, 0, 0);
+      endDate = new Date(year, month - 1, 10, 23, 59, 59, 999);
     } else {
-      startDate = new Date(year, month - 1, 16, 0, 0, 0);
-      endDate = new Date(year, month, 0, 23, 59, 59, 999);
+      startDate = new Date(year, month - 1, 11, 0, 0, 0);
+      endDate = new Date(year, month - 1, 25, 23, 59, 59, 999);
     }
 
     const logsRef = collection(db, "attendanceLogs");
@@ -74,7 +79,7 @@ export default function AdminLogsTable() {
         snapshot.forEach((doc) => {
           const data = doc.data();
           const timeInDate = data.timeIn?.toDate ? data.timeIn.toDate() : null;
-          
+
           if (timeInDate && timeInDate >= startDate && timeInDate <= endDate) {
             fetchedLogs.push({
               id: doc.id,
@@ -121,7 +126,7 @@ export default function AdminLogsTable() {
 
   const openEditModal = (log: AttendanceLog) => {
     setSelectedLog(log);
-    
+
     // Formatting local ISO strings securely to populate the HTML5 datetime-local inputs
     const formatForInput = (dateObj: Date | null) => {
       if (!dateObj) return "";
@@ -139,13 +144,13 @@ export default function AdminLogsTable() {
   const handleSaveManualEdit = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     if (!selectedLog || !editTimeIn || !editTimeOut) return;
-    
+
     setIsSavingEdit(true);
     try {
       const manualTimeInDate = new Date(editTimeIn);
       const manualTimeOutDate = new Date(editTimeOut);
       const logRef = doc(db, "attendanceLogs", selectedLog.id);
-      
+
       let newStatus = selectedLog.status;
       if (editExcuseLate && newStatus.toLowerCase().includes("late")) {
         newStatus = "Admin Resolved";
@@ -192,7 +197,7 @@ export default function AdminLogsTable() {
   };
 
   const filteredLogs = logs.filter(log => log.fullName.toLowerCase().includes(searchTerm.toLowerCase()));
-  
+
   const totalPages = Math.ceil(filteredLogs.length / rowsPerPage);
   const indexOfLastRow = currentPage * rowsPerPage;
   const indexOfFirstRow = indexOfLastRow - rowsPerPage;
@@ -203,42 +208,42 @@ export default function AdminLogsTable() {
 
   return (
     <div className="w-full bg-white dark:bg-[#1a1a1a] rounded-3xl shadow-xl border border-gray-200 dark:border-white/10 overflow-hidden">
-      
+
       <div className="px-6 py-6 border-b border-gray-200 dark:border-white/10 flex flex-col xl:flex-row justify-between items-center gap-4">
         <h3 className="text-xl font-bold text-gray-900 dark:text-white">Attendance Logs</h3>
-        
+
         <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
           <div className="relative flex-1 min-w-[180px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input 
-              type="text" 
-              placeholder="Search employee..." 
-              value={searchTerm} 
+            <input
+              type="text"
+              placeholder="Search employee..."
+              value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl text-sm outline-none text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 transition-all"
             />
           </div>
-          
+
           <div className="relative shrink-0">
-             <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-             <input 
-               type="month" 
-               value={selectedMonth} 
-               onChange={(e) => setSelectedMonth(e.target.value)} 
-               className="bg-gray-50 dark:bg-black/40 border border-gray-200 dark:border-white/10 rounded-xl text-sm pl-10 pr-4 py-2.5 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500 transition-all cursor-pointer" 
-             />
+            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="month"
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="bg-gray-50 dark:bg-black/40 border border-gray-200 dark:border-white/10 rounded-xl text-sm pl-10 pr-4 py-2.5 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500 transition-all cursor-pointer"
+            />
           </div>
 
           <div className="relative shrink-0">
-             <Layers className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-             <select 
-               value={cutoff}
-               onChange={(e) => setCutoff(e.target.value as "1" | "2")}
-               className="bg-gray-50 dark:bg-black/40 border border-gray-200 dark:border-white/10 rounded-xl text-sm pl-10 pr-8 py-2.5 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500 transition-all cursor-pointer appearance-none"
-             >
-               <option value="1">1st Cutoff (1-15)</option>
-               <option value="2">2nd Cutoff (16-End)</option>
-             </select>
+            <Layers className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            <select
+              value={cutoff}
+              onChange={(e) => setCutoff(e.target.value as "1" | "2")}
+              className="bg-gray-50 dark:bg-black/40 border border-gray-200 dark:border-white/10 rounded-xl text-sm pl-10 pr-8 py-2.5 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500 transition-all cursor-pointer appearance-none"
+            >
+              <option value="1">1st Cutoff (26-10)</option>
+              <option value="2">2nd Cutoff (11-25)</option>
+            </select>
           </div>
         </div>
       </div>
@@ -266,7 +271,7 @@ export default function AdminLogsTable() {
                 <td className="px-6 py-4">
                   <div className="flex flex-col text-xs font-mono font-bold">
                     <span className="text-emerald-600 dark:text-emerald-400">IN: {formatTime(log.timeIn)}</span>
-                    
+
                     {log.lateReason && (
                       <span className="text-[9px] text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-500/10 px-1.5 py-0.5 rounded border border-rose-200 dark:border-rose-500/20 uppercase tracking-widest mt-1 w-fit">
                         Late Reason: {log.lateReason}
@@ -287,7 +292,7 @@ export default function AdminLogsTable() {
                 </td>
                 <td className="px-6 py-4 text-center">
                   <div className="flex justify-center items-center gap-2">
-                    <button 
+                    <button
                       type="button"
                       onClick={() => openEditModal(log)}
                       className="text-[10px] font-bold bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 dark:hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 px-4 py-2 rounded-lg transition-colors flex items-center gap-1.5 border border-amber-200 dark:border-amber-500/30"
@@ -296,7 +301,7 @@ export default function AdminLogsTable() {
                     </button>
 
                     {!log.timeOut && (
-                      <button 
+                      <button
                         type="button"
                         onClick={() => { setSelectedLog(log); setIsForceOutModalOpen(true); }}
                         className="text-[10px] font-bold bg-rose-600 hover:bg-rose-500 text-white px-3 py-2 rounded-lg transition-all shadow-md shadow-rose-500/20 active:scale-95"
@@ -310,7 +315,7 @@ export default function AdminLogsTable() {
             ))}
           </tbody>
         </table>
-        
+
         {filteredLogs.length === 0 && (
           <div className="text-center py-16 text-gray-500 italic">No attendance records found for this cutoff window.</div>
         )}
@@ -343,7 +348,7 @@ export default function AdminLogsTable() {
         </div>
       )}
 
-      <ConfirmModal 
+      <ConfirmModal
         isOpen={isForceOutModalOpen}
         onClose={() => { setIsForceOutModalOpen(false); setSelectedLog(null); }}
         onConfirm={executeForceClockOut}
@@ -363,7 +368,7 @@ export default function AdminLogsTable() {
                 <X className="w-5 h-5" />
               </button>
             </div>
-            
+
             <div className="p-6 flex flex-col gap-5">
               <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
                 You are manually resolving the attendance log for <strong>{selectedLog.fullName}</strong>. Please ensure accuracy for payroll compliance.
@@ -372,8 +377,8 @@ export default function AdminLogsTable() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-bold text-gray-500 uppercase">Correct Time In</label>
-                  <input 
-                    type="datetime-local" 
+                  <input
+                    type="datetime-local"
                     value={editTimeIn}
                     onChange={(e) => setEditTimeIn(e.target.value)}
                     required
@@ -383,8 +388,8 @@ export default function AdminLogsTable() {
 
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-bold text-gray-500 uppercase">Correct Time Out</label>
-                  <input 
-                    type="datetime-local" 
+                  <input
+                    type="datetime-local"
                     value={editTimeOut}
                     onChange={(e) => setEditTimeOut(e.target.value)}
                     required
@@ -395,8 +400,8 @@ export default function AdminLogsTable() {
 
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-bold text-gray-500 uppercase">Resolution Note (Required)</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   value={editReason}
                   onChange={(e) => setEditReason(e.target.value)}
                   placeholder="e.g., Admin Resolution: Clock-in system failure"
@@ -407,9 +412,9 @@ export default function AdminLogsTable() {
 
               {selectedLog.status.toLowerCase().includes("late") && (
                 <div className="p-4 bg-slate-50 dark:bg-black/20 rounded-xl border border-gray-200 dark:border-white/10 flex items-start gap-3">
-                  <input 
-                    type="checkbox" 
-                    id="excuseLate" 
+                  <input
+                    type="checkbox"
+                    id="excuseLate"
                     checked={editExcuseLate}
                     onChange={(e) => setEditExcuseLate(e.target.checked)}
                     className="mt-1 w-4 h-4 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500"
@@ -424,7 +429,7 @@ export default function AdminLogsTable() {
                 </div>
               )}
 
-              <button 
+              <button
                 type="submit"
                 disabled={isSavingEdit || !editTimeIn || !editTimeOut || !editReason}
                 className="w-full mt-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white font-bold py-3.5 rounded-xl transition-all flex justify-center items-center gap-2 shadow-lg shadow-amber-500/30 disabled:opacity-50 active:scale-95"
