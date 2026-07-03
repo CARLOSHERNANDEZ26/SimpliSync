@@ -226,7 +226,7 @@ export default function LeavePage() {
 
   return (
     <ProtectedRoute>
-      <main className="min-h-screen w-full relative overflow-hidden pt-[73px] bg-slate-50 dark:bg-[#0a0a0a] print:bg-white print:pt-0">
+      <main className="min-h-screen w-full relative overflow-hidden pt-[57px] lg:pt-0 lg:pl-[260px] bg-slate-50 dark:bg-[#0a0a0a] print:bg-white print:p-0">
         <div className="print:hidden"><Navbar /></div>
         
         <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-12 print:p-0">

@@ -84,7 +84,7 @@ export default function SettingsPage() {
 
   return (
     <ProtectedRoute>
-      <main className="min-h-screen w-full bg-slate-50 dark:bg-[#0a0a0a] text-gray-900 dark:text-white font-sans relative overflow-y-auto overflow-x-hidden transition-colors duration-500 pt-[73px] pb-20">
+      <main className="min-h-screen w-full bg-slate-50 dark:bg-[#0a0a0a] text-gray-900 dark:text-white font-sans relative overflow-y-auto overflow-x-hidden transition-colors duration-500 pt-[57px] lg:pt-0 lg:pl-[260px] pb-20">
         <div className="absolute top-0 left-0 w-[40rem] h-[40rem] bg-teal-400/20 dark:bg-teal-600/10 rounded-full blur-[150px] pointer-events-none"></div>
         <div className="absolute bottom-0 right-0 w-[30rem] h-[30rem] bg-emerald-400/20 dark:bg-emerald-600/10 rounded-full blur-[120px] pointer-events-none"></div>
 

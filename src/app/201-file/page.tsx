@@ -135,7 +135,7 @@ export default function Employee201FilePage() {
 
   return (
     <ProtectedRoute>
-      <main className="min-h-screen w-full relative overflow-hidden pt-[73px] bg-slate-50 dark:bg-[#0a0a0a] print:bg-white print:pt-0">
+      <main className="min-h-screen w-full relative overflow-hidden pt-[57px] lg:pt-0 lg:pl-[260px] bg-slate-50 dark:bg-[#0a0a0a] print:bg-white print:p-0">
         <div className="absolute top-0 right-0 w-[40rem] h-[40rem] bg-teal-500/10 rounded-full blur-[150px] pointer-events-none print:hidden"></div>
         <div className="print:hidden"><Navbar /></div>
         

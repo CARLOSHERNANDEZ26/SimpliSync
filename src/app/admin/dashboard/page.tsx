@@ -201,7 +201,7 @@ export default function AdminCommandCenter() {
 
   return (
     <ProtectedRoute>
-      <main className="min-h-screen w-full pt-[73px] bg-slate-50 dark:bg-[#0a0a0a]">
+      <main className="min-h-screen w-full pt-[57px] lg:pt-0 lg:pl-[260px] bg-slate-50 dark:bg-[#0a0a0a]">
         <Navbar />
 
         <div className="max-w-7xl mx-auto px-6 py-10">

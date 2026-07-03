@@ -105,7 +105,7 @@ export default function CompanyCalendarPage() {
 
   return (
     <ProtectedRoute>
-      <main className="min-h-screen w-full relative overflow-y-auto pt-[73px] bg-slate-50 dark:bg-[#0a0a0a] text-gray-900 dark:text-white">
+      <main className="min-h-screen w-full relative overflow-y-auto pt-[57px] lg:pt-0 lg:pl-[260px] bg-slate-50 dark:bg-[#0a0a0a] text-gray-900 dark:text-white">
         <Navbar />
 
         <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-12">

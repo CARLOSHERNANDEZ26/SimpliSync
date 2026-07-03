@@ -287,7 +287,7 @@ export default function BenefitsPage() {
 
   return (
     <ProtectedRoute>
-      <main className="min-h-screen w-full relative overflow-x-hidden pt-[73px] bg-slate-50 dark:bg-[#0a0a0a]">
+      <main className="min-h-screen w-full relative overflow-x-hidden pt-[57px] lg:pt-0 lg:pl-[260px] bg-slate-50 dark:bg-[#0a0a0a]">
         <div className="absolute top-0 left-0 w-[40rem] h-[40rem] bg-emerald-500/10 rounded-full blur-[150px] pointer-events-none"></div>
         <Navbar />
         

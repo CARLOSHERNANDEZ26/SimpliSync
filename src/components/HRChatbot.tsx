@@ -93,7 +93,7 @@ export default function HRChatbot({ logs }: { logs: AttendanceLog[] }) {
   };
 
   return (
-    <div className="fixed bottom-6 xl:bottom-8 left-6 xl:left-8 z-[60]">
+    <div className="fixed bottom-6 xl:bottom-8 right-6 xl:right-8 z-[60]">
       {/* Floating Action Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
@@ -104,7 +104,7 @@ export default function HRChatbot({ logs }: { logs: AttendanceLog[] }) {
 
       {/* Chat Window */}
       {isOpen && (
-        <div className="absolute bottom-20 left-0 w-[calc(100vw-3rem)] sm:w-[400px] h-[550px] max-h-[calc(100vh-8rem)] bg-white dark:bg-[#151515] border border-gray-200 dark:border-white/10 rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-fade-in-up">
+        <div className="absolute bottom-20 right-0 w-[calc(100vw-3rem)] sm:w-[400px] h-[550px] max-h-[calc(100vh-8rem)] bg-white dark:bg-[#151515] border border-gray-200 dark:border-white/10 rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-fade-in-up">
           
           {/* Header */}
           <div className="bg-gradient-to-r from-teal-600 to-emerald-600 p-4 flex items-center gap-3 relative overflow-hidden">
