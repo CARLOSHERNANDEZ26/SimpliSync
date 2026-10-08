@@ -6,8 +6,9 @@ import Navbar from "@/components/Navbar";
 import { collection, query, where, onSnapshot, addDoc, updateDoc, doc, serverTimestamp, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/hooks/useAuth";
-import { Calendar as CalendarIcon, Clock, CheckCircle, XCircle, ExternalLink, Info, MessageSquare, X, Printer, ArrowLeft, Edit2, Eye } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, CheckCircle, XCircle, ExternalLink, Info, MessageSquare, X, Printer, ArrowLeft, Edit2, Eye, Download, Paperclip, Upload, FileText, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
+import jsPDF from "jspdf";
 
 interface LeaveRequest { 
   id: string;
@@ -18,6 +19,7 @@ interface LeaveRequest {
   endDate: string;
   reason: string;
   attachmentUrl?: string;
+  attachmentName?: string;
   status: "pending" | "approved" | "rejected";
   adminRemarks?: string; 
   statusDate?: string; 
@@ -36,10 +38,43 @@ export default function LeavePage() {
   const [endDate, setEndDate] = useState("");
   const [reason, setReason] = useState("");
   const [attachmentUrl, setAttachmentUrl] = useState(""); 
+  const [attachmentName, setAttachmentName] = useState("");
+  const [attachmentMode, setAttachmentMode] = useState<"file" | "link">("file");
+  const [isUploading, setIsUploading] = useState(false);
   const [requestToDecline, setRequestToDecline] = useState<LeaveRequest | null>(null);
   const [declineReason, setDeclineReason] = useState("");
   const [inspectedRequest, setInspectedRequest] = useState<LeaveRequest | null>(null);
   const todayString = new Date().toISOString().split("T")[0];
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 850 * 1024) {
+      toast.error("File size is too large (max 800KB). Please upload a smaller file or paste a G-Drive link.");
+      return;
+    }
+
+    setIsUploading(true);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = event.target?.result as string;
+      setAttachmentUrl(result);
+      setAttachmentName(file.name);
+      setIsUploading(false);
+      toast.success(`Attached file: ${file.name}`);
+    };
+    reader.onerror = () => {
+      setIsUploading(false);
+      toast.error("Failed to read file.");
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveFile = () => {
+    setAttachmentUrl("");
+    setAttachmentName("");
+  };
 
   const [authorizedBy, setAuthorizedBy] = useState("Human Resources Dept.");
   const [isEditingAuth, setIsEditingAuth] = useState(false);
@@ -144,12 +179,13 @@ export default function LeavePage() {
         startDate,
         endDate,
         reason,
-        attachmentUrl, 
+        attachmentUrl: attachmentUrl || null, 
+        attachmentName: attachmentName || null,
         status: "pending",
         createdAt: serverTimestamp()
       });
       toast.success("Leave request submitted!");
-      setStartDate(""); setEndDate(""); setReason(""); setAttachmentUrl(""); 
+      setStartDate(""); setEndDate(""); setReason(""); setAttachmentUrl(""); setAttachmentName(""); 
     } catch (error: unknown) {
       console.error("Submission error:", error);
       toast.error("Failed to submit.");
@@ -224,6 +260,208 @@ export default function LeavePage() {
     }
   };
 
+  const handleDownloadPDF = () => {
+    if (!inspectedRequest) return;
+    try {
+      const doc = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
+      });
+
+      const titleText = inspectedRequest.status === "pending" 
+        ? "LEAVE APPLICATION (PENDING SLIP)" 
+        : "OFFICIAL LEAVE OF ABSENCE FORM";
+      const dateFiled = inspectedRequest.createdAt 
+        ? new Date(inspectedRequest.createdAt.seconds * 1000).toLocaleDateString() 
+        : "System Pending";
+      
+      const start = new Date(inspectedRequest.startDate);
+      const end = new Date(inspectedRequest.endDate);
+      const totalDays = Math.ceil(Math.abs(end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+
+      // Header
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(16);
+      doc.setTextColor(15, 23, 42);
+      doc.text("SIMPLIFV BUSINESS CONSULTING CORP.", 105, 20, { align: "center" });
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(100);
+      doc.text("Subic City, Zambales - \"Let's SimplifV your Business\"", 105, 26, { align: "center" });
+
+      // Divider line
+      doc.setDrawColor(30, 41, 59);
+      doc.setLineWidth(0.8);
+      doc.line(15, 32, 195, 32);
+
+      // Form Title
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      doc.setTextColor(15, 23, 42);
+      doc.text(titleText, 105, 41, { align: "center" });
+
+      // Field Sections
+      let y = 54;
+      doc.setFontSize(8);
+      doc.setTextColor(100);
+      doc.text("EMPLOYEE NAME", 15, y);
+      doc.text("DATE FILED", 115, y);
+
+      y += 5;
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(15, 23, 42);
+      doc.text(inspectedRequest.userName, 15, y);
+      doc.text(dateFiled, 115, y);
+
+      y += 2;
+      doc.setLineWidth(0.2);
+      doc.setDrawColor(200);
+      doc.line(15, y, 95, y);
+      doc.line(115, y, 195, y);
+
+      y += 10;
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(100);
+      doc.text("TYPE OF LEAVE REQUESTED", 15, y);
+
+      y += 5;
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(15, 23, 42);
+      doc.text(getFullLeaveTypeName(inspectedRequest.type), 15, y);
+
+      y += 2;
+      doc.line(15, y, 195, y);
+
+      y += 10;
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(100);
+      doc.text("INCLUSIVE DATES", 15, y);
+      doc.text("TOTAL CALENDAR DAYS", 115, y);
+
+      y += 5;
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(15, 23, 42);
+      doc.text(`${inspectedRequest.startDate} to ${inspectedRequest.endDate}`, 15, y);
+      doc.text(`${totalDays} Day(s)`, 115, y);
+
+      y += 2;
+      doc.line(15, y, 95, y);
+      doc.line(115, y, 195, y);
+
+      y += 12;
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(100);
+      doc.text("DETAILED REASON FOR ABSENCE", 15, y);
+
+      y += 4;
+      doc.setDrawColor(220);
+      doc.setFillColor(250, 250, 250);
+      doc.roundedRect(15, y, 180, 25, 2, 2, "FD");
+
+      doc.setFont("helvetica", "italic");
+      doc.setFontSize(9.5);
+      doc.setTextColor(30, 41, 59);
+      const splitReason = doc.splitTextToSize(`"${inspectedRequest.reason}"`, 172);
+      doc.text(splitReason, 19, y + 7);
+
+      y += 33;
+      // HR Disposition section line
+      doc.setLineWidth(0.6);
+      doc.setDrawColor(30, 41, 59);
+      doc.line(15, y, 195, y);
+
+      y += 6;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.setTextColor(15, 23, 42);
+      doc.text("HUMAN RESOURCES DISPOSITION", 15, y);
+
+      y += 8;
+      // Status Badge box
+      const statusStr = inspectedRequest.status === "pending" ? "[ FOR HR REVIEW ]" : inspectedRequest.status.toUpperCase();
+      doc.setFontSize(9);
+      if (inspectedRequest.status === "approved") {
+        doc.setDrawColor(16, 185, 129);
+        doc.setFillColor(236, 253, 245);
+        doc.setTextColor(5, 150, 105);
+      } else if (inspectedRequest.status === "rejected") {
+        doc.setDrawColor(244, 63, 94);
+        doc.setFillColor(254, 242, 242);
+        doc.setTextColor(225, 29, 72);
+      } else {
+        doc.setDrawColor(156, 163, 175);
+        doc.setFillColor(249, 250, 251);
+        doc.setTextColor(107, 114, 128);
+      }
+      doc.roundedRect(15, y - 4, 45, 8, 1, 1, "FD");
+      doc.text(statusStr, 37.5, y + 1.5, { align: "center" });
+
+      if (inspectedRequest.statusDate) {
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8.5);
+        doc.setTextColor(100);
+        doc.text(`Processed on: ${inspectedRequest.statusDate}`, 66, y + 1.5);
+      }
+
+      if (inspectedRequest.status !== "pending") {
+        y += 12;
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8);
+        doc.setTextColor(100);
+        doc.text("HR ADMIN REMARKS", 15, y);
+
+        y += 4;
+        doc.setDrawColor(220);
+        doc.setFillColor(250, 250, 250);
+        doc.roundedRect(15, y, 180, 18, 2, 2, "FD");
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        doc.setTextColor(30, 41, 59);
+        const splitRemarks = doc.splitTextToSize(inspectedRequest.adminRemarks || "No additional remarks.", 172);
+        doc.text(splitRemarks, 19, y + 6);
+        y += 22;
+      } else {
+        y += 15;
+      }
+
+      // Signatures
+      y += 22;
+      doc.setLineWidth(0.4);
+      doc.setDrawColor(50);
+      doc.line(20, y, 80, y);
+      doc.line(130, y, 190, y);
+
+      y += 4;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      doc.setTextColor(15, 23, 42);
+      doc.text(inspectedRequest.userName, 50, y, { align: "center" });
+      doc.text(authorizedBy, 160, y, { align: "center" });
+
+      y += 4;
+      doc.setFontSize(7.5);
+      doc.setTextColor(120);
+      doc.text("EMPLOYEE SIGNATURE", 50, y, { align: "center" });
+      doc.text("AUTHORIZED SIGNATURE", 160, y, { align: "center" });
+
+      const safeName = inspectedRequest.userName.replace(/[^a-zA-Z0-9]/g, "_");
+      doc.save(`Leave_Form_${safeName}_${inspectedRequest.startDate}.pdf`);
+      toast.success("Leave form PDF downloaded!");
+    } catch (err) {
+      console.error("PDF generation failed:", err);
+      toast.error("Failed to generate PDF download.");
+    }
+  };
+
   return (
     <ProtectedRoute>
       <main className="min-h-screen w-full relative overflow-hidden pt-[57px] lg:pt-0 lg:pl-[260px] bg-slate-50 dark:bg-[#0a0a0a] print:bg-white print:p-0">
@@ -282,13 +520,83 @@ export default function LeavePage() {
                         </div>
                         <textarea required value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Detailed reason for leave..." className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white h-24 resize-none focus:outline-none focus:ring-2 focus:ring-teal-500"></textarea>
                         
-                        <input 
-                          type="url" 
-                          value={attachmentUrl} 
-                          onChange={(e) => setAttachmentUrl(e.target.value)} 
-                          placeholder="Supporting Doc Link (G-Drive) - Optional" 
-                          className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 placeholder-gray-500" 
-                        />
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center text-xs font-semibold text-gray-500 dark:text-gray-400">
+                            <span>Supporting Document <span className="font-normal text-gray-400 lowercase">(optional)</span></span>
+                            <div className="flex gap-1 bg-slate-100 dark:bg-black/40 p-0.5 rounded-lg">
+                              <button
+                                type="button"
+                                onClick={() => setAttachmentMode("file")}
+                                className={`px-2 py-0.5 rounded-md text-[11px] font-bold transition-all ${
+                                  attachmentMode === "file" 
+                                    ? "bg-teal-600 text-white shadow-sm" 
+                                    : "text-gray-500 hover:text-gray-900 dark:hover:text-white"
+                                }`}
+                              >
+                                Upload File
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setAttachmentMode("link")}
+                                className={`px-2 py-0.5 rounded-md text-[11px] font-bold transition-all ${
+                                  attachmentMode === "link" 
+                                    ? "bg-teal-600 text-white shadow-sm" 
+                                    : "text-gray-500 hover:text-gray-900 dark:hover:text-white"
+                                }`}
+                              >
+                                Paste Link
+                              </button>
+                            </div>
+                          </div>
+
+                          {attachmentMode === "file" ? (
+                            <div>
+                              {attachmentUrl ? (
+                                <div className="flex items-center justify-between p-3 bg-teal-500/10 border border-teal-500/30 rounded-xl text-xs">
+                                  <div className="flex items-center gap-2 truncate pr-2">
+                                    <FileText className="w-4 h-4 text-teal-600 dark:text-teal-400 shrink-0" />
+                                    <span className="font-semibold text-gray-900 dark:text-white truncate">
+                                      {attachmentName || "Attached File"}
+                                    </span>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={handleRemoveFile}
+                                    className="p-1 hover:bg-rose-100 dark:hover:bg-rose-500/20 text-rose-500 rounded-lg transition-colors shrink-0"
+                                    title="Remove File"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              ) : (
+                                <label className="flex flex-col items-center justify-center p-3.5 bg-slate-50 dark:bg-black/20 border-2 border-dashed border-gray-300 dark:border-white/10 hover:border-teal-500 dark:hover:border-teal-400 rounded-xl cursor-pointer transition-colors text-center">
+                                  <Upload className="w-5 h-5 text-gray-400 mb-1" />
+                                  <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                                    {isUploading ? "Processing file..." : "Choose Medical Cert / Supporting File"}
+                                  </span>
+                                  <span className="text-[10px] text-gray-400 mt-0.5">Images, PDFs or docs (up to 800KB)</span>
+                                  <input
+                                    type="file"
+                                    accept="image/*,.pdf,.doc,.docx,.txt"
+                                    onChange={handleFileChange}
+                                    className="hidden"
+                                  />
+                                </label>
+                              )}
+                            </div>
+                          ) : (
+                            <input 
+                              type="url" 
+                              value={attachmentUrl} 
+                              onChange={(e) => {
+                                setAttachmentUrl(e.target.value);
+                                setAttachmentName(e.target.value ? "External Link Document" : "");
+                              }} 
+                              placeholder="Supporting Doc Link (G-Drive) - Optional" 
+                              className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 placeholder-gray-500" 
+                            />
+                          )}
+                        </div>
 
                         <button type="submit" disabled={isSubmitting} className="w-full bg-teal-600 hover:bg-teal-500 py-3.5 rounded-xl font-bold text-white transition-all shadow-lg shadow-teal-500/20 active:scale-95 disabled:opacity-50 flex justify-center items-center gap-2">
                           {isSubmitting ? "Submitting..." : "Submit Formal Request"}
@@ -313,9 +621,19 @@ export default function LeavePage() {
                             <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">&quot;{req.reason}&quot;</p>
                             
                             {req.attachmentUrl && (
-                              <a href={req.attachmentUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300 font-semibold bg-indigo-50 dark:bg-indigo-500/10 px-2.5 py-1.5 rounded-lg w-fit mt-2 transition-colors">
-                                <ExternalLink className="w-3.5 h-3.5" /> View Document
-                              </a>
+                              <div className="mt-2">
+                                <a 
+                                  href={req.attachmentUrl} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer" 
+                                  download={req.attachmentName || "attached_document"} 
+                                  className="inline-flex items-center gap-1.5 text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300 font-bold bg-indigo-50 dark:bg-indigo-500/10 px-2.5 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-500/20 w-fit transition-colors shadow-sm"
+                                >
+                                  <Paperclip className="w-3.5 h-3.5" /> 
+                                  <span>{req.attachmentName ? `Attached: ${req.attachmentName}` : "View Attached Document"}</span>
+                                  <ExternalLink className="w-3 h-3 ml-0.5 opacity-70" />
+                                </a>
+                              </div>
                             )}
                           </div>
 
@@ -402,9 +720,20 @@ export default function LeavePage() {
                 <button onClick={() => setInspectedRequest(null)} className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-xl text-xs font-bold flex items-center gap-1 shadow-sm transition-colors">
                   <ArrowLeft className="w-3.5 h-3.5" /> Close
                 </button>
-                <button onClick={() => window.print()} className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-md shadow-indigo-600/20 transition-all">
-                  <Printer className="w-4 h-4" /> Save as PDF
-                </button>
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={handleDownloadPDF} 
+                    className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-md shadow-indigo-600/20 transition-all"
+                  >
+                    <Download className="w-4 h-4" /> Download PDF
+                  </button>
+                  <button 
+                    onClick={() => window.print()} 
+                    className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-md shadow-slate-800/20 transition-all"
+                  >
+                    <Printer className="w-4 h-4" /> Print
+                  </button>
+                </div>
               </div>
 
               <div className="text-center border-b-2 border-gray-900 pb-4 mb-6">
@@ -455,10 +784,37 @@ export default function LeavePage() {
                   &quot;{inspectedRequest.reason}&quot;
                 </div>
                 {inspectedRequest.attachmentUrl && (
-                  <div className="mt-2 print:hidden">
-                    <a href={inspectedRequest.attachmentUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded inline-flex items-center gap-1">
-                      <ExternalLink className="w-3 h-3" /> External Medical/Support Document Attached
-                    </a>
+                  <div className="mt-3 p-3.5 bg-slate-50 border border-indigo-200 rounded-xl print:hidden space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-indigo-900 flex items-center gap-1.5">
+                        <Paperclip className="w-4 h-4 text-indigo-600" />
+                        Supporting / Medical Document Attached:
+                      </span>
+                      <a 
+                        href={inspectedRequest.attachmentUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        download={inspectedRequest.attachmentName || "attached_document"}
+                        className="text-xs font-bold text-indigo-600 hover:text-indigo-800 underline flex items-center gap-1"
+                      >
+                        <Download className="w-3.5 h-3.5" /> Download / Open Attachment
+                      </a>
+                    </div>
+                    
+                    <div className="text-xs font-semibold text-gray-700 bg-white p-2 rounded-lg border border-gray-200 truncate flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-indigo-500 shrink-0" />
+                      <span className="truncate">{inspectedRequest.attachmentName || "Attached Document File / Link"}</span>
+                    </div>
+
+                    {inspectedRequest.attachmentUrl.startsWith("data:image/") && (
+                      <div className="mt-2 max-h-48 overflow-hidden rounded-lg border border-gray-200 bg-white p-1">
+                        <img 
+                          src={inspectedRequest.attachmentUrl} 
+                          alt="Attached Supporting Document" 
+                          className="max-h-44 w-auto object-contain mx-auto rounded"
+                        />
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
