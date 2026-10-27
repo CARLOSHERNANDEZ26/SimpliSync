@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import Navbar from "@/components/Navbar";
 import { collection, query, orderBy, onSnapshot, limit, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/hooks/useAuth";
@@ -74,8 +73,6 @@ export default function AuditLogsPage() {
   return (
     <ProtectedRoute>
       <main className="min-h-screen w-full relative overflow-x-hidden pt-[57px] lg:pt-0 lg:pl-[260px] bg-slate-50 dark:bg-[#0a0a0a]">
-        <Navbar />
-        
         <div className="relative z-10 w-full px-4 sm:px-8 lg:px-10 py-6 sm:py-10">
           
           <div className="mb-8">

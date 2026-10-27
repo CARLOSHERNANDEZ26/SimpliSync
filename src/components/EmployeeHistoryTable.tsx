@@ -128,7 +128,7 @@ export default function EmployeeHistoryTable() {
   if (isLoading) return <div className="text-center p-8 text-teal-600 animate-pulse font-medium">Syncing your records...</div>;
 
   return (
-    <div className="w-full mt-8 bg-white dark:bg-white/5 backdrop-blur-md rounded-2xl shadow-sm border border-gray-200 dark:border-white/10 overflow-hidden transition-all">
+    <div className="w-full bg-white dark:bg-[#1a1a1a] rounded-3xl shadow-xl border border-gray-200 dark:border-white/10 overflow-hidden transition-all flex flex-col justify-between h-full min-h-[520px]">
       <div className="px-6 py-4 border-b border-gray-200 dark:border-white/10 flex justify-between items-center flex-wrap gap-4">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">My Attendance Logs</h3>
 

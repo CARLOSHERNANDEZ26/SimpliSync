@@ -2,11 +2,10 @@
 
 import { useState, useEffect } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import Navbar from "@/components/Navbar";
 import { collection, query, where, onSnapshot, addDoc, updateDoc, doc, serverTimestamp, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/hooks/useAuth";
-import { Calendar as CalendarIcon, Clock, CheckCircle, XCircle, ExternalLink, Info, MessageSquare, X, Printer, ArrowLeft, Edit2, Eye, Download, Paperclip, Upload, FileText, Trash2 } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, CheckCircle, XCircle, ExternalLink, Info, MessageSquare, X, Printer, ArrowLeft, Edit2, Eye, Download, Paperclip, Upload, FileText, Trash2, CalendarCheck } from "lucide-react";
 import toast from "react-hot-toast";
 import jsPDF from "jspdf";
 
@@ -465,8 +464,6 @@ export default function LeavePage() {
   return (
     <ProtectedRoute>
       <main className="min-h-screen w-full relative overflow-hidden pt-[57px] lg:pt-0 lg:pl-[260px] bg-slate-50 dark:bg-[#0a0a0a] print:bg-white print:p-0">
-        <div className="print:hidden"><Navbar /></div>
-        
         <div className="relative z-10 w-full px-4 sm:px-8 lg:px-10 py-6 sm:py-10 print:p-0">
           
           <div className="mb-10 print:hidden">
@@ -476,7 +473,7 @@ export default function LeavePage() {
             </h1>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 print:hidden">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch print:hidden">
             <div className="lg:col-span-1 space-y-8">
               
               {!isAdmin && (
@@ -607,60 +604,79 @@ export default function LeavePage() {
               )}
 
               {isAdmin && (
-                 <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl">
-                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Pending Approval</h3>
-                    <div className="space-y-4">
-                      {pendingRequests.map(req => (
-                        <div key={req.id} className="p-4 rounded-2xl bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/5 space-y-3 relative overflow-hidden">
-                          <div className="absolute top-0 left-0 w-1 h-full bg-amber-400"></div>
-                          <div className="pl-2">
-                            <div className="font-bold text-gray-900 dark:text-white">{req.userName}</div>
-                            <div className={`text-[10px] font-bold uppercase ${req.type === 'lwop' ? 'text-amber-600 dark:text-amber-400' : 'text-teal-600 dark:text-teal-400'}`}>
-                              {req.type} • {req.startDate} to {req.endDate}
-                            </div>
-                            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">&quot;{req.reason}&quot;</p>
-                            
-                            {req.attachmentUrl && (
-                              <div className="mt-2">
-                                <a 
-                                  href={req.attachmentUrl} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer" 
-                                  download={req.attachmentName || "attached_document"} 
-                                  className="inline-flex items-center gap-1.5 text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300 font-bold bg-indigo-50 dark:bg-indigo-500/10 px-2.5 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-500/20 w-fit transition-colors shadow-sm"
-                                >
-                                  <Paperclip className="w-3.5 h-3.5" /> 
-                                  <span>{req.attachmentName ? `Attached: ${req.attachmentName}` : "View Attached Document"}</span>
-                                  <ExternalLink className="w-3 h-3 ml-0.5 opacity-70" />
-                                </a>
+                 <div className="bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl h-full min-h-[520px] flex flex-col justify-between">
+                    <div>
+                      <div className="flex justify-between items-center mb-6">
+                        <h3 className="text-xl font-bold text-gray-900 dark:text-white">Pending Approval</h3>
+                        <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-teal-50 text-teal-700 dark:bg-teal-500/15 dark:text-teal-400">
+                          {pendingRequests.length} pending
+                        </span>
+                      </div>
+                      <div className="space-y-4 max-h-[550px] overflow-y-auto pr-1 custom-scrollbar">
+                        {pendingRequests.map(req => (
+                          <div key={req.id} className="p-4 rounded-2xl bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/5 space-y-3">
+                            <div>
+                              <div className="font-bold text-gray-900 dark:text-white">{req.userName}</div>
+                              <div className={`text-[10px] font-bold uppercase ${req.type === 'lwop' ? 'text-amber-600 dark:text-amber-400' : 'text-teal-600 dark:text-teal-400'}`}>
+                                {req.type} • {req.startDate} to {req.endDate}
                               </div>
-                            )}
-                          </div>
+                              <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">&quot;{req.reason}&quot;</p>
+                              
+                              {req.attachmentUrl && (
+                                <div className="mt-2">
+                                  <a 
+                                    href={req.attachmentUrl} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer" 
+                                    download={req.attachmentName || "attached_document"} 
+                                    className="inline-flex items-center gap-1.5 text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300 font-bold bg-indigo-50 dark:bg-indigo-500/10 px-2.5 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-500/20 w-fit transition-colors shadow-sm"
+                                  >
+                                    <Paperclip className="w-3.5 h-3.5" /> 
+                                    <span>{req.attachmentName ? `Attached: ${req.attachmentName}` : "View Attached Document"}</span>
+                                    <ExternalLink className="w-3 h-3 ml-0.5 opacity-70" />
+                                  </a>
+                                </div>
+                              )}
+                            </div>
 
-                          {/* Added a "View Form" button */}
-                          <div className="flex gap-2 pt-2">
-                            <button onClick={() => setInspectedRequest(req)} className="flex-[0.5] py-2 bg-slate-200 hover:bg-slate-300 dark:bg-white/5 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-bold active:scale-95 transition-all flex items-center justify-center gap-1">
-                              <Eye className="w-4 h-4" /> 
-                            </button>
-                            <button onClick={() => handleUpdateStatus(req.id, "approved", req)} className="flex-1 py-2 bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-500/20 dark:hover:bg-emerald-500/30 text-emerald-700 dark:text-emerald-400 rounded-lg text-xs font-bold active:scale-95 transition-all">
-                              Approve
-                            </button>
-                            <button onClick={() => setRequestToDecline(req)} className="flex-1 py-2 bg-rose-100 hover:bg-rose-200 dark:bg-rose-500/20 dark:hover:bg-rose-500/30 text-rose-700 dark:text-rose-400 rounded-lg text-xs font-bold active:scale-95 transition-all">
-                              Decline
-                            </button>
+                            <div className="flex gap-2 pt-2">
+                              <button onClick={() => setInspectedRequest(req)} className="flex-[0.5] py-2 bg-slate-200 hover:bg-slate-300 dark:bg-white/5 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-bold active:scale-95 transition-all flex items-center justify-center gap-1 cursor-pointer">
+                                <Eye className="w-4 h-4" /> 
+                              </button>
+                              <button onClick={() => handleUpdateStatus(req.id, "approved", req)} className="flex-1 py-2 bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-500/20 dark:hover:bg-emerald-500/30 text-emerald-700 dark:text-emerald-400 rounded-lg text-xs font-bold active:scale-95 transition-all cursor-pointer">
+                                Approve
+                              </button>
+                              <button onClick={() => setRequestToDecline(req)} className="flex-1 py-2 bg-rose-100 hover:bg-rose-200 dark:bg-rose-500/20 dark:hover:bg-rose-500/30 text-rose-700 dark:text-rose-400 rounded-lg text-xs font-bold active:scale-95 transition-all cursor-pointer">
+                                Decline
+                              </button>
+                            </div>
                           </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {pendingRequests.length === 0 && (
+                      <div className="flex-1 flex flex-col items-center justify-center py-12 text-center">
+                        <div className="w-14 h-14 rounded-2xl bg-teal-50 dark:bg-teal-500/10 flex items-center justify-center text-teal-600 dark:text-teal-400 mb-3 border border-teal-100/80 dark:border-teal-500/20 shadow-xs">
+                          <CalendarCheck className="w-7 h-7" />
                         </div>
-                      ))}
-                      {pendingRequests.length === 0 && (
-                        <div className="text-center py-6 text-sm text-gray-500 italic">No pending requests found.</div>
-                      )}
+                        <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-1">No Pending Requests</h4>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 max-w-[220px]">
+                          All employee leave requests have been reviewed and resolved.
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="mt-4 pt-4 border-t border-gray-100 dark:border-white/5 text-xs text-gray-500 dark:text-gray-400 flex justify-between items-center">
+                      <span>SimpliSync Leave Desk</span>
+                      <span className="font-semibold">{pendingRequests.length} to process</span>
                     </div>
                  </div>
               )}
             </div>
 
-            <div className="lg:col-span-2">
-               <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl overflow-hidden">
+            <div className="lg:col-span-2 flex flex-col h-full">
+               <div className="bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl overflow-hidden h-full min-h-[520px] flex flex-col justify-between">
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-200 dark:border-white/5">
@@ -705,6 +721,10 @@ export default function LeavePage() {
                     )}
                   </tbody>
                 </table>
+                <div className="mt-4 pt-4 border-t border-gray-100 dark:border-white/5 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                  <span>Total leave records: {(isAdmin ? pastRequests : requests).length}</span>
+                  <span className="font-medium text-teal-600 dark:text-teal-400">Archived Records</span>
+                </div>
                </div>
             </div>
 

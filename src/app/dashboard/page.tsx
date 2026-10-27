@@ -4,7 +4,6 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAuth } from "@/hooks/useAuth";
 import { collection, query, where, orderBy, onSnapshot, limit } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import Navbar from "@/components/Navbar";
 import ClockInButton from "@/components/ClockInButton";
 import ClockOutButton from "@/components/ClockOutButton";
 import AdminLogsTable from "@/components/AdminLogsTable";
@@ -105,11 +104,9 @@ export default function DashboardPage() {
   return (
     <ProtectedRoute>
       <main className="min-h-screen w-full relative overflow-x-hidden pt-[57px] lg:pt-0 lg:pl-[260px] bg-slate-50 dark:bg-[#0a0a0a] flex flex-col">
-        <div className="absolute top-0 left-0 w-[40rem] h-[40rem] bg-teal-400/20 dark:bg-teal-600/10 rounded-full blur-[150px] pointer-events-none"></div>
+        <div className="absolute top-0 right-0 w-[40rem] h-[40rem] bg-teal-400/10 dark:bg-teal-600/10 rounded-full blur-[150px] pointer-events-none"></div>
         <div className="absolute bottom-0 right-0 w-[30rem] h-[30rem] bg-emerald-400/20 dark:bg-emerald-600/10 rounded-full blur-[120px] pointer-events-none"></div>
 
-        <Navbar />
-        
         <div className="relative z-10 w-full flex-grow flex flex-col px-4 sm:px-8 lg:px-10 py-6 pb-24 lg:pb-8">
           
           <div className="mb-8">
@@ -160,53 +157,109 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {/* Lower Section Split */}
-              <div className="flex flex-col lg:flex-row gap-8 items-start w-full">
+              {/* Lower Section Split: Equal height containers */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch w-full">
                 
-                {/* Left Column: Action Required Widget */}
-                <div className="w-full lg:w-[320px] xl:w-[380px] shrink-0 flex flex-col gap-6 sticky top-[90px]">
-                  <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl w-full">
-                    <div className="flex justify-between items-center mb-6">
-                      <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2"><AlertCircle className="w-4 h-4 text-amber-500" /> Action Required</h3>
-                      <Link href="/leave" className="text-xs font-bold text-teal-600 dark:text-teal-400 hover:text-teal-700 transition-colors flex items-center gap-1">View All <ArrowRight className="w-3 h-3" /></Link>
-                    </div>
-                    <div className="flex flex-col gap-3">
-                      {pendingLeaves.length > 0 ? (
-                        pendingLeaves.slice(0, 4).map(leave => (
-                          <div key={leave.id} className="p-3.5 rounded-2xl bg-slate-50 dark:bg-black/20 border border-gray-100 dark:border-white/5 flex justify-between items-center group hover:border-teal-300 dark:hover:border-teal-500/30 transition-colors">
-                            <div className="min-w-0 flex-1 pr-2">
-                              <div className="font-bold text-sm text-gray-900 dark:text-white truncate">{leave.userName}</div>
-                              <div className="text-[10px] font-semibold mt-0.5 uppercase tracking-wide text-teal-600 dark:text-teal-400">{leave.type} Leave</div>
-                            </div>
-                            <Link href="/leave" className="px-3 py-1.5 bg-white dark:bg-white/10 border border-gray-200 dark:border-white/10 text-[10px] font-bold text-gray-700 dark:text-gray-300 rounded-lg shadow-sm group-hover:bg-teal-600 group-hover:text-white group-hover:border-teal-600 transition-all uppercase tracking-wider shrink-0">Review</Link>
+                {/* Left Column: Action Required Widget (Equal height to Attendance Logs) */}
+                <div className="lg:col-span-4 xl:col-span-4 flex flex-col h-full">
+                  <div className="bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl w-full h-full min-h-[520px] flex flex-col justify-between">
+                    <div>
+                      <div className="flex justify-between items-center mb-6">
+                        <div className="flex items-center gap-2">
+                          <div className="p-2 bg-amber-500/10 text-amber-500 rounded-xl">
+                            <AlertCircle className="w-5 h-5" />
                           </div>
-                        ))
-                      ) : (
-                        <div className="py-8 text-center bg-slate-50 dark:bg-white/[0.02] rounded-2xl border border-dashed border-gray-200 dark:border-white/10">
-                          <CalendarCheck className="w-6 h-6 text-teal-500 mb-2 opacity-50 mx-auto" />
-                          <p className="text-xs font-bold text-gray-600 dark:text-gray-400">All caught up!</p>
+                          <div>
+                            <h3 className="text-base font-bold text-gray-900 dark:text-white">Action Required</h3>
+                            <p className="text-[11px] font-semibold text-gray-500 dark:text-gray-400">
+                              {pendingLeaves.length} pending review{pendingLeaves.length === 1 ? "" : "s"}
+                            </p>
+                          </div>
+                        </div>
+                        <Link href="/leave" className="text-xs font-bold text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 transition-colors flex items-center gap-1">
+                          View All <ArrowRight className="w-3.5 h-3.5" />
+                        </Link>
+                      </div>
+
+                      {/* List of pending leaves (up to 5 items) */}
+                      {pendingLeaves.length > 0 && (
+                        <div className="flex flex-col gap-3">
+                          {pendingLeaves.slice(0, 5).map(leave => (
+                            <div key={leave.id} className="p-3.5 rounded-2xl bg-slate-50 dark:bg-black/20 border border-gray-100 dark:border-white/5 flex justify-between items-center group hover:border-teal-300 dark:hover:border-teal-500/30 transition-all">
+                              <div className="min-w-0 flex-1 pr-3">
+                                <div className="font-bold text-sm text-gray-900 dark:text-white truncate">{leave.userName}</div>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-teal-50 text-teal-700 dark:bg-teal-500/15 dark:text-teal-400">
+                                    {leave.type} Leave
+                                  </span>
+                                  {leave.startDate && (
+                                    <span className="text-[11px] text-gray-500 dark:text-gray-400 truncate">
+                                      {leave.startDate}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <Link 
+                                href="/leave" 
+                                className="px-3.5 py-1.5 bg-white dark:bg-white/10 border border-gray-200 dark:border-white/10 text-[11px] font-bold text-gray-700 dark:text-gray-300 rounded-xl shadow-xs group-hover:bg-teal-600 group-hover:text-white group-hover:border-teal-600 transition-all uppercase tracking-wider shrink-0"
+                              >
+                                Review
+                              </Link>
+                            </div>
+                          ))}
                         </div>
                       )}
                     </div>
+
+                    {/* Symmetrical Centered Empty State when no data */}
+                    {pendingLeaves.length === 0 && (
+                      <div className="flex-1 flex flex-col items-center justify-center py-12 text-center">
+                        <div className="w-14 h-14 rounded-2xl bg-teal-50 dark:bg-teal-500/10 flex items-center justify-center text-teal-600 dark:text-teal-400 mb-3 border border-teal-100/80 dark:border-teal-500/20 shadow-xs">
+                          <CalendarCheck className="w-7 h-7" />
+                        </div>
+                        <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-1">All Caught Up!</h4>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 max-w-[220px]">
+                          No employee leave requests or approval items currently require your action.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Footer */}
+                    <div className="mt-4 pt-4 border-t border-gray-100 dark:border-white/5 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                      <span className="font-medium">
+                        {pendingLeaves.length > 5 ? `Showing 5 of ${pendingLeaves.length} requests` : `${pendingLeaves.length} pending total`}
+                      </span>
+                      <Link href="/leave" className="font-bold text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1">
+                        Open Leave Desk <ArrowRight className="w-3 h-3" />
+                      </Link>
+                    </div>
+
                   </div>
                 </div>
 
-                {/* Right Column: Paginated Admin Logs Table */}
-                <div className="w-full lg:flex-1 min-w-0">
+                {/* Right Column: Paginated Admin Logs Table (Equal height) */}
+                <div className="lg:col-span-8 xl:col-span-8 flex flex-col h-full min-w-0">
                   <AdminLogsTable />
                 </div>
               </div>
             </div>
           ) : (
-            <div className="flex flex-col lg:flex-row gap-8 mb-8 w-full">
-              <div className="w-full lg:w-[320px] xl:w-[380px] shrink-0 flex flex-col space-y-6">
-                <div className="p-5 sm:p-8 rounded-3xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 shadow-xl">
-                  <ClockInButton />
-                  <div className="my-6 h-px bg-gray-200 dark:bg-white/10"></div>
-                  <ClockOutButton />
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch mb-8 w-full">
+              <div className="lg:col-span-4 xl:col-span-4 flex flex-col h-full">
+                <div className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-white/10 shadow-xl h-full flex flex-col justify-between">
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Work Attendance</h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-6">Record your daily shift time-in and time-out.</p>
+                    <ClockInButton />
+                    <div className="my-6 h-px bg-gray-200 dark:bg-white/10"></div>
+                    <ClockOutButton />
+                  </div>
+                  <div className="pt-4 text-center text-xs text-gray-400 font-medium">
+                    SimpliSync Geo-Verified Timekeeping
+                  </div>
                 </div>
               </div>
-              <div className="w-full lg:flex-1 min-w-0">
+              <div className="lg:col-span-8 xl:col-span-8 flex flex-col h-full min-w-0">
                 <EmployeeHistoryTable />
               </div>
             </div>

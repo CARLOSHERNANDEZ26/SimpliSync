@@ -1,7 +1,6 @@
 "use client";
 
 import ProtectedRoute from "@/components/ProtectedRoute";
-import Navbar from "@/components/Navbar";
 import PreferencesSettings from "@/components/PreferencesSettings";
 import AdminSettings from "@/components/AdminSettings";
 import { useAuth } from "@/hooks/useAuth";
@@ -84,11 +83,9 @@ export default function SettingsPage() {
 
   return (
     <ProtectedRoute>
-      <main className="min-h-screen w-full bg-slate-50 dark:bg-[#0a0a0a] text-gray-900 dark:text-white font-sans relative overflow-y-auto overflow-x-hidden transition-colors duration-500 pt-[57px] lg:pt-0 lg:pl-[260px] pb-20">
-        <div className="absolute top-0 left-0 w-[40rem] h-[40rem] bg-teal-400/20 dark:bg-teal-600/10 rounded-full blur-[150px] pointer-events-none"></div>
+      <main className="min-h-screen w-full bg-slate-50 dark:bg-[#0a0a0a] text-gray-900 dark:text-white font-sans relative overflow-y-auto overflow-x-hidden pt-[57px] lg:pt-0 lg:pl-[260px] pb-20">
+        <div className="absolute top-0 right-0 w-[40rem] h-[40rem] bg-teal-400/10 dark:bg-teal-600/10 rounded-full blur-[150px] pointer-events-none"></div>
         <div className="absolute bottom-0 right-0 w-[30rem] h-[30rem] bg-emerald-400/20 dark:bg-emerald-600/10 rounded-full blur-[120px] pointer-events-none"></div>
-
-        <Navbar />
 
         <div className="relative z-10 w-full px-4 sm:px-8 lg:px-10 py-6 sm:py-10">
           <div className="flex flex-col space-y-8 animate-fade-in-up">

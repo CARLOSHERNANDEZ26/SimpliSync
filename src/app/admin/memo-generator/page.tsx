@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import Navbar from "@/components/Navbar";
 import { useAuth } from "@/hooks/useAuth";
 import { Bot, FileText, Send, Sparkles, Trash2, List, AlertTriangle, Search, Eye, X, Database, Tag, Edit, ChevronLeft, ChevronRight } from "lucide-react";
 import toast from "react-hot-toast";
@@ -313,8 +312,7 @@ export default function MemoGeneratorPage() {
   return (
     <ProtectedRoute>
       <main className="min-h-screen w-full relative overflow-hidden pt-[57px] lg:pt-0 lg:pl-[260px] bg-slate-50 dark:bg-[#0a0a0a]">
-        <div className="absolute top-0 left-0 w-[40rem] h-[40rem] bg-emerald-400/20 dark:bg-emerald-600/10 rounded-full blur-[150px] pointer-events-none"></div>
-        <Navbar />
+        <div className="absolute top-0 right-0 w-[40rem] h-[40rem] bg-emerald-400/10 dark:bg-emerald-600/10 rounded-full blur-[150px] pointer-events-none"></div>
         
         <div className="relative z-10 w-full px-4 sm:px-8 lg:px-10 py-6 sm:py-10">
           
@@ -339,26 +337,48 @@ export default function MemoGeneratorPage() {
           </div>
           
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
             
-            <div className="lg:col-span-4 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl h-fit">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-emerald-500" />
-                AI Generation
-              </h3>
-              <form onSubmit={handleGenerate} className="space-y-4">
-                <textarea 
-                  required value={prompt} onChange={(e) => setPrompt(e.target.value)} 
-                  placeholder="e.g., Draft a memo reminding employees about the 15-minute lateness penalty..." 
-                  className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white h-40 resize-none focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                ></textarea>
-                <button type="submit" disabled={isGenerating} className="w-full bg-emerald-600 hover:bg-emerald-500 py-3 rounded-xl font-bold text-white transition-all shadow-lg active:scale-95 disabled:opacity-70 flex justify-center items-center gap-2 text-sm cursor-pointer">
-                  {isGenerating ? "Generating Draft..." : <><Send className="w-4 h-4" /> Generate with AI</>}
-                </button>
-              </form>
+            <div className="lg:col-span-4 bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl flex flex-col justify-between min-h-[600px] h-full">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-emerald-500" />
+                  AI Generation
+                </h3>
+                <form onSubmit={handleGenerate} className="space-y-4">
+                  <textarea 
+                    required value={prompt} onChange={(e) => setPrompt(e.target.value)} 
+                    placeholder="e.g., Draft a memo reminding employees about the 15-minute lateness penalty..." 
+                    className="w-full bg-slate-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white h-40 resize-none focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  ></textarea>
+                  <button type="submit" disabled={isGenerating} className="w-full bg-emerald-600 hover:bg-emerald-500 py-3 rounded-xl font-bold text-white transition-all shadow-lg active:scale-95 disabled:opacity-70 flex justify-center items-center gap-2 text-sm cursor-pointer">
+                    {isGenerating ? "Generating Draft..." : <><Send className="w-4 h-4" /> Generate with AI</>}
+                  </button>
+                </form>
+              </div>
+
+              <div className="mt-6 pt-5 border-t border-gray-100 dark:border-white/5">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Quick Prompt Starters</p>
+                <div className="space-y-2">
+                  <button 
+                    type="button" 
+                    onClick={() => setPrompt("Draft a formal policy on employee work hours, grace periods, and late arrival sanctions compliant with Philippine DOLE standards.")}
+                    className="w-full text-left p-2.5 rounded-xl bg-slate-50 dark:bg-black/20 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 border border-gray-200 dark:border-white/5 text-xs text-gray-700 dark:text-gray-300 transition-colors cursor-pointer"
+                  >
+                    ⏰ Attendance & Grace Period Policy
+                  </button>
+                  <button 
+                    type="button" 
+                    onClick={() => setPrompt("Generate an official memorandum announcing the 13th month pay disbursement schedule and statutory computation formula.")}
+                    className="w-full text-left p-2.5 rounded-xl bg-slate-50 dark:bg-black/20 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 border border-gray-200 dark:border-white/5 text-xs text-gray-700 dark:text-gray-300 transition-colors cursor-pointer"
+                  >
+                    💰 13th-Month Pay Computation Protocol
+                  </button>
+                </div>
+              </div>
             </div>
 
-            <div className="lg:col-span-8 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl flex flex-col min-h-[600px] relative">
+            <div className="lg:col-span-8 bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl flex flex-col min-h-[600px] relative h-full">
               
               <div className="flex flex-wrap items-center gap-4 mb-6 border-b border-gray-200 dark:border-white/10 pb-2">
                 <button 

@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import Navbar from "@/components/Navbar";
 import { useAuth } from "@/hooks/useAuth";
 import { collection, query, where, onSnapshot, addDoc, serverTimestamp, orderBy, doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -194,7 +193,6 @@ export default function DisciplinaryPage() {
     <ProtectedRoute>
       <main className="min-h-screen w-full relative overflow-x-hidden pt-[57px] lg:pt-0 lg:pl-[260px] bg-slate-50 dark:bg-[#0a0a0a]">
         <div className="absolute top-0 right-0 w-[40rem] h-[40rem] bg-emerald-500/10 rounded-full blur-[150px] pointer-events-none"></div>
-        <Navbar />
         
         <div className="relative z-10 w-full px-4 sm:px-8 lg:px-10 py-6 sm:py-10">
           

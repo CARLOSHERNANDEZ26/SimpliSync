@@ -12,23 +12,13 @@ import {
   ChevronRight
 } from "lucide-react";
 
-export default function Navbar() {
-  const { user } = useAuth();
-  const pathname = usePathname();
-  const isAdmin = user?.email === "admin@simplisync.local";
-  const [mounted, setMounted] = useState(false);
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
+interface SidebarContentProps {
+  pathname: string;
+  user: any;
+  isAdmin: boolean;
+}
 
-  useEffect(() => {
-    const frame = requestAnimationFrame(() => setMounted(true));
-    return () => cancelAnimationFrame(frame);
-  }, []);
-
-  // Close mobile menu on route change
-  useEffect(() => {
-    setIsMobileOpen(false);
-  }, [pathname]);
-
+function SidebarContent({ pathname, user, isAdmin }: SidebarContentProps) {
   const isActive = (path: string) =>
     path === "/dashboard" ? pathname === path : pathname.startsWith(path);
 
@@ -39,11 +29,7 @@ export default function Navbar() {
         : "text-gray-600 hover:bg-gray-100/80 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-white/8 dark:hover:text-gray-100"
     }`;
 
-  const adminLinkClass = linkClass;
-
-  if (!mounted) return null;
-
-  const SidebarContent = () => (
+  return (
     <div className="flex flex-col h-full">
       {/* Logo */}
       <div className="px-4 pt-6 pb-5 border-b border-gray-200 dark:border-white/8 flex items-center gap-3 shrink-0">
@@ -67,7 +53,6 @@ export default function Navbar() {
 
       {/* Nav Links — scrollable */}
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-6 hide-scrollbar">
-
         {/* General Section */}
         <div>
           <p className="px-3 mb-2 text-[10px] font-bold text-gray-500 uppercase tracking-widest">General</p>
@@ -118,32 +103,32 @@ export default function Navbar() {
           <div>
             <p className="px-3 mb-2 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Administration</p>
             <div className="space-y-1">
-              <Link href="/admin/dashboard" className={adminLinkClass("/admin/dashboard")} aria-label="Command Center">
+              <Link href="/admin/dashboard" className={linkClass("/admin/dashboard")} aria-label="Command Center">
                 <Activity className="w-4 h-4 shrink-0 transition-transform duration-200 group-hover:scale-110" />
                 <span>Command Center</span>
                 {isActive("/admin/dashboard") && <ChevronRight className="w-3.5 h-3.5 ml-auto text-teal-600/70 dark:text-teal-400/60" />}
               </Link>
-              <Link href="/admin/payroll" className={adminLinkClass("/admin/payroll")} aria-label="Payroll">
+              <Link href="/admin/payroll" className={linkClass("/admin/payroll")} aria-label="Payroll">
                 <Banknote className="w-4 h-4 shrink-0 transition-transform duration-200 group-hover:scale-110" />
                 <span>Payroll & Compensation</span>
                 {isActive("/admin/payroll") && <ChevronRight className="w-3.5 h-3.5 ml-auto text-teal-600/70 dark:text-teal-400/60" />}
               </Link>
-              <Link href="/admin/benefits" className={adminLinkClass("/admin/benefits")} aria-label="Benefits">
+              <Link href="/admin/benefits" className={linkClass("/admin/benefits")} aria-label="Benefits">
                 <Gift className="w-4 h-4 shrink-0 transition-transform duration-200 group-hover:scale-110" />
                 <span>Benefits Administration</span>
                 {isActive("/admin/benefits") && <ChevronRight className="w-3.5 h-3.5 ml-auto text-teal-600/70 dark:text-teal-400/60" />}
               </Link>
-              <Link href="/admin/disciplinary" className={adminLinkClass("/admin/disciplinary")} aria-label="Disciplinary">
+              <Link href="/admin/disciplinary" className={linkClass("/admin/disciplinary")} aria-label="Disciplinary">
                 <Gavel className="w-4 h-4 shrink-0 transition-transform duration-200 group-hover:scale-110" />
                 <span>Disciplinary Advisor</span>
                 {isActive("/admin/disciplinary") && <ChevronRight className="w-3.5 h-3.5 ml-auto text-teal-600/70 dark:text-teal-400/60" />}
               </Link>
-              <Link href="/admin/performance" className={adminLinkClass("/admin/performance")} aria-label="Performance">
+              <Link href="/admin/performance" className={linkClass("/admin/performance")} aria-label="Performance">
                 <TrendingUp className="w-4 h-4 shrink-0 transition-transform duration-200 group-hover:scale-110" />
                 <span>Performance Management</span>
                 {isActive("/admin/performance") && <ChevronRight className="w-3.5 h-3.5 ml-auto text-teal-600/70 dark:text-teal-400/60" />}
               </Link>
-              <Link href="/admin/memo-generator" className={adminLinkClass("/admin/memo-generator")} aria-label="AI Policy Lab">
+              <Link href="/admin/memo-generator" className={linkClass("/admin/memo-generator")} aria-label="AI Policy Lab">
                 <Sparkles className="w-4 h-4 shrink-0 transition-transform duration-200 group-hover:scale-110" />
                 <span>AI Policy Lab</span>
                 {isActive("/admin/memo-generator") && <ChevronRight className="w-3.5 h-3.5 ml-auto text-teal-600/70 dark:text-teal-400/60" />}
@@ -176,16 +161,33 @@ export default function Navbar() {
       </div>
     </div>
   );
+}
+
+export default function Navbar() {
+  const { user } = useAuth();
+  const pathname = usePathname();
+  const isAdmin = user?.email === "admin@simplisync.local";
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
+
+  // Close mobile menu on route change
+  useEffect(() => {
+    setIsMobileOpen(false);
+  }, [pathname]);
+
+  // Do not render on public landing or auth pages, or if not authenticated
+  if (!pathname || pathname === "/" || pathname === "/login" || pathname === "/register" || !user) {
+    return null;
+  }
 
   return (
     <>
-      {/* ─── DESKTOP SIDEBAR ─── */}
-      <aside className="hidden lg:flex fixed top-0 left-0 z-50 h-screen w-[260px] flex-col bg-white/95 dark:bg-[#0b0f19]/95 backdrop-blur-md border-r border-gray-200 dark:border-white/8 transition-colors duration-300">
-        <SidebarContent />
+      {/* ─── DESKTOP SIDEBAR (print:hidden) ─── */}
+      <aside className="print:hidden hidden lg:flex fixed top-0 left-0 z-50 h-screen w-[260px] flex-col bg-white dark:bg-[#0b0f19] border-r border-gray-200 dark:border-white/8">
+        <SidebarContent pathname={pathname} user={user} isAdmin={isAdmin} />
       </aside>
 
-      {/* ─── MOBILE: Top bar + slide-in drawer ─── */}
-      <div className="lg:hidden fixed top-0 left-0 z-50 w-full flex items-center justify-between px-4 py-3 bg-white/95 dark:bg-[#0b0f19]/95 backdrop-blur-md border-b border-gray-200 dark:border-white/8 transition-colors duration-300">
+      {/* ─── MOBILE: Top bar + slide-in drawer (print:hidden) ─── */}
+      <div className="print:hidden lg:hidden fixed top-0 left-0 z-50 w-full flex items-center justify-between px-4 py-3 bg-white dark:bg-[#0b0f19] border-b border-gray-200 dark:border-white/8">
         <div className="flex items-center gap-2.5">
           <Link href="/dashboard" className="relative w-8 h-8 flex items-center justify-center">
             <Image src="/simplifvlogo.png" alt="SimpliSync Logo" fill priority className="object-contain" sizes="32px" />
@@ -208,18 +210,18 @@ export default function Navbar() {
       {/* Mobile overlay */}
       {isMobileOpen && (
         <div
-          className="lg:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+          className="print:hidden lg:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
           onClick={() => setIsMobileOpen(false)}
         />
       )}
 
       {/* Mobile drawer */}
       <aside
-        className={`lg:hidden fixed top-0 left-0 z-50 h-screen w-[260px] flex flex-col bg-white dark:bg-[#0b0f19] border-r border-gray-200 dark:border-white/8 transition-transform duration-300 ease-in-out ${
+        className={`print:hidden lg:hidden fixed top-0 left-0 z-50 h-screen w-[260px] flex flex-col bg-white dark:bg-[#0b0f19] border-r border-gray-200 dark:border-white/8 transition-transform duration-300 ease-in-out ${
           isMobileOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <SidebarContent />
+        <SidebarContent pathname={pathname} user={user} isAdmin={isAdmin} />
       </aside>
     </>
   );

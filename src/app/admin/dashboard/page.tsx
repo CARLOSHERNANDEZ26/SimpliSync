@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import Navbar from "@/components/Navbar";
 import {
   collection, query, onSnapshot, orderBy, limit, getDocs, where, startAfter,
   QueryDocumentSnapshot, DocumentData, QueryConstraint
@@ -202,8 +201,6 @@ export default function AdminCommandCenter() {
   return (
     <ProtectedRoute>
       <main className="min-h-screen w-full pt-[57px] lg:pt-0 lg:pl-[260px] bg-slate-50 dark:bg-[#0a0a0a]">
-        <Navbar />
-
         <div className="w-full px-4 sm:px-8 lg:px-10 py-6 sm:py-10">
           <div className="mb-10">
             <h1 className="text-4xl font-bold text-gray-900 dark:text-white flex items-center gap-3">

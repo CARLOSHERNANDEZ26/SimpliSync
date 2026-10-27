@@ -15,6 +15,8 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+import Navbar from "@/components/Navbar";
+
 export const metadata: Metadata = {
   title: {
     template: 'SimpliSync | %s',
@@ -59,6 +61,7 @@ export default function RootLayout({
                 },
               }} 
             />
+            <Navbar />
             {children}
           </AuthProvider>
         </ThemeProvider>

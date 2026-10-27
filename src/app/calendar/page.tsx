@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import Navbar from "@/components/Navbar";
 import { collection, query, orderBy, onSnapshot, addDoc, deleteDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/hooks/useAuth";
@@ -106,8 +105,6 @@ export default function CompanyCalendarPage() {
   return (
     <ProtectedRoute>
       <main className="min-h-screen w-full relative overflow-y-auto pt-[57px] lg:pt-0 lg:pl-[260px] bg-slate-50 dark:bg-[#0a0a0a] text-gray-900 dark:text-white">
-        <Navbar />
-
         <div className="relative z-10 w-full px-4 sm:px-8 lg:px-10 py-6 sm:py-10">
           <div className="mb-8">
             <h1 className="text-3xl font-black tracking-tight flex items-center gap-3">
@@ -117,7 +114,7 @@ export default function CompanyCalendarPage() {
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Configure workspace cycles, leaves, and calendar adjustments.</p>
           </div>
 
-          <div className={`grid grid-cols-1 ${isAdmin ? "lg:grid-cols-3 xl:grid-cols-4" : "w-full"} gap-8 items-start`}>
+          <div className={`grid grid-cols-1 ${isAdmin ? "lg:grid-cols-3 xl:grid-cols-4" : "w-full"} gap-8 items-stretch`}>
             
             <div className={`${isAdmin ? "lg:col-span-2 xl:col-span-3" : "w-full"} bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl backdrop-blur-md flex flex-col`}>
               <div className="flex justify-between items-center mb-6">
@@ -183,7 +180,7 @@ export default function CompanyCalendarPage() {
             </div>
 
             {isAdmin && (
-              <div className="bg-white dark:bg-[#151515] border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl flex flex-col sticky top-[90px]">
+              <div className="bg-white dark:bg-[#151515] border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl flex flex-col justify-between h-full min-h-[550px]">
                 <div className="mb-4 pb-3 border-b border-gray-100 dark:border-white/5">
                   <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
                     <Tag className="w-4 h-4 text-teal-500" /> Allocation Control

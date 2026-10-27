@@ -6,7 +6,7 @@ import { db } from "@/lib/firebase";
 import { adminForceClockOut } from "@/services/attendance";
 import toast from "react-hot-toast";
 import ConfirmModal from "@/components/ConfirmModal";
-import { Search, Calendar, Edit, X, Save, ShieldAlert, ChevronLeft, ChevronRight, Layers } from "lucide-react";
+import { Search, Calendar, Edit, X, Save, ShieldAlert, ChevronLeft, ChevronRight, Layers, Clock } from "lucide-react";
 
 interface AttendanceLog {
   id: string;
@@ -33,7 +33,7 @@ export default function AdminLogsTable() {
   });
 
   const [currentPage, setCurrentPage] = useState(1);
-  const rowsPerPage = 6;
+  const rowsPerPage = 5;
   const [isForceOutModalOpen, setIsForceOutModalOpen] = useState(false);
   const [selectedLog, setSelectedLog] = useState<AttendanceLog | null>(null);
   const [isForceOutLoading, setIsForceOutLoading] = useState(false);
@@ -207,9 +207,9 @@ export default function AdminLogsTable() {
   if (error) return <div className="text-center py-10 text-rose-500">{error}</div>;
 
   return (
-    <div className="w-full bg-white dark:bg-[#1a1a1a] rounded-3xl shadow-xl border border-gray-200 dark:border-white/10 overflow-hidden">
+    <div className="w-full h-full bg-white dark:bg-[#1a1a1a] rounded-3xl shadow-xl border border-gray-200 dark:border-white/10 overflow-hidden flex flex-col justify-between min-h-[520px]">
 
-      <div className="px-6 py-6 border-b border-gray-200 dark:border-white/10 flex flex-col xl:flex-row justify-between items-center gap-4">
+      <div className="px-6 py-6 border-b border-gray-200 dark:border-white/10 flex flex-col xl:flex-row justify-between items-center gap-4 shrink-0">
         <h3 className="text-xl font-bold text-gray-900 dark:text-white">Attendance Logs</h3>
 
         <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
@@ -248,7 +248,7 @@ export default function AdminLogsTable() {
         </div>
       </div>
 
-      <div className="overflow-x-auto custom-scrollbar">
+      <div className="overflow-x-auto custom-scrollbar flex-1 flex flex-col justify-between">
         <table className="w-full text-left text-sm text-gray-500 dark:text-gray-400">
           <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-white/5 dark:text-gray-300">
             <tr>
@@ -317,15 +317,24 @@ export default function AdminLogsTable() {
         </table>
 
         {filteredLogs.length === 0 && (
-          <div className="text-center py-16 text-gray-500 italic">No attendance records found for this cutoff window.</div>
+          <div className="flex-1 flex flex-col items-center justify-center py-20 text-center text-gray-400 dark:text-gray-500 italic">
+            <Clock className="w-8 h-8 text-gray-300 dark:text-gray-600 mb-2 opacity-50" />
+            <p className="text-sm">No attendance records found for this cutoff window.</p>
+          </div>
         )}
       </div>
 
-      {totalPages > 1 && (
-        <div className="px-6 py-4 border-t border-gray-100 dark:border-white/5 flex items-center justify-between bg-slate-50/50 dark:bg-white/[0.01]">
-          <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
-            Showing <span className="font-bold text-gray-800 dark:text-white">{indexOfFirstRow + 1}</span> to <span className="font-bold text-gray-800 dark:text-white">{Math.min(indexOfLastRow, filteredLogs.length)}</span> of <span className="font-bold text-gray-800 dark:text-white">{filteredLogs.length}</span> records
-          </p>
+      <div className="px-6 py-4 border-t border-gray-100 dark:border-white/5 flex items-center justify-between bg-slate-50/50 dark:bg-white/[0.01]">
+        <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
+          {filteredLogs.length > 0 ? (
+            <>
+              Showing <span className="font-bold text-gray-800 dark:text-white">{indexOfFirstRow + 1}</span> to <span className="font-bold text-gray-800 dark:text-white">{Math.min(indexOfLastRow, filteredLogs.length)}</span> of <span className="font-bold text-gray-800 dark:text-white">{filteredLogs.length}</span> records
+            </>
+          ) : (
+            <span>0 attendance records for cutoff</span>
+          )}
+        </p>
+        {totalPages > 1 && (
           <div className="flex items-center gap-2">
             <button
               onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
@@ -345,8 +354,8 @@ export default function AdminLogsTable() {
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       <ConfirmModal
         isOpen={isForceOutModalOpen}
