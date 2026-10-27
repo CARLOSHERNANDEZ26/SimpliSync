@@ -33,14 +33,8 @@ export default function DashboardPage() {
   const [exceptionReason, setExceptionReason] = useState("");
   const [isResolving, setIsResolving] = useState(false);
 
-  const getCategoryBadgeColor = (category?: string): string => {
-    switch(category) {
-      case "Attendance & Timekeeping": return "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400 border-blue-200 dark:border-blue-500/30";
-      case "Leaves & Absences": return "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 border-amber-200 dark:border-amber-500/30";
-      case "Payroll & Compensation": return "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30";
-      case "Code of Conduct & Security": return "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400 border-rose-200 dark:border-rose-500/30";
-      default: return "bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-gray-400 border-gray-200 dark:border-white/20";
-    }
+  const getCategoryBadgeColor = (_category?: string): string => {
+    return "bg-teal-50 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300 border-teal-200 dark:border-teal-500/30";
   };
 
   const handleResolveException = async (e: React.FormEvent) => {
@@ -116,61 +110,61 @@ export default function DashboardPage() {
 
         <Navbar />
         
-        <div className="relative z-10 w-full flex-grow flex flex-col max-w-7xl mx-auto px-4 sm:px-6 py-6 pb-24 lg:pb-8">
+        <div className="relative z-10 w-full flex-grow flex flex-col px-4 sm:px-8 lg:px-10 py-6 pb-24 lg:pb-8">
           
           <div className="mb-8">
             <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white shrink-0">
               Welcome back, {user?.displayName || (user?.email?.split('@')[0] ? user.email.split('@')[0].charAt(0).toUpperCase() + user.email.split('@')[0].slice(1) : "User")}
             </h2>
             <p className="text-gray-500 dark:text-gray-400 mt-2 text-sm sm:text-base">
-              {isAdmin ? "Here is what is happening across the company  today." : "Here is your workspace overview."}
+              {isAdmin ? "Here is what is happening across the company today." : "Here is your workspace overview."}
             </p>
           </div>
           
           {isAdmin ? (
             <div className="flex flex-col gap-8 mb-8 w-full">
               
-              {/*  3-Column Clean KPI Layout */}
+              {/* 3-Column Clean KPI Layout */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
                 <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 p-6 rounded-3xl shadow-lg hover:shadow-xl transition-all relative overflow-hidden group">
-                  <div className="absolute -right-6 -top-6 w-24 h-24 bg-blue-50 dark:bg-blue-500/10 rounded-full group-hover:scale-150 transition-transform duration-500 ease-out"></div>
+                  <div className="absolute -right-6 -top-6 w-24 h-24 bg-teal-50 dark:bg-teal-500/10 rounded-full group-hover:scale-150 transition-transform duration-500 ease-out"></div>
                   <div className="relative z-10 flex justify-between items-start">
                     <div>
                       <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Total Workforce</p>
                       <h3 className="text-3xl font-black text-gray-900 dark:text-white">{employees.length}</h3>
                     </div>
-                    <div className="p-3 bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-2xl"><Users className="w-5 h-5" /></div>
+                    <div className="p-3 bg-teal-50 dark:bg-teal-500/15 text-teal-600 dark:text-teal-400 rounded-2xl border border-teal-100/80 dark:border-teal-500/20 shadow-xs"><Users className="w-5 h-5" /></div>
                   </div>
                 </div>
 
                 <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 p-6 rounded-3xl shadow-lg hover:shadow-xl transition-all relative overflow-hidden group">
-                  <div className="absolute -right-6 -top-6 w-24 h-24 bg-emerald-50 dark:bg-emerald-500/10 rounded-full group-hover:scale-150 transition-transform duration-500 ease-out"></div>
+                  <div className="absolute -right-6 -top-6 w-24 h-24 bg-teal-50 dark:bg-teal-500/10 rounded-full group-hover:scale-150 transition-transform duration-500 ease-out"></div>
                   <div className="relative z-10 flex justify-between items-start">
                     <div>
                       <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Present Today</p>
                       <h3 className="text-3xl font-black text-gray-900 dark:text-white">{todaysLogsCount}</h3>
                     </div>
-                    <div className="p-3 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-2xl"><FileText className="w-5 h-5" /></div>
+                    <div className="p-3 bg-teal-50 dark:bg-teal-500/15 text-teal-600 dark:text-teal-400 rounded-2xl border border-teal-100/80 dark:border-teal-500/20 shadow-xs"><FileText className="w-5 h-5" /></div>
                   </div>
                 </div>
 
                 <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 p-6 rounded-3xl shadow-lg hover:shadow-xl transition-all relative overflow-hidden group">
-                  <div className="absolute -right-6 -top-6 w-24 h-24 bg-amber-50 dark:bg-amber-500/10 rounded-full group-hover:scale-150 transition-transform duration-500 ease-out"></div>
+                  <div className="absolute -right-6 -top-6 w-24 h-24 bg-teal-50 dark:bg-teal-500/10 rounded-full group-hover:scale-150 transition-transform duration-500 ease-out"></div>
                   <div className="relative z-10 flex justify-between items-start">
                     <div>
                       <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Pending Leaves</p>
                       <h3 className="text-3xl font-black text-gray-900 dark:text-white">{pendingLeaves.length}</h3>
                     </div>
-                    <div className="p-3 bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 rounded-2xl"><CalendarCheck className="w-5 h-5" /></div>
+                    <div className="p-3 bg-teal-50 dark:bg-teal-500/15 text-teal-600 dark:text-teal-400 rounded-2xl border border-teal-100/80 dark:border-teal-500/20 shadow-xs"><CalendarCheck className="w-5 h-5" /></div>
                   </div>
                 </div>
               </div>
 
               {/* Lower Section Split */}
-              <div className="flex flex-col lg:flex-row gap-8 items-start">
+              <div className="flex flex-col lg:flex-row gap-8 items-start w-full">
                 
                 {/* Left Column: Action Required Widget */}
-                <div className="w-full lg:w-1/3 flex flex-col gap-6 sticky top-[90px]">
+                <div className="w-full lg:w-[320px] xl:w-[380px] shrink-0 flex flex-col gap-6 sticky top-[90px]">
                   <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl w-full">
                     <div className="flex justify-between items-center mb-6">
                       <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2"><AlertCircle className="w-4 h-4 text-amber-500" /> Action Required</h3>
@@ -179,17 +173,17 @@ export default function DashboardPage() {
                     <div className="flex flex-col gap-3">
                       {pendingLeaves.length > 0 ? (
                         pendingLeaves.slice(0, 4).map(leave => (
-                          <div key={leave.id} className="p-3.5 rounded-2xl bg-slate-50 dark:bg-black/20 border border-gray-100 dark:border-white/5 flex justify-between items-center group hover:border-amber-200 dark:hover:border-amber-500/30 transition-colors">
+                          <div key={leave.id} className="p-3.5 rounded-2xl bg-slate-50 dark:bg-black/20 border border-gray-100 dark:border-white/5 flex justify-between items-center group hover:border-teal-300 dark:hover:border-teal-500/30 transition-colors">
                             <div className="min-w-0 flex-1 pr-2">
                               <div className="font-bold text-sm text-gray-900 dark:text-white truncate">{leave.userName}</div>
-                              <div className="text-[10px] font-semibold text-gray-500 mt-0.5 uppercase tracking-wide text-teal-600 dark:text-teal-400">{leave.type} Leave</div>
+                              <div className="text-[10px] font-semibold mt-0.5 uppercase tracking-wide text-teal-600 dark:text-teal-400">{leave.type} Leave</div>
                             </div>
-                            <Link href="/leave" className="px-3 py-1.5 bg-white dark:bg-white/10 border border-gray-200 dark:border-white/10 text-[10px] font-bold text-gray-700 dark:text-gray-300 rounded-lg shadow-sm group-hover:bg-amber-500 group-hover:text-white group-hover:border-amber-500 transition-all uppercase tracking-wider shrink-0">Review</Link>
+                            <Link href="/leave" className="px-3 py-1.5 bg-white dark:bg-white/10 border border-gray-200 dark:border-white/10 text-[10px] font-bold text-gray-700 dark:text-gray-300 rounded-lg shadow-sm group-hover:bg-teal-600 group-hover:text-white group-hover:border-teal-600 transition-all uppercase tracking-wider shrink-0">Review</Link>
                           </div>
                         ))
                       ) : (
                         <div className="py-8 text-center bg-slate-50 dark:bg-white/[0.02] rounded-2xl border border-dashed border-gray-200 dark:border-white/10">
-                          <CalendarCheck className="w-6 h-6 text-emerald-400 mb-2 opacity-50 mx-auto" />
+                          <CalendarCheck className="w-6 h-6 text-teal-500 mb-2 opacity-50 mx-auto" />
                           <p className="text-xs font-bold text-gray-600 dark:text-gray-400">All caught up!</p>
                         </div>
                       )}
@@ -198,21 +192,21 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Right Column: Paginated Admin Logs Table */}
-                <div className="w-full lg:w-2/3">
+                <div className="w-full lg:flex-1 min-w-0">
                   <AdminLogsTable />
                 </div>
               </div>
             </div>
           ) : (
             <div className="flex flex-col lg:flex-row gap-8 mb-8 w-full">
-              <div className="w-full lg:w-1/3 flex flex-col space-y-6">
+              <div className="w-full lg:w-[320px] xl:w-[380px] shrink-0 flex flex-col space-y-6">
                 <div className="p-5 sm:p-8 rounded-3xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 shadow-xl">
                   <ClockInButton />
                   <div className="my-6 h-px bg-gray-200 dark:bg-white/10"></div>
                   <ClockOutButton />
                 </div>
               </div>
-              <div className="w-full lg:w-2/3">
+              <div className="w-full lg:flex-1 min-w-0">
                 <EmployeeHistoryTable />
               </div>
             </div>
@@ -221,33 +215,33 @@ export default function DashboardPage() {
           {/* COMPANY MEMOS */}
           <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl col-span-1 lg:col-span-2 mt-4">
             <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-indigo-500" />
+              <Sparkles className="w-5 h-5 text-teal-600 dark:text-teal-400" />
               Company Memos & Updates
             </h3>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
               {announcements.length > 0 ? (
                 announcements.map((memo) => (
                   <div 
                     key={memo.id} 
                     onClick={() => setSelectedMemo(memo)}
-                    className="group cursor-pointer p-5 bg-slate-50 dark:bg-black/20 rounded-2xl border border-gray-100 dark:border-white/5 hover:border-indigo-500/50 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-all duration-300 flex flex-col justify-between min-h-[140px]"
+                    className="group cursor-pointer p-5 bg-slate-50 dark:bg-black/20 rounded-2xl border border-gray-100 dark:border-white/5 hover:border-teal-500/40 hover:bg-teal-50/40 dark:hover:bg-teal-500/5 transition-all duration-300 flex flex-col justify-between min-h-[140px]"
                   >
                     <div>
                       <div className="flex justify-between items-start mb-3 gap-2">
                         <span className={`px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider border whitespace-nowrap flex items-center gap-1 ${getCategoryBadgeColor(memo.category)}`}>
-                          <Tag className="w-2.5 h-2.5" /> {memo.category || "General"}
+                          <Tag className="w-2.5 h-2.5 text-teal-600 dark:text-teal-400" /> {memo.category || "General"}
                         </span>
                         <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">
                           {memo.createdAt ? new Date(memo.createdAt.seconds * 1000).toLocaleDateString() : "New"}
                         </span>
                       </div>
                       
-                      <h4 className="text-sm font-bold text-gray-900 dark:text-white line-clamp-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors leading-tight">
+                      <h4 className="text-sm font-bold text-gray-900 dark:text-white line-clamp-2 group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors leading-tight">
                         {memo.title || "Official Company Memorandum"}
                       </h4>
                     </div>
-                    <div className="mt-4 flex items-center justify-between text-xs font-bold text-gray-400 group-hover:text-indigo-500 transition-colors">
+                    <div className="mt-4 flex items-center justify-between text-xs font-bold text-gray-400 group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors">
                       <span>From {memo.author}</span>
                       <span>Read memo &rarr;</span>
                     </div>

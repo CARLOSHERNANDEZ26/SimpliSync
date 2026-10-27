@@ -196,12 +196,12 @@ export default function DisciplinaryPage() {
         <div className="absolute top-0 right-0 w-[40rem] h-[40rem] bg-emerald-500/10 rounded-full blur-[150px] pointer-events-none"></div>
         <Navbar />
         
-        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
+        <div className="relative z-10 w-full px-4 sm:px-8 lg:px-10 py-6 sm:py-10">
           
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10">
             <div>
               <h1 className="text-4xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
-                <Gavel className="w-10 h-10 text-emerald-500" />
+                <Gavel className="w-10 h-10 text-teal-600 dark:text-teal-400" />
                 Disciplinary Action Advisor
               </h1>
               <p className="text-gray-500 dark:text-gray-400 mt-2">

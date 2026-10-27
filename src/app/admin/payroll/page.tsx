@@ -331,10 +331,10 @@ export default function PayrollPage() {
       <main className="min-h-screen w-full relative overflow-x-hidden pt-[57px] lg:pt-0 lg:pl-[260px] bg-slate-50 dark:bg-[#0a0a0a] print:p-0 print:bg-white">
         <div className="print:hidden"><Navbar /></div>
 
-        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-12 print:hidden">
+        <div className="relative z-10 w-full px-4 sm:px-8 lg:px-10 py-6 sm:py-10 print:hidden">
           <div className="mb-8">
             <h1 className="text-4xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
-              <Banknote className="w-10 h-10 text-emerald-500" /> Payroll Management
+              <Banknote className="w-10 h-10 text-teal-600 dark:text-teal-400" /> Payroll Management
             </h1>
             <p className="text-gray-500 dark:text-gray-400 mt-2">Automated semi-monthly salary generation, OT calculations, and deductions.</p>
           </div>

@@ -467,7 +467,7 @@ export default function LeavePage() {
       <main className="min-h-screen w-full relative overflow-hidden pt-[57px] lg:pt-0 lg:pl-[260px] bg-slate-50 dark:bg-[#0a0a0a] print:bg-white print:p-0">
         <div className="print:hidden"><Navbar /></div>
         
-        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-12 print:p-0">
+        <div className="relative z-10 w-full px-4 sm:px-8 lg:px-10 py-6 sm:py-10 print:p-0">
           
           <div className="mb-10 print:hidden">
             <h1 className="text-4xl font-bold text-gray-900 dark:text-white flex items-center gap-3">

@@ -139,7 +139,7 @@ export default function Employee201FilePage() {
         <div className="absolute top-0 right-0 w-[40rem] h-[40rem] bg-teal-500/10 rounded-full blur-[150px] pointer-events-none print:hidden"></div>
         <div className="print:hidden"><Navbar /></div>
         
-        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-12 print:p-0">
+        <div className="relative z-10 w-full px-4 sm:px-8 lg:px-10 py-6 sm:py-10 print:p-0">
           <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4 print:hidden">
             <div>
               <h1 className="text-4xl font-bold text-gray-900 dark:text-white flex items-center gap-3"><FolderOpen className="w-10 h-10 text-teal-500" /> My 201 File</h1>

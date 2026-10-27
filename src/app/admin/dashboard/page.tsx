@@ -204,26 +204,29 @@ export default function AdminCommandCenter() {
       <main className="min-h-screen w-full pt-[57px] lg:pt-0 lg:pl-[260px] bg-slate-50 dark:bg-[#0a0a0a]">
         <Navbar />
 
-        <div className="max-w-7xl mx-auto px-6 py-10">
+        <div className="w-full px-4 sm:px-8 lg:px-10 py-6 sm:py-10">
           <div className="mb-10">
             <h1 className="text-4xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
-              <Activity className="w-10 h-10 text-emerald-500" />
+              <Activity className="w-10 h-10 text-teal-600 dark:text-teal-400" />
               Company Performance Center
             </h1>
             <p className="text-gray-500 mt-2">Real-time HR analytics and system audit logs.</p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div className="bg-white dark:bg-white/5 p-6 rounded-3xl border border-gray-200 dark:border-white/10 shadow-sm">
-              <Users className="text-emerald-500 mb-2" />
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalEmployees}</div>
-              <div className="text-xs text-gray-400 uppercase font-bold tracking-wider">Active Headcount</div>
+            <div className="bg-white dark:bg-white/5 p-6 rounded-3xl border border-gray-200 dark:border-white/10 shadow-sm relative group overflow-hidden">
+              <div className="absolute -right-6 -top-6 w-24 h-24 bg-teal-50 dark:bg-teal-500/10 rounded-full group-hover:scale-150 transition-transform duration-500 ease-out"></div>
+              <div className="relative z-10">
+                <Users className="text-teal-600 dark:text-teal-400 mb-2" />
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalEmployees}</div>
+                <div className="text-xs text-gray-400 uppercase font-bold tracking-wider">Active Headcount</div>
+              </div>
             </div>
 
             <div className="bg-white dark:bg-white/5 p-6 rounded-3xl border border-gray-200 dark:border-white/10 shadow-sm relative group overflow-hidden">
-              <div className="absolute -right-6 -top-6 w-24 h-24 bg-emerald-50 dark:bg-emerald-500/10 rounded-full group-hover:scale-150 transition-transform duration-500 ease-out"></div>
+              <div className="absolute -right-6 -top-6 w-24 h-24 bg-teal-50 dark:bg-teal-500/10 rounded-full group-hover:scale-150 transition-transform duration-500 ease-out"></div>
               <div className="relative z-10">
-                <TrendingUp className="text-emerald-500 mb-2" />
+                <TrendingUp className="text-teal-600 dark:text-teal-400 mb-2" />
                 <div className="text-2xl font-bold text-gray-900 dark:text-white flex items-baseline gap-1">
                   {stats.avgPerformance > 0 ? stats.avgPerformance.toFixed(1) : "-"}
                   <span className="text-sm font-medium text-gray-400">/ 5.0</span>
@@ -232,17 +235,20 @@ export default function AdminCommandCenter() {
               </div>
             </div>
 
-            <div className="bg-white dark:bg-white/5 p-6 rounded-3xl border border-gray-200 dark:border-white/10 shadow-sm">
-              <FileText className="text-amber-500 mb-2" />
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.activePolicies}</div>
-              <div className="text-xs text-gray-400 uppercase font-bold tracking-wider">Active Policies</div>
+            <div className="bg-white dark:bg-white/5 p-6 rounded-3xl border border-gray-200 dark:border-white/10 shadow-sm relative group overflow-hidden">
+              <div className="absolute -right-6 -top-6 w-24 h-24 bg-teal-50 dark:bg-teal-500/10 rounded-full group-hover:scale-150 transition-transform duration-500 ease-out"></div>
+              <div className="relative z-10">
+                <FileText className="text-teal-600 dark:text-teal-400 mb-2" />
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.activePolicies}</div>
+                <div className="text-xs text-gray-400 uppercase font-bold tracking-wider">Active Policies</div>
+              </div>
             </div>
 
             {/* Current Cutoff Date window tracking */}
             <div className="bg-white dark:bg-white/5 p-6 rounded-3xl border border-gray-200 dark:border-white/10 shadow-sm relative group overflow-hidden">
               <div className="absolute -right-6 -top-6 w-24 h-24 bg-teal-50 dark:bg-teal-500/10 rounded-full group-hover:scale-150 transition-transform duration-500 ease-out"></div>
               <div className="relative z-10">
-                <CalendarDays className="text-teal-500 mb-2" />
+                <CalendarDays className="text-teal-600 dark:text-teal-400 mb-2" />
                 <div className="text-lg font-black text-gray-900 dark:text-white font-mono truncate tracking-tight py-0.5">
                   {stats.cutoffLabel || "Calculating..."}
                 </div>

@@ -108,7 +108,7 @@ export default function CompanyCalendarPage() {
       <main className="min-h-screen w-full relative overflow-y-auto pt-[57px] lg:pt-0 lg:pl-[260px] bg-slate-50 dark:bg-[#0a0a0a] text-gray-900 dark:text-white">
         <Navbar />
 
-        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
+        <div className="relative z-10 w-full px-4 sm:px-8 lg:px-10 py-6 sm:py-10">
           <div className="mb-8">
             <h1 className="text-3xl font-black tracking-tight flex items-center gap-3">
               <CalendarIcon className="w-8 h-8 text-teal-500" />
@@ -117,9 +117,9 @@ export default function CompanyCalendarPage() {
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Configure workspace cycles, leaves, and calendar adjustments.</p>
           </div>
 
-          <div className={`grid grid-cols-1 ${isAdmin ? "lg:grid-cols-3" : "max-w-4xl mx-auto"} gap-8 items-start`}>
+          <div className={`grid grid-cols-1 ${isAdmin ? "lg:grid-cols-3 xl:grid-cols-4" : "w-full"} gap-8 items-start`}>
             
-            <div className={`${isAdmin ? "lg:col-span-2" : "w-full"} bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl backdrop-blur-md flex flex-col`}>
+            <div className={`${isAdmin ? "lg:col-span-2 xl:col-span-3" : "w-full"} bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl p-6 shadow-xl backdrop-blur-md flex flex-col`}>
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-bold tracking-tight font-mono text-gray-800 dark:text-gray-200">
                   {monthNames[navMonth]} {navYear}

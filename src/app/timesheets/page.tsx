@@ -319,7 +319,7 @@ function TimesheetsContent() {
       <main className="min-h-screen w-full relative overflow-x-hidden pt-[57px] lg:pt-0 lg:pl-[260px] bg-slate-50 dark:bg-[#0a0a0a]">
         <Navbar />
 
-        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
+        <div className="relative z-10 w-full px-4 sm:px-8 lg:px-10 py-6 sm:py-10">
 
           {filterEmployeeId && (
             <Link href="/employees" className="inline-flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-teal-600 mb-6 transition-colors">

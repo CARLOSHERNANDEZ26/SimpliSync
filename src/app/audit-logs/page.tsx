@@ -76,11 +76,11 @@ export default function AuditLogsPage() {
       <main className="min-h-screen w-full relative overflow-x-hidden pt-[57px] lg:pt-0 lg:pl-[260px] bg-slate-50 dark:bg-[#0a0a0a]">
         <Navbar />
         
-        <div className="relative z-10 w-full max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
+        <div className="relative z-10 w-full px-4 sm:px-8 lg:px-10 py-6 sm:py-10">
           
           <div className="mb-8">
             <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
-              <ShieldCheck className="w-8 h-8 sm:w-10 sm:h-10 text-indigo-500" />
+              <ShieldCheck className="w-8 h-8 sm:w-10 sm:h-10 text-teal-600 dark:text-teal-400" />
               System Audit Trail
             </h1>
             <p className="text-gray-500 dark:text-gray-400 mt-2 text-sm sm:text-base">

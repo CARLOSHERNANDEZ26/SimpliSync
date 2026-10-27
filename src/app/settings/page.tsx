@@ -90,7 +90,7 @@ export default function SettingsPage() {
 
         <Navbar />
 
-        <div className="relative z-10 w-full max-w-[95%] 2xl:max-w-[100rem] mx-auto px-4 sm:px-6 py-6 sm:py-12">
+        <div className="relative z-10 w-full px-4 sm:px-8 lg:px-10 py-6 sm:py-10">
           <div className="flex flex-col space-y-8 animate-fade-in-up">
             
             <div className="space-y-2 text-center lg:text-left">
@@ -102,7 +102,7 @@ export default function SettingsPage() {
               </p>
             </div>
 
-            <div className={`grid grid-cols-1 ${isAdmin ? "md:grid-cols-2 lg:grid-cols-3 max-w-7xl mx-auto" : "max-w-md mx-auto"} gap-6 items-start w-full`}>
+            <div className={`grid grid-cols-1 ${isAdmin ? "md:grid-cols-2 lg:grid-cols-3" : "max-w-xl"} gap-6 items-start w-full`}>
                <div className="w-full">
                  <PreferencesSettings />
                </div>
@@ -191,7 +191,7 @@ export default function SettingsPage() {
             </div>
 
             {/* SimplifV Company Profile Section */}
-            <div className="max-w-5xl mx-auto w-full mt-10">
+            <div className="w-full mt-10">
               <div className="bg-white dark:bg-[#151515] border border-gray-200 dark:border-white/10 rounded-3xl overflow-hidden shadow-xl">
                 
                 <div className="bg-gradient-to-r from-teal-600 to-emerald-600 p-8 sm:p-10 text-white relative overflow-hidden">

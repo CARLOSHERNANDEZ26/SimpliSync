@@ -296,14 +296,8 @@ export default function MemoGeneratorPage() {
   const totalPages = Math.ceil(filteredMemos.length / ITEMS_PER_PAGE);
   const currentMemos = filteredMemos.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
-  const getCategoryBadgeColor = (category: string) => {
-    switch(category) {
-      case "Attendance & Timekeeping": return "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400 border-blue-200 dark:border-blue-500/30";
-      case "Leaves & Absences": return "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 border-amber-200 dark:border-amber-500/30";
-      case "Payroll & Compensation": return "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30";
-      case "Code of Conduct & Security": return "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400 border-rose-200 dark:border-rose-500/30";
-      default: return "bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-gray-400 border-gray-200 dark:border-white/20";
-    }
+  const getCategoryBadgeColor = (_category?: string) => {
+    return "bg-teal-50 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300 border-teal-200 dark:border-teal-500/30";
   };
 
   if (!isAdmin && user) {
@@ -322,7 +316,7 @@ export default function MemoGeneratorPage() {
         <div className="absolute top-0 left-0 w-[40rem] h-[40rem] bg-emerald-400/20 dark:bg-emerald-600/10 rounded-full blur-[150px] pointer-events-none"></div>
         <Navbar />
         
-        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
+        <div className="relative z-10 w-full px-4 sm:px-8 lg:px-10 py-6 sm:py-10">
           
           <div className="mb-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>

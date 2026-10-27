@@ -19,7 +19,7 @@ export default function EmployeeProfilePage() {
 
         <Navbar />
         
-        <div className="relative z-20 w-full max-w-6xl mx-auto px-4 sm:px-6 pt-8 -mb-2">
+        <div className="relative z-20 w-full px-4 sm:px-8 lg:px-10 pt-8 -mb-2">
           <Link href="/employees" className="inline-flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-200 bg-white dark:bg-white/10 hover:bg-gray-100 dark:hover:bg-white/20 border border-gray-200 dark:border-white/10 px-4 py-2.5 rounded-xl transition-all shadow-sm group">
             <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
             Back to Directory

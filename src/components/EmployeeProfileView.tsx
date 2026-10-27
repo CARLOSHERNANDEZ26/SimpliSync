@@ -199,7 +199,7 @@ export default function EmployeeProfileView({ userId }: { userId: string }) {
   }
 
   return (
-    <div className="relative z-10 w-full max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
+    <div className="relative z-10 w-full px-4 sm:px-8 lg:px-10 py-6 sm:py-10">
       
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
         <div className="flex items-center gap-5">
